@@ -1,5 +1,7 @@
 2002-12-11  Marc Mulcahy  <marc@plbb.net>
 
+	* php/urlevent.php php/addevents.php: Added support for URL events.
+
 	* src/db.ch: Added URL event type to the scheduler.
 
 	* src/mixerautomation.ch (mixer_automation_flush): Allows flushing

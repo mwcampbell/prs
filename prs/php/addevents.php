@@ -30,6 +30,7 @@ html_start ("Add Playlist Event");
 <ul>
 <li><a href="randomevent.php?template_id=<? echo $template_id ?>&amp;event_number=<? echo $event_number ?>&amp;insert_event=<? echo $insert_event ?>&amp;event_type=random">Add Random Event</a></li>
 <li><a href="randomevent.php?template_id=<? echo $template_id ?>&amp;event_number=<? echo $event_number ?>&amp;insert_event=<? echo $insert_event ?>&amp;event_type=simple_random">Add Simple Random Event</a></li>
+<li><a href="urlevent.php?template_id=<? echo $template_id ?>&amp;event_number=<? echo $event_number ?>&amp;insert_event=<? echo $insert_event ?>">Add URL Event</a></li>
 <li><a href = "edittemplate.php?template_id=<? echo $template_id ?>">Edit this template</a></li>
 <li><a href = "template.php">Back to Playlist Template Administration</a></li>
 </ul>

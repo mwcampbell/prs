@@ -104,7 +104,8 @@ channel_info_destroy (channel_info *i)
 		kill (i->decoder_pid, SIGTERM);
 		waitpid (i->decoder_pid, NULL, 0);
 	}
-	pthread_cond_wait (&(i->cond), &(i->mutex));
+	if (i->transfer_thread != -1)
+		pthread_cond_wait (&(i->cond), &(i->mutex));
 	pthread_mutex_unlock (&(i->mutex));
 
 	/* Remove from our list of url channels */
@@ -418,6 +419,7 @@ curl_transfer_thread_func (void *data)
 			i->ch->data_end_reached = 1;
 	}
 	pthread_cond_broadcast (&(i->cond));
+	i->transfer_thread = -1;
 	pthread_mutex_unlock (&(i->mutex));
 }
 
