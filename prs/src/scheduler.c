@@ -297,7 +297,7 @@ url_manager (void *data)
 						    i->m->latency);
 			
 			if (ch) {
-				ch->level = 0;
+				ch->level = .0001;
 				ch->enabled = 1;
 				mixer_add_channel (i->m, ch);
 				mixer_patch_channel_all (i->m, i->url);
