@@ -91,9 +91,9 @@ mixer_automation_destroy (MixerAutomation *a)
 	list *tmp;
 	if (!a)
 		return;
-	if (a->automation_thread > 0)
-	{
+	if (a->automation_thread > 0) {
 		a->running = 0;
+		pthread_join (&(a->automation_thread), NULL);
 	}
 	for (tmp = a->events; tmp; tmp = tmp->next)
 	{
