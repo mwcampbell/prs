@@ -43,6 +43,8 @@
 #include "list.h"
 
 
+#define BLOCK_SIZE 1024
+
 typedef struct {
 	shout_t *shout;
 	int retry_delay;
@@ -197,7 +199,7 @@ shout_thread (void *data)
 	int retry_delay;
 	int blocks_waited = 0;
 	int connected = 0;
-	char buffer[1024];
+	char buffer[BLOCK_SIZE];
 	char *tmp;
 	int bytes_read, bytes_left;
 	
@@ -212,11 +214,11 @@ shout_thread (void *data)
 	 *
 	 */
 
-	retry_delay = (double)(shout_get_bitrate(i->shout)*1000/8/1024)*i->retry_delay;
+	retry_delay = (double)(BLOCK_SIZE/shout_get_bitrate(i->shout)*1000/8)*i->retry_delay;
 
 	while (!i->stream_reset) {
 		tmp = buffer;
-		bytes_left = 1024;
+		bytes_left = BLOCK_SIZE;
 
 		while (bytes_left) {
 			bytes_read = read (i->encoder_output_fd, tmp, bytes_left);
@@ -241,7 +243,7 @@ shout_thread (void *data)
 			}
 		}
 		else if (connected) {
-			int rv = shout_send (i->shout, buffer, 1024-bytes_left);
+			int rv = shout_send (i->shout, buffer, BLOCK_SIZE-bytes_left);
 			if (rv) {
 				debug_printf (DEBUG_FLAGS_GENERAL, "Error sending data to server: %s\n", shout_get_error (i->shout));
 				shout_close (i->shout);
