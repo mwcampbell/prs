@@ -1,3 +1,13 @@
+2003-04-24  Marc Mulcahy  <marc@plbb.net>
+
+	* src/multibandaudiocompressor.ch: Suppport linking bands together.
+
+	* src/prs_config.c (multiband_audio_compressor_config): Support for
+	the new link option for the multiband compressor.
+
+	* src/audiocompressor.c (audio_compressor_process_data): Added a
+	declipper.
+
 2003-04-10  Marc Mulcahy  <marc@plbb.net>
 
 	* src/multibandaudiocompressor.c src/multibandaudiocompressor.h

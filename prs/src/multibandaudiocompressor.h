@@ -38,7 +38,8 @@ multiband_audio_compressor_add_band (AudioFilter *f,
 				     double attack_time,
 				     double release_time,
 				     double volume,
-				     double output_gain);
+				     double output_gain,
+				     double link);
 
 
 #endif

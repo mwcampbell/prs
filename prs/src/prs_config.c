@@ -229,6 +229,7 @@ multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 	double release_time;
 	double pre_process_gain;
 	double output_gain;
+	double link;
 
 	f = multiband_audio_compressor_new (b->rate,
 					    b->channels,
@@ -246,6 +247,7 @@ multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 			release_time = atof (xmlGetProp(cur, "release_time"));
 			pre_process_gain = atof (xmlGetProp(cur, "pre_process_gain"));
 			output_gain = atof (xmlGetProp(cur, "output_gain"));
+			link = atof (xmlGetProp (cur, "link"));
 			if (freq >= (b->rate/2)*.9)
 				freq = (b->rate/2)*.9;
 			multiband_audio_compressor_add_band (f,
@@ -255,7 +257,8 @@ multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 							     attack_time,
 							     release_time,
 							     pre_process_gain,
-							     output_gain);
+							     output_gain,
+							     link);
 		}
 		cur = cur->next;
 	}

@@ -54,7 +54,7 @@ audio_compressor_process_data (AudioFilter *f,
 			       short *output,
 			       int output_length)
 {
-	short peak1, peak2;
+	long long  peak1, peak2;
 	short *buffer_end;
 	short *iptr, *optr;
 	CompressorData *d = NULL;
@@ -69,17 +69,17 @@ audio_compressor_process_data (AudioFilter *f,
 	iptr = input;
 	buffer_end = input+input_length;
 	while (iptr < buffer_end) {
-		short val = abs (*iptr++);
-		if (val > peak1)
-			peak1 = val;
+		long val = *iptr++;
+		peak1 += val*val;
 		if (f->channels == 2) {
-			short val = abs (*iptr++);
-			if (val > peak2)
-				peak2 = val;
+			long val = *iptr++;
+			peak2 += val*val;
 		}
 	}
 	if (f->channels == 1)
 		peak2 = peak1;
+	peak1 = sqrt (peak1/input_length/f->channels);
+	peak2 = sqrt (peak2/input_length/f->channels);
 	if ((double)(peak1+peak2)/2 > d->ithreshhold) {
 		double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;
 		double delta = d->threshhold-peak_gain;
@@ -95,7 +95,12 @@ audio_compressor_process_data (AudioFilter *f,
 	iptr = input;
 	optr = output;
 	while (iptr < buffer_end) {
-		*optr++ = *iptr++*d->level*d->output_gain;
+		long val = *iptr++*d->level*d->output_gain;
+		if (val > 32767)
+			val = 32767;
+		else if (val < -32768)
+			val = -32768;
+		*optr++ = val;
 		if (d->fade != 0) {
 			if ((d->fade > 1 && d->level >= d->fade_destination) ||
 			    (d->fade < 1 && d->level <= d->fade_destination)) {
@@ -105,8 +110,14 @@ audio_compressor_process_data (AudioFilter *f,
 			else
 				d->level *= d->fade;
 		}
-		if (f->channels == 2)
-			*optr++ = *iptr++*d->level*d->output_gain;
+		if (f->channels == 2) {
+			long val = *iptr++*d->level*d->output_gain;
+			if (val > 32767)
+				val = 32767;
+			else if (val < -32768)
+				val = -32768;
+			*optr++ = val;
+		}
 	}
 	return input_length;
 }

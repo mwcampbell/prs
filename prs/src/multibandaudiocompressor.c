@@ -52,7 +52,9 @@ typedef struct {
 	double x2[2];
 	double y2[2];
   
-	/* Processing state variables */
+	double link;
+
+        /* Processing state variables */
 
 	double level;
 	double fade;
@@ -67,6 +69,8 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 					 int output_length)
 {
 	long long peak1, peak2;
+	long prev_peak1, prev_peak2;
+	double peak;
 	short *buffer_end;
 	short *iptr, *optr;
 	list *tmp;
@@ -180,11 +184,12 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 			}
 		}
 		peak1 = peak2 = 0;
+		prev_peak1 = prev_peak2 = 0;
 		iptr = f->buffer;
 		buffer_end = f->buffer+f->buffer_size*f->channels;
 		while (iptr < buffer_end)
 		{
-			long val = *iptr;
+			long val = *iptr++;
 			peak1 += val*val;
 			if (f->channels == 2)
 			{
@@ -194,9 +199,11 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 		}
 		if (f->channels == 1)
 			peak2 = peak1;
-		peak1 = sqrt (peak1/input_length/f->channels)/.7;
-		peak2 = sqrt (peak2/input_length/f->channels)/.7;
-		if ((double) (peak1+peak2)/2  > b->ithreshhold)
+		peak1 = sqrt (peak1/input_length/f->channels);
+		peak2 = sqrt (peak2/input_length/f->channels);
+		peak = ((peak1+peak2)/2)*(1-b->link)+
+			((prev_peak1+prev_peak2)/2)*b->link;
+		if (peak  > b->ithreshhold)
 		{
 			double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;      
 			double delta = b->threshhold-peak_gain;
@@ -212,6 +219,8 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 			b->fade = b->release_time;
 		}
 		first_band = 0;
+		prev_peak1 = peak1;
+		prev_peak2 = peak2;
 	}
 	return input_length;
 }
@@ -240,7 +249,8 @@ multiband_audio_compressor_add_band (AudioFilter *f,
 				     double attack_time,
 				     double release_time,
 				     double volume,
-				     double output_gain)
+				     double output_gain,
+				     double link)
 {
 	double compression_amount;
 	band *b ;
@@ -248,13 +258,15 @@ multiband_audio_compressor_add_band (AudioFilter *f,
 	double omega = 2*PI*freq/f->rate;
 	double sine = sin(omega);
 	double cosine = cos(omega);
-	double Q = 1.0;
+	double Q = 1;
 	double alpha = sine/(2*Q);
 
 	
 	b = (band *) malloc (sizeof (band));
 
-	/* Setup low-pass filter */
+	b->link = link;
+
+        /* Setup low-pass filter */
 
 	b->b0 = (1-cosine)/2;
 	b->b1 = 1-cosine;
