@@ -50,9 +50,11 @@ mixer_bus_add_data (MixerBus *b,
 			 int length)
 {
   short *tmp, *tmp2;
+  long samp;
   
   if (!b)
     return 0;
+
   if (!b->buffer)
     return 0;
 
@@ -61,7 +63,13 @@ mixer_bus_add_data (MixerBus *b,
 
   while (length--)
     {
-      *tmp++ += *tmp2++;
+      samp = *tmp+*tmp2++;
+      if (samp > 32767)
+	*tmp++ = 32767;
+      else if (samp < -32768)
+	*tmp++ = -32768;
+      else
+	*tmp++ = (short) samp;    
     }
 }
 

@@ -1,3 +1,7 @@
+2002-10-08  Marc Mulcahy <marc.mulcahy@sun.com>
+
+	*  src/mixerbus.c: Added declipper to the mixer.
+
 2002-10-08  Marc Mulcahy <marc@plbb.net>
 
 	* src/prs_server.c: Updated CVS to reflect what's on the air on Big
