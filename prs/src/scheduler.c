@@ -283,7 +283,10 @@ scheduler_schedule_next_event (scheduler *s)
 		stack_entry = (template_stack_entry *) s->template_stack->data;
 	else
 		stack_entry = NULL;
-	if (!stack_entry || s->prev_event_end_time >= stack_entry->t->end_time) {
+	t = get_playlist_template (s->db, s->last_event_end_time);
+	
+	if ((t && stack_entry->t->id != t->id) ||
+	    !stack_entry || s->prev_event_end_time >= stack_entry->t->end_time) {
 		debug_printf (DEBUG_FLAGS_SCHEDULER, "Switching templates\n");
 		scheduler_switch_templates (s);
 		if (s->template_stack)
@@ -294,6 +297,8 @@ scheduler_schedule_next_event (scheduler *s)
 		}
 	}
 
+	if (t)
+		playlist_template_destroy (t);
 	e = list_get_item (stack_entry->t->events, stack_entry->event_number-1);
 	anchor = list_get_item (stack_entry->t->events, e->anchor_event_number-1);
   
@@ -563,8 +568,7 @@ scheduler_main_thread (void *data)
 		while (current < target) {
 			current = scheduler_schedule_next_event (s);
 		}
-		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler main thread sleeping for %lf seconds\n", (double) (current-target+s->preschedule)*.9);
-		usleep ((current-target+s->preschedule)*900000);
+		usleep ((current-target+s->preschedule)*1000000);
 		target = current;
 	}
 }

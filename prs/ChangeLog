@@ -1,3 +1,11 @@
+2003-01-11  Marc Mulcahy  <marc@plbb.net>
+
+	* src/scheduler.c (scheduler_schedule_next_event): Check the correct
+	playlist template for  the end of the last event in the scheduler.
+	Force a template switch if the template has changed.
+	(scheduler_main_thread): Ensure scheduler doesn't get too far ahead of
+	realtime.
+
 2003-01-10  Marc Mulcahy  <marc@plbb.net>
 
 	* php/addtimeslot.php: Update web interface to suppor tadding
