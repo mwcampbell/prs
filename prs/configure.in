@@ -17,7 +17,9 @@ dnl --------------------------------------------------
 dnl Check for libraries
 dnl --------------------------------------------------
 
-AC_CHECK_LIB(m, cos, LIBS="-lm")
+LIBS="-lreadline -lhistory -ltermcap"
+AC_CHECK_LIB(m, cos, LIBS="$LIBS -lm")
+AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
 AC_CHECK_LIB(vorbis, vorbis_block_init, LIBS="$LIBS -lvorbis")
 AC_CHECK_LIB(vorbisfile, ov_open, LIBS="$LIBS -lvorbisfile")
 AC_CHECK_LIB(xml2, xmlParseFile, LIBS="$LIBS -lxml2")

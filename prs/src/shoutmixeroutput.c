@@ -162,7 +162,7 @@ shout_thread (void *data)
 {
 	MixerOutput *o = NULL;
 	shout_info *i = NULL;
-	char buffer[4096];
+	char buffer[1024];
 	char *tmp;
 	int bytes_read, bytes_left;
 
@@ -172,7 +172,7 @@ shout_thread (void *data)
 
 	while (!i->stream_reset) {
 		tmp = buffer;
-		bytes_left = 4096;
+		bytes_left = 1024;
 
 		while (bytes_left) {
 			bytes_read = read (i->encoder_output_fd, tmp, bytes_left);
@@ -181,11 +181,10 @@ shout_thread (void *data)
 			tmp += bytes_read;
 			bytes_left -= bytes_read;
 		}
-		shout_send (i->shout, buffer, 4096-bytes_left);
-	if (bytes_left > 0)
-		i->stream_reset = 1;
+		shout_send (i->shout, buffer, 1024-bytes_left);
+		if (bytes_left > 0)
+			i->stream_reset = 1;
 	}
-	fprintf (stderr, "Shout thread exiting...\n");
 }
 
 

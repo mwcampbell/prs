@@ -136,21 +136,14 @@ scheduler_switch_templates (scheduler *s)
 	
 	if (e) {
 		AutomationEvent *ae = automation_event_new ();
-		double start_delta = e->t->end_time-e->t->end_prefade-s->prev_event_start_time;
-		if (e->t->end_prefade > 0) {
-			ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
-			ae->delta_time = start_delta;
-			ae->length = e->t->end_prefade;
-			ae->level = 0;
-			mixer_automation_add_event (s->a, ae);
-			start_delta = e->t->end_prefade;
-			ae = automation_event_new ();
-		}
-		ae->type = AUTOMATION_EVENT_TYPE_DELETE_ALL;
+		double start_delta = e->t->end_time-s->prev_event_start_time-(e->t->end_prefade*.8);
+		ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
 		ae->delta_time = start_delta;
-		ae->length = 0;
+		ae->length = e->t->end_prefade;
+		ae->level = 0;
 		mixer_automation_add_event (s->a, ae);
-		s->last_event_end_time = s->prev_event_start_time = s->prev_event_end_time = e->t->end_time;
+		s->last_event_end_time = s->prev_event_end_time = e->t->end_time;
+		s->prev_event_start_time = e->t->end_time-(t->end_prefade*.8);
 		scheduler_pop_template (s);
 		if (s->template_stack)
 			return;
@@ -160,21 +153,24 @@ scheduler_switch_templates (scheduler *s)
 
 	if (!t && !e) {
 		s->last_event_end_time += s->preschedule;
-		s->prev_event_start_time = s->prev_event_end_time = s->last_event_end_time;
+		s->prev_event_end_time = s->last_event_end_time;
 	}
-	if (t && !s->template_stack) {
+	if (t) {
 
 		/* Set new template */
 
-		if (!e) {
+		if (!e)
 			start_time = mixer_get_time (s->a->m);
-			if (t->start_time > start_time)
-				start_time = t->start_time;
-			s->last_event_end_time = s->prev_event_end_time = start_time;
+		else
+			start_time = t->start_time;
+		if (t->start_time > start_time)
+			start_time = t->start_time;
+		s->last_event_end_time = s->prev_event_end_time = start_time;
+		if (!e) {
+			s->prev_event_start_time = start_time;
+			mixer_automation_set_start_time (s->a, start_time);
 		}
-		else {
-			s->last_event_end_time = s->prev_event_end_time = s->prev_event_start_time = t->start_time;
-		}
+		t->start_time = start_time;
 		scheduler_push_template (s, t, 1);
 	}
 }
@@ -280,6 +276,7 @@ scheduler_schedule_next_event (scheduler *s)
 	double rv;
 	url_manager_info *i;
 	pthread_t url_manager_thread;
+	char channel_name[1024];
 	
 	pthread_mutex_lock (&(s->mut));
 	if (s->template_stack)
@@ -319,7 +316,12 @@ scheduler_schedule_next_event (scheduler *s)
 	/* Create an automation event */
 
 	ae = automation_event_new ();
-	ae->channel_name = strdup (e->channel_name);
+
+	/* Try to create a unique channel name */
+
+	sprintf (channel_name, "%s %d %d%lf", e->channel_name, e->template_id, e->number, s->last_event_end_time);
+	
+	ae->channel_name = strdup (channel_name);
 	ae->delta_time = e->start_time-s->prev_event_start_time;
   
 	switch (e->type)
@@ -365,11 +367,17 @@ scheduler_schedule_next_event (scheduler *s)
 			break;
 		}
       
-		ae->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
-		ae->detail1 = strdup (r->path);
+		/* Add the channel to the mixer */
+
+		mixer_add_file (s->a->m, ae->channel_name, r->path);
+
+		ae->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
 		ae->level = e->level;
 		e->start_time -= r->audio_in;
-		ae->delta_time -= r->audio_in;
+		if (e->start_time < stack_entry->t->start_time)
+			e->start_time = stack_entry->t->start_time;
+		else
+			ae->delta_time -= r->audio_in;
 		ae->length = r->audio_out;
 		e->end_time = e->start_time+r->audio_out;
 		recording_free (r);
@@ -388,7 +396,13 @@ scheduler_schedule_next_event (scheduler *s)
 
 		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduling path event %s\n", e->detail1);
 		info = file_info_new (e->detail1, 1000, 2000);
-		ae->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
+
+
+		/* Add channel to the mixer */
+
+		mixer_add_file (s->a->m, ae->channel_name, e->detail1);
+
+		ae->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
 		ae->detail1 = strdup (e->detail1);
 		ae->level = e->level;
 		e->start_time -= info->audio_in;

@@ -24,7 +24,7 @@ typedef FileInfo * (*FileInfoConstructor) (char *path,
 					   unsigned short out_threshhold);
 
 FileInfo * 
-file_info_new (char *path,
+file_info_new (const char *path,
 	       unsigned short in_threshhold,
 	       unsigned short out_threshhold);
 void

@@ -43,5 +43,6 @@ prs_server_SOURCES = \
 	mixerautomation.c \
 	scheduler.c \
 	debug.c \
+	completion.c \
 	prs_server.c
 

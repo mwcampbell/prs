@@ -1,3 +1,27 @@
+2003-01-09  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixerautomation.c (mixer_automation_next_event): Changes to
+	support the removal of the ADD_CHANNEL event type.
+
+	* src/mixer.c (mixer_add_file): Allows a channel to be added to the
+	mixer by file name.  Removed the automation event type for ADD_CHANNEL
+	and replaced it with ENABLE_CHANNEL.
+
+	* src/mixerchannel.c (data_reader): Ensure data reader thread is
+	destroyed when the channel is destroyed.
+
+	* src/prs_server.c src/completion.c src/completion.h src/Makefile.am:
+	Added tab completion and the "add" command to add a particular file
+	to the automation.  Also, added the "N" command to turn off the mic
+	and fire next automation event, and the "S" command to turn off the
+	mic and start the automation.
+	
+	* src/scheduler.c (scheduler_schedule_next_event)
+	(scheduler_switch_templates): Fixed late automation event.
+
+	* src/shoutmixeroutput.c (shout_thread): Use 1k buffers instead of
+	4k buffers.
+
 2003-01-06  Marc Mulcahy  <marc@plbb.net>
 
 	* src/shoutmixeroutput.c (shout_thread): Ensure 4k buffers are sent

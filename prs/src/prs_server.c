@@ -11,6 +11,8 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include "debug.h"
 #include "db.h"
 #include "prs.h"
@@ -25,6 +27,75 @@
 #include "vorbismixerchannel.h"
 #include "ossmixerchannel.h"
 #include "scheduler.h"
+#include "completion.h"
+
+
+
+static double delta = 0.0;
+
+
+
+static void
+add_file (MixerAutomation *a,
+	  Database *db,
+	  const char *path)
+{
+	AutomationEvent *e = automation_event_new ();
+	Recording *r;
+	
+	e->detail1 = strdup (path);
+	e->level = 1.0;
+	e->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
+	r = find_recording_by_path (db, path);
+	if (!r) {
+		FileInfo *i = file_info_new (path, 1000, 2000);
+		if (!i) {
+			fprintf (stderr, "File not found in playlist.\n");
+			return;
+		}
+		if (i->name)
+			e->channel_name = strdup (i->name);
+		else
+			e->channel_name = strdup ("untitled");
+		e->delta_time = delta-i->audio_in;
+		delta = e->length = i->audio_out;
+	}
+	else {
+		e->channel_name = strdup (r->name);
+		e->delta_time = delta-r->audio_in;
+		delta = e->length = r->audio_out;
+	}
+	
+	/* Add channel to the mixer */
+
+	mixer_add_file (a->m, e->channel_name, path);
+
+	mixer_automation_add_event (a, e);
+}
+
+
+static void
+load_file (MixerAutomation *a,
+	   Database *db)
+{
+	char *path;
+
+	path = readline ("Enter file name: ");
+	if (path[0] == '\'') {
+		char *new;
+		int i = strlen (path)-1;
+
+		while (path[i] != path[0])
+			i--;
+		if (i)
+			new = strndup (&path[1], i-1);
+		else
+			new = strdup ("");
+		free (path);
+		path = new;
+	}
+	add_file (a, db, path);
+}
 
 
 
@@ -33,9 +104,7 @@ load_playlist (MixerAutomation *a, Database *db, FILE *in, FILE *out)
 {
 	char pl_name[1025];
 	char path[1025];
-	AutomationEvent *e;
 	FILE *fp;
-	static double delta = 0.0;
 	
 	fprintf (out, "Enter playlist name: ");
 	fgets (pl_name, 1024, in);
@@ -48,35 +117,10 @@ load_playlist (MixerAutomation *a, Database *db, FILE *in, FILE *out)
 	}
 
 	while (!feof (fp)) { 
-		Recording *r;
-		AutomationEvent *e = automation_event_new ();
-	
 		fgets (path, 1024, fp);
 		path[strlen(path)-1] = 0;
 
-		e->detail1 = strdup (path);
-		e->level = 1.0;
-		e->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
-		r = find_recording_by_path (db, path);
-		if (!r) {
-			FileInfo *i;
-			
-			i = file_info_new (path, 1000, 2000);
-			if (!i) {
-				fclose (fp);
-				fprintf (out, "File not found in playlist.\n");
-				return;
-			}
-			e->channel_name = strdup ("ACB Radio Test");
-			e->delta_time = delta-i->audio_in;
-			delta = e->length = i->audio_out;
-		}
-		else {
-			e->channel_name = strdup (r->name);
-			e->delta_time = delta-r->audio_in;
-			delta = e->length = r->audio_out;
-		}
-		mixer_automation_add_event (a, e);
+		add_file (a, db, path);
 	}
 }
 
@@ -84,10 +128,10 @@ load_playlist (MixerAutomation *a, Database *db, FILE *in, FILE *out)
 static void
 mic_on (mixer *m)
 {
-	mixer_fade_all (m, .2, .5);
+	mixer_fade_all (m, .3, .5);
 	mixer_fade_channel (m, "soundcard", 1.0, .2);
 	mixer_enable_channel (m, "soundcard", 1);
-	mixer_set_default_level (m, .2);
+	mixer_set_default_level (m, .3);
 }
 
 
@@ -178,6 +222,16 @@ prs_session (PRS *prs, FILE *in, FILE *out)
 	}      
       if (!strcmp (input, "load"))
 	load_playlist (prs->automation, prs->db, in, out);
+      if (!strcmp (input, "add"))
+	      load_file (prs->automation, prs->db);
+      if (!strcmp (input, "N")) {
+	      mic_off (prs->mixer);
+	      mixer_automation_next_event (prs->automation);
+      }
+      if (!strcmp (input, "S")) {
+	      mic_off (prs->mixer);
+	      mixer_automation_start (prs->automation);
+      }
     }
 
   return 0;
@@ -195,6 +249,9 @@ main (int argc, char *argv[])
   const char *config_filename = "prs.conf";
   PRS *prs = prs_new ();
 
+  completion_init ();
+  debug_set_flags (DEBUG_FLAGS_ALL);
+  
   if (argc > 1)
     config_filename = argv[1];
   debug_printf (DEBUG_FLAGS_GENERAL, "Loading config file %s\n", config_filename);

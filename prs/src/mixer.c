@@ -13,7 +13,27 @@
 #include "mixerbus.h"
 #include "mixerpatchpoint.h"
 #include "mixeroutput.h"
+#include "vorbismixerchannel.h"
+#include "mp3mixerchannel.h"
 
+
+
+typedef MixerChannel *(*create_func)(const char *name, const char *path, int latency);
+
+
+
+typedef struct {
+	char *extension;
+	create_func constructor;
+} channel_type_constructor_link;
+
+
+#define N_LINKS 2
+
+channel_type_constructor_link type_links[N_LINKS] = {
+	{".mp3", mp3_mixer_channel_new},
+	{".ogg", vorbis_mixer_channel_new}
+};
 
 
 static void
@@ -656,8 +676,7 @@ mixer_delete_all_channels (mixer *m)
 		      "deleting all mixer channels\n");
 	mixer_lock (m);
 	tmp = m->channels;
-	while (tmp)
-	{
+	while (tmp) {
 		list *next = tmp->next;
 		MixerChannel *ch = (MixerChannel *) tmp->data;
 		assert (ch != NULL);
@@ -714,19 +733,15 @@ mixer_get_time (mixer *m)
 void
 mixer_sync_time (mixer *m)
 {
-	time_t cur_time = time (NULL);
+	struct timeval v;
 
 	assert (m != NULL);
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "mixer_sync_time called\n");
 
-	/* Wait for time to change */
-
-	while (cur_time == time (NULL));
-
-	cur_time = time (NULL);
 	mixer_lock (m);
-	m->cur_time = cur_time;
+	gettimeofday (&v, NULL);
+	m->cur_time = v.tv_sec+(v.tv_usec/1000000);
 	mixer_unlock (m);
 }
 
@@ -778,9 +793,10 @@ mixer_fade_all (mixer *m,
 	for (tmp = m->channels; tmp; tmp = tmp->next) {
 		ch = (MixerChannel *) tmp->data;
 		assert (ch != NULL);
-		ch->fade = pow ((level+.001)/(ch->level+.001), 1.0/(ch->rate*fade_time));
-		ch->fade_destination = level;
-		fprintf (stderr, "Fading %s %lf %lf.\n", ch->name, ch->fade, ch->fade_destination);
+		if (ch->enabled) {
+			ch->fade = pow ((level+.001)/(ch->level+.001), 1.0/(ch->rate*fade_time));
+			ch->fade_destination = level;
+		}
 	}
 	mixer_unlock (m);
 }
@@ -829,4 +845,24 @@ mixer_set_default_level (mixer *m,
 	mixer_lock (m);
 	m->default_level = level;
 	mixer_unlock (m);
+}
+
+
+void
+mixer_add_file (mixer *m,
+		const char *channel_name,
+		const char *path)
+{
+	MixerChannel *ch = NULL;
+	const char *file_extension;
+	int i;
+	
+	file_extension = path+strlen(path)-4;
+
+	for (i = 0; i < N_LINKS; i++) {
+		if (!strcmp (type_links[i].extension, file_extension))
+			ch = type_links[i].constructor (channel_name, path, m->latency);
+	}
+	if (ch)
+		mixer_add_channel (m, ch);
 }

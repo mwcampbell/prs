@@ -97,14 +97,14 @@ mixer_automation_add_event (MixerAutomation *a,
 	a->events = list_append (a->events, e);
 	pthread_mutex_unlock (&(a->mut));
 	switch (e->type) {
-	case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
-			debug_printf (DEBUG_FLAGS_AUTOMATION, "Add channel event added %s\n", e->channel_name);
+	case AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL:
+			debug_printf (DEBUG_FLAGS_AUTOMATION, "Enable channel event added %s\n", e->channel_name);
 			break;
 	case AUTOMATION_EVENT_TYPE_FADE_CHANNEL:
 		debug_printf (DEBUG_FLAGS_AUTOMATION, "fade channel event added %s\n", e->channel_name);
 		break;
 	case AUTOMATION_EVENT_TYPE_FADE_ALL:
-		debug_printf (DEBUG_FLAGS_AUTOMATION, "fade all event added.\n");
+		debug_printf (DEBUG_FLAGS_AUTOMATION, "fade all event added\n");
 		break;
 	}
 }
@@ -123,35 +123,24 @@ mixer_automation_next_event (MixerAutomation *a)
 	pthread_mutex_lock (&(a->mut));
 	if (a->events)
 		e = (AutomationEvent *) a->events->data;
-	else
-	{
+	else {
 		pthread_mutex_unlock (&(a->mut));
 		debug_printf (DEBUG_FLAGS_AUTOMATION, "mixer_Automation_next_event called with no events on stack.\n");
 		return;
 	}
 
 	mixer_time = mixer_get_time (a->m);
-	debug_printf (DEBUG_FLAGS_AUTOMATION, "Executing automation event, lag is %lf\n", a->last_event_time+e->delta_time-mixer_time);
+	debug_printf (DEBUG_FLAGS_AUTOMATION, "Executing automation event, time %lf lag is %lf\n", mixer_time, a->last_event_time+e->delta_time-mixer_time);
     
-	/* Do event */
+        /* Do event */
 
 	switch (e->type)
 	{
-	case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
-		if (strcmp (e->detail1 + strlen (e->detail1) - 4, ".mp3") == 0) {
-			debug_printf (DEBUG_FLAGS_AUTOMATION, "Adding mp3 channel %s\n", e->detail1);
-			ch = mp3_mixer_channel_new (e->channel_name, e->detail1,
-						    a->m->latency);
-		}
-		else {
-			debug_printf (DEBUG_FLAGS_AUTOMATION, "Adding vorbis channel %s\n", e->detail1);
-			ch = vorbis_mixer_channel_new (e->channel_name, e->detail1,
-						       a->m->latency);
-		}
+	case AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL:
+		ch = mixer_get_channel (a->m, e->channel_name);
 		if (ch) {
 			ch->level = e->level;
 			
-			mixer_add_channel (a->m, ch);
 			mixer_patch_channel_all (a->m, e->channel_name);
 			mixer_enable_channel (a->m, e->channel_name, 1);
 		}
@@ -163,14 +152,15 @@ mixer_automation_next_event (MixerAutomation *a)
 		mixer_fade_all (a->m, e->level, e->length);
 		break;
 	case AUTOMATION_EVENT_TYPE_DELETE_ALL:
-		mixer_delete_all_channels (a->m);
+		mixer_delete_all_enabled_channels (a->m);
 		break;
 	}
 	a->events = list_delete_item (a->events, a->events);
-	a->last_event_time = mixer_get_time (a->m);
+	a->last_event_time = mixer_time;
 	automation_event_destroy (e);
 	pthread_mutex_unlock (&(a->mut));
 }
+
 
 
 

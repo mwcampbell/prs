@@ -119,6 +119,11 @@ mixer_wait_for_notification (mixer *m,
 void
 mixer_set_default_level (mixer *m,
 			 double level);
+void
+mixer_add_file (mixer *m,
+		const char *channel_name,
+		const char *file_name);
+
 
 
 #endif
