@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
+#include "prs_config.h"
 #include "db.h"
 #include "mixerautomation.h"
 #include "ossmixeroutput.h"
@@ -91,109 +92,6 @@ prs_signal_handler (int signum)
 
 
 
-static shout_conn_t *
-get_shout_connection (const char * stream)
-{
-  char key[1024];
-  char *value;
-  shout_conn_t *c = malloc (sizeof (shout_conn_t));
-  shout_init_connection (c);  
-  sprintf (key, "%s_ip", stream);
-  value = get_config_value (key);
-  if (value)
-    c->ip = value;
-  sprintf (key, "%s_port", stream);
-  value = get_config_value (key);
-  if (value)
-    c->port = atoi (value);
-  free (value);
-
-
-  /* I f we don't have  a valid ip and port, stop now */
-
-  if (!c->ip || c->port <= 0)
-    {
-      free (c);
-      return NULL;
-    }
-
-  sprintf (key, "%s_mount", stream);
-  value = get_config_value (key);
-  if (value)
-    c->mount = value;
-  sprintf (key, "%s_password", stream);
-  value = get_config_value (key);
-  if (value)
-    c->password = value;
-  sprintf (key, "%s_aim", stream);
-  value = get_config_value (key);
-  if (value)
-    c->aim = value;
-  sprintf (key, "%s_icq", stream);
-  value = get_config_value (key);
-  if (value)
-    c->icq = value;
-  sprintf (key, "%s_irc", stream);
-  value = get_config_value (key);
-  if (value)
-    c->irc = value;
-  sprintf (key, "%s_name", stream);
-  value = get_config_value (key);
-  if (value)
-    c->name = value;
-  sprintf (key, "%s_url", stream);
-  value = get_config_value (key);
-  if (value)
-    c->url = value;
-  sprintf (key, "%s_genre", stream);
-  value = get_config_value (key);
-  if (value)
-    c->genre = value;
-  sprintf (key, "%s_description", stream);
-  value = get_config_value (key);
-  if (value)
-    c->description = value;
-  sprintf (key, "%s_bitrate", stream);
-  value = get_config_value (key);
-  if (value)
-    c->bitrate = atoi (value);
-  free (value);
-  sprintf (key, "%s_ispublic", stream);
-  value = get_config_value (key);
-  if (value)
-    c->ispublic = atoi (value);
-  free (value);
-  return c;
-}
-
-
-
-static void
-setup_streams (mixer *m)
-{
-  int i;
-  char stream_name[1024];
-  MixerOutput *o;
-  shout_conn_t *new;
-  
-  for (i = 1; i <= 5; i++)
-    {
-      sprintf (stream_name, "stream%d", i);
-      new = get_shout_connection (stream_name);    
-      o = mixer_get_output (m, stream_name);
-      if (o && new)
-	shout_mixer_output_set_connection (o, new);
-      else if (new)
-	{
-	  o = shout_mixer_output_new (stream_name, 44100, 2, new);
-	  mixer_add_output (m, o);
-	  mixer_patch_bus (m, "air", stream_name);
-	}
-    }
-}
-
-
-
 int main (void)
 {
   mixer *m;
@@ -210,79 +108,7 @@ int main (void)
   signal (SIGUSR1, prs_signal_handler);
   m = mixer_new ();
   mixer_sync_time (m);
-  b = mixer_bus_new ("air", 44100, 2);
-  mixer_add_bus (m, b);
-  setup_streams (m);
-  o = oss_mixer_output_new ("soundcard",
-			    44100,
-			    2);
-  f = audio_compressor_new (44100, 2, 44100*2*MIXER_LATENCY,
-			    -15,
-			    2,
-			    .01,
-			    5,
-			    1);
-  mixer_bus_add_filter (b, f);
-#define OUTPUT_GAIN 2 
-#define ATTACK_TIME .01
-#define RELEASE_TIME 2.5
-  f = multiband_audio_compressor_new (44100, 2, 44100*2*MIXER_LATENCY);
-  multiband_audio_compressor_add_band
-    (f,
-     150,
-     -40,
-     4,
-     ATTACK_TIME,
-     RELEASE_TIME,
-     1,
-     OUTPUT_GAIN*28);
-  multiband_audio_compressor_add_band
-    (f,
-     300,
-     -30,
-     3,
-     ATTACK_TIME,
-     RELEASE_TIME,
-     1,
-     OUTPUT_GAIN*7);
-  multiband_audio_compressor_add_band
-    (f,
-     600,
-     -30,
-     3,
-     ATTACK_TIME,
-     RELEASE_TIME,
-     1,
-     OUTPUT_GAIN*8);
-  multiband_audio_compressor_add_band
-    (f,
-     6000,
-     -30,
-     3,
-     ATTACK_TIME,
-     RELEASE_TIME,
-     1,
-     OUTPUT_GAIN*10); 
-  multiband_audio_compressor_add_band
-    (f,
-     15000,
-     -20,
-     2,
-     ATTACK_TIME,
-     RELEASE_TIME,
-     1,
-     OUTPUT_GAIN*7); 
-  mixer_bus_add_filter (b, f);
-  mixer_add_output (m, o);
-  mixer_patch_bus (m, "air", "soundcard");
-  
-  
-#if 0
-  ch = vorbis_mixer_channel_new ("test", "test.ogg");
-  mixer_add_channel (m, ch);
-  mixer_patch_channel_all (m, "test");
-#endif
-  printf ("Running as pid %d.\n", getpid ());
+  prs_config (m);
   a = mixer_automation_new (m);
   mixer_start (m);
 

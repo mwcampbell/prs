@@ -10,6 +10,7 @@ prs_server_SOURCES = \
 	global_data.c \
 	db.c \
 	list.c \
+	prs_config.c \
 	mixer.c \
 	mixerbus.c \
 	mixerbus.h \

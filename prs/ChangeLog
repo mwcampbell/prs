@@ -1,3 +1,11 @@
+2002-10-24  Marc Mulcahy <marc.mulcahy@sun.com
+
+	* src/prs_server.c src/shoutmixeroutput.c: Added support for
+	stereo/mono encoding.  added support for both Vorbis and mp3 encoding.
+	
+	* src/prs_config.c: Added XML configuration file rather than databse
+	table.
+
 2002-10-08  Marc Mulcahy <marc.mulcahy@sun.com>
 
 	*  src/mixerbus.c: Added declipper to the mixer.

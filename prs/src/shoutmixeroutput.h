@@ -9,10 +9,6 @@ MixerOutput *
 shout_mixer_output_new (const char *name,
 			int rate,
 			int channels,
-			shout_conn_t *connection);
-const shout_conn_t *
-shout_mixer_output_get_connection (MixerOutput *o);
-void
-shout_mixer_output_set_connection (MixerOutput *o,
-				   const shout_conn_t *connection);
+			shout_t *s,
+			int stereo);
 #endif
