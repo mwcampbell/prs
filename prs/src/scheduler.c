@@ -302,6 +302,7 @@ url_manager (void *data)
 			if (ch) {
 				ch->level = .0001;
 				ch->enabled = 1;
+				ch->key = i->end_time;
 				mixer_add_channel (i->m, ch);
 				mixer_patch_channel_all (i->m, i->url);
 			}
@@ -319,7 +320,8 @@ url_manager (void *data)
 	
 	/* Ensure mixer automation is running when we leave */
 
-	mixer_automation_stop (i->a);
+	if (!i->a->running)
+		mixer_automation_stop (i->a);
 	mixer_automation_set_start_time (i->a, i->end_time-i->end_fade);
 	mixer_automation_start (i->a);
 	
@@ -474,7 +476,7 @@ scheduler_schedule_next_event (scheduler *s)
 			e->end_time = e->start_time;
 		}
 		else {
-			mixer_add_file (s->a->m, ae->channel_name, e->detail1, stack_entry->t->id);
+			mixer_add_file (s->a->m, ae->channel_name, e->detail1, stack_entry->t->end_time);
 			ae->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
 			ae->detail1 = strdup (e->detail1);
 			ae->level = e->level;
