@@ -583,7 +583,7 @@ scheduler_main_thread (void *data)
 		}
 		target += s->preschedule;
 		pthread_mutex_unlock (&(s->mut));
-		while (current < target) {
+		while (current < target+s->preschedule) {
 			current = scheduler_schedule_next_event (s);
 		}
 		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler sleeping for %lf seconds\n", current-target-s->preschedule);

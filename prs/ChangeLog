@@ -1,3 +1,7 @@
+2003-01-15  Marc Mulcahy  <marc@plbb.net>
+
+	* src/scheduler.c (scheduler_main_thread): Fix prescheduling bug.
+
 2003-01-13  Marc Mulcahy <marc@plbb.net>
 
 	* Added license info to all source files.
