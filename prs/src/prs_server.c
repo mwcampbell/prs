@@ -108,7 +108,12 @@ int main (void)
   signal (SIGUSR1, prs_signal_handler);
   m = mixer_new ();
   mixer_sync_time (m);
+
+  /* Parse configuration file */
+
   prs_config (m);
+
+
   a = mixer_automation_new (m);
   mixer_start (m);
 
