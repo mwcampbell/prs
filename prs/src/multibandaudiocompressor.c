@@ -142,6 +142,38 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 				*optr++ = out*b->volume;
 			}
 		}
+		peak1 = peak2 = 0;
+		iptr = f->buffer;
+		buffer_end = f->buffer+f->buffer_size*f->channels;
+		while (iptr < buffer_end)
+		{
+			short val = abs (*iptr++);
+			if (val > peak1)
+				peak1 = val;
+			if (f->channels == 2)
+			{
+				short val = abs (*iptr++);
+				if (val > peak2)
+					peak2 = val;
+			}
+		}
+		if (f->channels == 1)
+			peak2 = peak1;
+		if ((double) (peak1+peak2)/2  > b->ithreshhold)
+		{
+			double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;      
+			double delta = b->threshhold-peak_gain;
+			b->fade_destination = pow (10.0, (delta-delta/b->ratio)/20);
+			if (b->fade_destination < b->level)
+				b->fade = b->attack_time;
+			else
+				b->fade = b->release_time;
+		}
+		else if (b->fade_destination != 0)
+		{
+			b->fade_destination = 1;
+			b->fade = b->release_time;
+		}
 		buffer_end = f->buffer+f->buffer_size*f->channels;
 		iptr = f->buffer;
 		optr = output;
@@ -179,38 +211,6 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 				else
 					b->level *= b->fade;
 			}
-		}
-		peak1 = peak2 = 0;
-		iptr = output;
-		buffer_end = output+output_length;
-		while (iptr < buffer_end)
-		{
-			short val = abs (*iptr++);
-			if (val > peak1)
-				peak1 = val;
-			if (f->channels == 2)
-			{
-				short val = abs (*iptr++);
-				if (val > peak2)
-					peak2 = val;
-			}
-		}
-		if (f->channels == 1)
-			peak2 = peak1;
-		if ((double) (peak1+peak2)/2  > b->ithreshhold)
-		{
-			double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;      
-			double delta = b->threshhold-peak_gain;
-			b->fade_destination = pow (10.0, (delta-delta/b->ratio)/20);
-			if (b->fade_destination < b->level)
-				b->fade = b->attack_time;
-			else
-				b->fade = b->release_time;
-		}
-		else if (b->fade_destination != 0)
-		{
-			b->fade_destination = 1;
-			b->fade = b->release_time;
 		}
 		first_band = 0;
 	}
