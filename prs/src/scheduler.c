@@ -133,9 +133,10 @@ scheduler_destroy (scheduler *s)
 	s->running = 0;
 	thread = s->scheduler_thread;
 	pthread_mutex_unlock (&(s->mut));
-		list_free (s->template_stack);
+	pthread_cancel (thread);
+	list_free (s->template_stack);
 	free (s);
-debug_printf (DEBUG_FLAGS_SCHEDULER, "Destroying scheduler object\n");
+	debug_printf (DEBUG_FLAGS_SCHEDULER, "Destroying scheduler object\n");
 }
 
 
@@ -590,6 +591,7 @@ scheduler_main_thread (void *data)
 	pthread_mutex_unlock (&(s->mut));
 	debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler main thread started\n");
 	while (1) {
+		pthread_testcancel ();
 		pthread_mutex_lock (&(s->mut));
 		if (!s->running) {
 			pthread_mutex_unlock (&(s->mut));
