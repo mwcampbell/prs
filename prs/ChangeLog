@@ -1,3 +1,19 @@
+2002-12-06  Marc Mulcahy  <marc@plbb.net>
+
+	* src/prs_config.c (stream_config): Fixed configuration bug when
+	outputting multiple streams.
+
+	* src/db.h: Added fallback_id and end_prefade to playlist_template
+	data structure to support new scheduling system.
+
+	* src/db.c (get_playlist_template): Fixed non-initialized variable bug.
+	(get_playlist_template_by_id): Added function to support fallback
+	templates.
+
+	* src/scheduler.c (scheduler_schedule_next_event): Changes to support
+	new scheduling system including fallback templates.  also fixed bug
+	which caused hangs when no template can be found.
+
 2002-12-04  Marc Mulcahy  <marc@plbb.net>
 
 	* src/shoutmixeroutput.c (start_encoder): Only 1 "-" command line

@@ -107,11 +107,18 @@ scheduler_schedule_next_event (scheduler *s)
 
 		/* Get the current template */
 
+		double start_time;
 		t = get_playlist_template (s->db, s->last_event_end_time);
 		if (!t) {
+			s->last_event_end_time += s->preschedule;
+			s->prev_event_start_time = s->prev_event_end_time = s->last_event_end_time;
 			pthread_mutex_unlock (&(s->mut));
 			return s->prev_event_end_time;
 		}
+		start_time = mixer_get_time (s->a->m);
+		if (t->start_time > start_time)
+			start_time = t->start_time;
+		s->prev_event_end_time = s->last_event_end_time = start_time;
 		scheduler_push_template (s, t, 1);
 	}
 
@@ -213,12 +220,36 @@ scheduler_schedule_next_event (scheduler *s)
   
 	/* If the start time of the event falls outside this template, go to a new one */
 
-	if (e->start_time > stack_entry->t->end_time)
-	{
+	if (e->end_time > stack_entry->t->end_time && stack_entry->t->fallback_id != -1) {
 		if (ae)
 			automation_event_destroy (ae);
+		t = get_playlist_template_by_id (s->db, stack_entry->t->fallback_id);
+		t->fallback_id = -1;
+		t->end_prefade = stack_entry->t->end_prefade;
+		t->start_time = stack_entry->t->start_time;
+		t->end_time = stack_entry->t->end_time;
 		scheduler_pop_template (s);
-		s->prev_event_end_time = s->last_event_end_time;
+		scheduler_push_template (s, t, 1);
+		pthread_mutex_unlock (&(s->mut));
+		return scheduler_schedule_next_event (s);
+	}
+	    		
+	else if (e->start_time > stack_entry->t->end_time) {
+		if (ae)
+			automation_event_destroy (ae);
+		/* Schedule the fade */
+
+		if (stack_entry->t->end_prefade > 0) {
+			ae = automation_event_new ();
+			ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
+			ae->level = 0.0;
+			ae->length = stack_entry->t->end_prefade;
+			ae->delta_time = stack_entry->t->end_time-s->prev_event_start_time-stack_entry->t->end_prefade;
+			mixer_automation_add_event (s->a, ae);
+		}
+			
+		s->prev_event_end_time = s->prev_event_start_time = s->last_event_end_time = stack_entry->t->end_time;
+		scheduler_pop_template (s);
 		pthread_mutex_unlock (&(s->mut));
 		return scheduler_schedule_next_event (s);
 	}
@@ -263,7 +294,7 @@ scheduler_main_thread (void *data)
 		while (current < target) {
 			current = scheduler_schedule_next_event (s);
 		}
-		usleep ((current-target)*900000);
+		usleep ((current-target+s->preschedule)*900000);
 		target = current;
 	}
 }

@@ -9,8 +9,8 @@ typedef struct _Database Database;
 
 struct _Database
 {
-  MYSQL *conn;
-  pthread_mutex_t mutex;
+	MYSQL *conn;
+	pthread_mutex_t mutex;
 };
 
 Database *
@@ -34,18 +34,18 @@ db_config (Database *db, xmlNodePtr cur);
 typedef struct _Recording Recording;
 
 struct _Recording {
-  int id;
-  char *name;
-  char *path;
-  char *artist;
-  char *category;
-  char *date;
-  int rate;
-  int channels;
-  double length;
-  double audio_in;
-  double audio_out;
-  Database *db;
+	int id;
+	char *name;
+	char *path;
+	char *artist;
+	char *category;
+	char *date;
+	int rate;
+	int channels;
+	double length;
+	double audio_in;
+	double audio_out;
+	Database *db;
 };
 
 
@@ -86,17 +86,26 @@ recording_list_free (list *l);
 
 
 
+typedef enum {
+	TEMPLATE_TYPE_STANDARD,
+	TEMPLATE_TYPE_FALLBACK
+} playlist_template_type;
+
+
 typedef struct _PlaylistTemplate PlaylistTemplate;
 struct _PlaylistTemplate {
-  int id;
-  char *name;
-  double start_time;
-  double end_time;
-  int repeat_events;
-  double artist_exclude;
-  double recording_exclude;
-  list *events;
-  Database *db;
+	int id;
+	playlist_template_type type;
+	char *name;
+	double start_time;
+	double end_time;
+	int repeat_events;
+	double artist_exclude;
+	double recording_exclude;
+	list *events;
+	int fallback_id;
+	double end_prefade;
+	Database *db;
 };
 
 
@@ -109,6 +118,8 @@ void
 playlist_template_destroy (PlaylistTemplate *t);
 PlaylistTemplate *
 get_playlist_template (Database *db, double cur_time);
+PlaylistTemplate *
+get_playlist_template_by_id (Database *db, int id);
 
 
 
@@ -123,28 +134,28 @@ get_playlist_template (Database *db, double cur_time);
 typedef struct _PlaylistEvent PlaylistEvent;
 
 typedef enum {
-  EVENT_TYPE_SIMPLE_RANDOM,
-  EVENT_TYPE_RANDOM,
-  EVENT_TYPE_PATH,
-  EVENT_TYPE_FADE
+	EVENT_TYPE_SIMPLE_RANDOM,
+	EVENT_TYPE_RANDOM,
+	EVENT_TYPE_PATH,
+	EVENT_TYPE_FADE
 } playlist_event_type;
 
 struct _PlaylistEvent {
-  int template_id;
-  int number;
-  playlist_event_type type;
-  char *channel_name;
-  double level;
-  int anchor_event_number;
-  int anchor_position;
-  double offset;
-  char *detail1;
-  char *detail2;
-  char *detail3;
-  char *detail4;
-  char *detail5;
-  double start_time;
-  double end_time;
+	int template_id;
+	int number;
+	playlist_event_type type;
+	char *channel_name;
+	double level;
+	int anchor_event_number;
+	int anchor_position;
+	double offset;
+	char *detail1;
+	char *detail2;
+	char *detail3;
+	char *detail4;
+	char *detail5;
+	double start_time;
+	double end_time;
 };
 
 
@@ -193,11 +204,11 @@ create_user_table (Database *db);
 
 typedef struct _RecordingPicker RecordingPicker;
 struct _RecordingPicker {
-  char *artist_exclude_table_name;
-  char *recording_exclude_table_name;
-  double artist_exclude;
-  double recording_exclude;
-  Database *db;
+	char *artist_exclude_table_name;
+	char *recording_exclude_table_name;
+	double artist_exclude;
+	double recording_exclude;
+	Database *db;
 };
 
 

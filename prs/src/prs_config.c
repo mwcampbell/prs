@@ -120,6 +120,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 			mixer_add_output (m, o);
 		}
 		cur = cur->next;
+		args = NULL;
 	}
 }
 
