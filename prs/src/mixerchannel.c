@@ -102,7 +102,7 @@ mixer_channel_new (const int rate,
 	ch->enabled = 0;
 	ch->data_end_reached = 0;
 	ch->level = 1.0;
-	ch->fade = 0.0;
+	ch->fade = 1.0;
 	ch->fade_destination = 1.0;
 	ch->key = -1;
 	
@@ -199,22 +199,20 @@ mixer_channel_process_levels (MixerChannel *ch)
 	if (ch->this_chunk_size >= ch->chunk_size)
 		ch->this_chunk_size = ch->chunk_size;
 	if (ch->level != 1.0 || ch->fade != 1.0) {
-		if (ch->level != 1.0 || ch->fade != 1.0) {
-			tmp = ch->output;
-			j = ch->this_chunk_size;
-			while (j--) {
+		tmp = ch->output;
+		j = ch->this_chunk_size;
+		while (j--) {
+			*tmp++ *= ch->level;
+			if (ch->channels == 2) {
 				*tmp++ *= ch->level;
-				if (ch->channels == 2) {
-					*tmp++ *= ch->level;
-				}
-				if ((ch->fade < 1.0 && ch->level <= ch->fade_destination) ||
-				    (ch->fade > 1.0 && ch->level >= ch->fade_destination)) {
-					ch->level = ch->fade_destination;
-					ch->fade = 1.0;
-				}
-				if (ch->fade != 1.0)
-					ch->level *= ch->fade;
 			}
+			if ((ch->fade < 1.0 && ch->level <= ch->fade_destination) ||
+			    (ch->fade > 1.0 && ch->level >= ch->fade_destination)) {
+				ch->level = ch->fade_destination;
+				ch->fade = 1.0;
+			}
+			if (ch->fade != 1.0)
+				ch->level *= ch->fade;
 		}
 	}
 }

@@ -1,3 +1,8 @@
+2003-01-22  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixerchannel.c (mixer_channel_process_levels): Fixed weirdness.
+	(mixer_channel_new): Set fade to correct value (1.0 not 0.0).
+
 2003-01-21  Matt Campbell  <mattcampbell@pobox.com>
 
 	* src/mp3fileinfo.c: Finally compatible with both id3lib 3.7 and

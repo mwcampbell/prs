@@ -137,7 +137,7 @@ prs_start (PRS *prs)
 	assert (prs != NULL);
 	debug_printf (DEBUG_FLAGS_GENERAL, "prs_start_called\n");
 	mixer_start (prs->mixer);
-	scheduler_start (prs->scheduler, 10);
+//	scheduler_start (prs->scheduler, 10);
 	mixer_automation_start (prs->automation);
 	pthread_create (&(prs->speex_connection_thread), NULL, speex_connection_listener, prs);
 }
