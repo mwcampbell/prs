@@ -170,7 +170,8 @@ shout_mixer_output_post_output (MixerOutput *o)
 static void *
 shout_thread (void *data)
 {
-  shout_info *i = (shout_info *) data;
+  MixerOutput *o = (MixerOutput *) data;
+  shout_info *i = (shout_info *) o->data;
   char buffer[1024];
   int bytes_read;
 
@@ -178,6 +179,7 @@ shout_thread (void *data)
   if (!shout_connect (i->shout_connection))
     {
       fprintf (stderr, "Couldn'[t connect to icecast server.\n");
+      o->enabled = 0;
       return;
     }
   fprintf (stderr, "Connected OK.\n");
@@ -233,7 +235,7 @@ shout_mixer_output_new (const char *name,
 
   start_encoder (o);
   i->stream_reset = 0;
-  pthread_create (&i->shout_thread_id, NULL, shout_thread, (void *) i);
+  pthread_create (&i->shout_thread_id, NULL, shout_thread, (void *) o);
   return o;
 }
 

@@ -1,5 +1,9 @@
 2002-08-01  Marc Mulcahy <marc@plbb.net>
 
+	* src/shoutmixeroutput.c: Disable output if connection to server fails.
+
+2002-08-01  Marc Mulcahy <marc@plbb.net>
+
 	* src/mixerautomation.c src/mixerautomation.h: Started work on new
 	automation system.
 
