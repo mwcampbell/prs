@@ -27,7 +27,8 @@ stream_config (mixer *m, xmlNodePtr cur)
 	int stereo;
 	int rate, channels;
 	list *args = NULL;
-
+	xmlChar *archive_file_name;
+	
 	cur = cur->xmlChildrenNode;
 
 	while (cur != NULL) {
@@ -101,6 +102,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 				channels = atoi (tmp);
 			else
 				channels = 2;
+			archive_file_name = xmlGetProp (cur, "archive_file_name");
 			name = xmlGetProp (cur, "name");
 
 			/* Process encoder args */
@@ -116,7 +118,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 				child = child->next;
 			}
 			o = shout_mixer_output_new (name, rate, channels,
-						    m->latency, s, stereo, args);
+						    m->latency, s, stereo, args, archive_file_name);
 			mixer_add_output (m, o);
 		}
 		cur = cur->next;

@@ -13,5 +13,6 @@ shout_mixer_output_new (const char *name,
 			const int latency,
 			shout_t *s,
 			const int stereo,
-			list *args_list);
+			list *args_list,
+			const char *archive_file_name);
 #endif

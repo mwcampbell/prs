@@ -1,5 +1,11 @@
 2003-01-09  Marc Mulcahy  <marc@plbb.net>
 
+	* src/shoutmixeroutput.ch (shout_mixer_output_new): Added
+	archive_file_name parameter.
+
+	* src/prs_config.c (stream_config): Added support for the
+	archive_file_name property of the stream tag.
+
 	* src/mixerautomation.c (mixer_automation_next_event): Changes to
 	support the removal of the ADD_CHANNEL event type.
 

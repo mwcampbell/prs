@@ -25,6 +25,7 @@ typedef struct {
 	int stream_reset;
 	int stereo;
 	pthread_t shout_thread_id;
+	int archive_file_fd;
 } shout_info;
 
 
@@ -152,6 +153,8 @@ shout_mixer_output_free_data (MixerOutput *o)
 		shout_free (i->shout);
 	if (i->args_list)
 		string_list_free (i->args_list);
+	if (i->archive_file_fd > 0)
+		close (i->archive_file_fd);
 	free (o->data);
 }
 
@@ -182,6 +185,8 @@ shout_thread (void *data)
 			bytes_left -= bytes_read;
 		}
 		shout_send (i->shout, buffer, 1024-bytes_left);
+		if (i->archive_file_fd > 0)
+			write (i->archive_file_fd, buffer, 1024-bytes_left);
 		if (bytes_left > 0)
 			i->stream_reset = 1;
 	}
@@ -215,7 +220,8 @@ shout_mixer_output_new (const char *name,
 			const int latency,
 			shout_t *s,
 			const int stereo,
-			list *encoder_args)
+			list *encoder_args,
+			const char *archive_file_name)
 {
 	MixerOutput *o;
 	shout_info *i;
@@ -231,6 +237,14 @@ shout_mixer_output_new (const char *name,
 	i->stereo = stereo;
 	i->args_list = encoder_args;
 	i->stream_reset = 0;
+
+	/* Open the archive file if one is specified */
+
+	if (archive_file_name) {
+		i->archive_file_fd = open (archive_file_name, O_WRONLY | O_CREAT | O_TRUNC);
+	}
+	else
+		i->archive_file_fd = -1;
 
 	o = malloc (sizeof (MixerOutput));
 	if (!o) {
