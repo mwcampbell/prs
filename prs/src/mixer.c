@@ -193,7 +193,10 @@ mixer_main_thread (void *data)
 			usleep (wait_time);
 		start = end;
 		mixer_lock (m);
-		m->cur_time += (slice_spent/1000000);
+		if (slice_spent < slice_length)
+			m->cur_time += time_slice;
+		else
+			m->cur_time += (slice_spent/1000000);
 		mixer_unlock (m);
 	}
 	mixer_lock (m);
