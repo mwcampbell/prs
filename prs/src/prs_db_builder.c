@@ -62,15 +62,18 @@ int main (void)
 	{
 	  i = get_vorbis_file_info (path, 0);
 	  r = find_recording_by_path (path);
-	  if (i->length-r->length <= .001)
+	  if (!r || i->length-r->length <= .001)
 	    {
 	      file_info_free (i);
 	      recording_free (r);
 	      continue;
 	    }
 	  file_info_free (i);
-	  delete_recording (r);
-	  recording_free (r);
+	  if (r)
+	    {
+	      delete_recording (r);
+	      recording_free (r);
+	    }
 	  i = get_vorbis_file_info (path, 1000);
 	  r = (Recording *) malloc (sizeof(Recording));
 	}

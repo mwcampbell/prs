@@ -1,4 +1,9 @@
-2002-07-08  Marc Mulcahy <marc@plbb.net>
+2002-07-09  Marc Mulcahy <marc.mulcahy@sun.com>
+
+	* src/db.c src/prs_db_builder.c: Fixed stupidity when handling
+	recordings not being in the database on database rebuild.
+
+2002-07-09  Marc Mulcahy <marc@plbb.net>
 
 	* src/db.c src/db.h: Added functions to check for the existence of the
 	various database tables.

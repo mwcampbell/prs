@@ -629,7 +629,10 @@ find_recording_by_path (const char *path)
   recording_path = process_for_sql (path);
   sprintf (buffer, "%s and recording.recording_path = '%s';", select_query, recording_path);
   res = PQexec (connection, buffer);
-  r = get_recording_from_result (res, 0);
+  if (PQntuples (res) <= 0)
+    r = NULL;
+  else
+    r = get_recording_from_result (res, 0);
   PQclear (res);
   return r;
 }
