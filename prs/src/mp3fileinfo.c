@@ -129,12 +129,9 @@ get_mp3_audio_out (FileInfo *info, int frames, int threshhold)
 	short *ptr;
 	double audio_out;
 	double seek_time;
-	double fps;
-	int skip_frames = 0;
 
 	assert (info != NULL);
 	assert (frames >= 0);
-	fps = (double) frames / info->length;
 	buffer_size = info->rate * info->channels * 20;
 	buffer = (short *) malloc (buffer_size * sizeof (short));
 	assert (buffer != NULL);
@@ -142,8 +139,7 @@ get_mp3_audio_out (FileInfo *info, int frames, int threshhold)
 	seek_time = info->length - 10;
 	if (seek_time < 0)
 		seek_time = 0;
-	skip_frames = (int) (seek_time * fps);
-	d = mp3_decoder_new (info->path, skip_frames);
+	d = mp3_decoder_new (info->path, seek_time);
 	assert (d != NULL);
 
 	samples_read = mp3_decoder_get_data (d, buffer, buffer_size);
