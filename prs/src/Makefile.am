@@ -18,5 +18,6 @@ prs_server_SOURCES = \
 	mixerchannel.c \
 	vorbismixerchannel.c \
 	ossmixerchannel.c \
+	mixerautomation.c \
 	prs_server.c
 
