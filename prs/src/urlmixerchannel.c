@@ -296,6 +296,7 @@ mp3_process_first_block (channel_info *i,
 {
 	unsigned long ulong_header = 0l;
 	mp3_header_t mh;
+	static mp3_header_t last_mh;
 	unsigned char *buf, *end_buf;
 	unsigned char *rv = NULL;
 
@@ -309,12 +310,15 @@ mp3_process_first_block (channel_info *i,
 					(*(buf+2) << 8) |
 					(*(buf+3)));
 			mp3_header_parse (ulong_header, &mh);
-			if (mh.syncword == 0X0FFF &&
-			    mh.layer > 0 &&
-			    mh.bitrate > 0 && mh.samplerate > 0) {
-				rv = buf;
-				break;
+			if (mh.syncword == 4095 && mh.syncword == last_mh.syncword &&
+			    mh.samplerate > 0 && mh.samplerate == last_mh.samplerate &&
+			    mh.bitrate > 0 && mh.bitrate == last_mh.bitrate) {
+			  rv = buf;
+			  break;
 			}
+		last_mh.syncword = mh.syncword;
+		last_mh.bitrate = mh.bitrate;
+		last_mh.samplerate = mh.samplerate;
 		}
 		buf++;
 	}
