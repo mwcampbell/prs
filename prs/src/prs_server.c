@@ -59,13 +59,8 @@ load_playlist (MixerAutomation *a, Database *db, FILE *in, FILE *out)
 		r = find_recording_by_path (db, path);
 		if (!r) {
 			FileInfo *i;
-			char *ext;
 			
-			ext = path + strlen(path)-4;
-			if (!strcmp (ext, ".ogg"))
-				i = get_vorbis_file_info (path, 2000, 3000);
-			if (!strcmp (ext, ".mp3"))
-				i = get_mp3_file_info (path, 2000, 3000);
+			i = file_info_new (path, 1000, 2000);
 			if (!i) {
 				fclose (fp);
 				fprintf (out, "File not found in playlist.\n");
@@ -171,7 +166,9 @@ prs_session (PRS *prs, FILE *in, FILE *out)
       if (!strcmp (input, "date"))
 	{
 	  time_t t = (time_t) mixer_get_time (prs->mixer);
-	  fprintf (out, "%s", ctime (&t));
+	  fprintf (out, "Mixer time: %s", ctime (&t));
+	  t = time (NULL);
+	  fprintf (out, "system time: %s", ctime (&t));
 	}      
       if (!strcmp (input, "load"))
 	load_playlist (prs->automation, prs->db, in, out);

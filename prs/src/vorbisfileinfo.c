@@ -157,7 +157,7 @@ process_vorbis_comments (OggVorbis_File *vf,
 
 
 FileInfo *
-get_vorbis_file_info (char *path,
+vorbis_file_info_new (char *path,
 		      unsigned short in_threshhold,
 		      unsigned short out_threshhold)
 {

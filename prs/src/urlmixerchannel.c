@@ -371,7 +371,7 @@ url_mixer_channel_new (const char *name,
 
 		if (!(i->transfer_url) && (!i->connected || i->rate == -1 ||
 					   i->channels == -1)) {
-			pthread_join (&(i->transfer_thread), NULL);
+			pthread_join (i->transfer_thread, NULL);
 			channel_info_destroy (i);
 			fprintf (stderr, "Error creating channel, %d %d %d.\n",
 				 i->connected, i->rate, i->channels);

@@ -5,6 +5,7 @@ prs_db_builder_SOURCES = \
 	fileinfo.c \
 	mp3fileinfo.c \
 	vorbisfileinfo.c \
+	wavefileinfo.c \
 	mp3decoder.c \
 	mp3header.c \
 	list.c	\

@@ -83,8 +83,7 @@ scheduler_destroy (scheduler *s)
 	s->running = 0;
 	thread = s->scheduler_thread;
 	pthread_mutex_unlock (&(s->mut));
-	pthread_kill (thread, SIGKILL);
-	list_free (s->template_stack);
+		list_free (s->template_stack);
 	free (s);
 }
 
@@ -225,7 +224,8 @@ scheduler_schedule_next_event (scheduler *s)
 	}
 	if (ae)
 	{
-		mixer_automation_add_event (s->a, ae);
+		fprintf (stderr, "Scheduling event at %lf\n", mixer_get_time (s->a->m));
+			 mixer_automation_add_event (s->a, ae);
 		s->prev_event_start_time = e->start_time;
 		s->prev_event_end_time = e->end_time;
 		if (e->end_time > s->last_event_end_time)

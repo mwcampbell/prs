@@ -1,3 +1,37 @@
+2002-12-01  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixerautomation.c (mixer_automation_destroy): Don't kill the
+	automation thread-- it breaks things.
+
+	* src/scheduler.c (scheduler_destroy): Don't kill the scheduler
+	thread-- it breaks things.
+
+	* src/fileinfo.c .h (file_info_new): Re-factered FileInfo
+	construction-- it is now done automatically based on file extension.
+	
+	* src/mp3fileinfo.c (mp3_file_info_new): Changed name to match
+	constructor semantics.
+
+	* src/vorbisfileinfo.c (vorbis_file_info_new): Changed name to match
+	constructor semantics.
+
+	* src/prs_config.c (stream_config): Added suppport for encoder
+	arguments.
+	(mixer_output_config): Added support for wave file outputs.
+
+	* src/wave.h: Definitions of wave header structures.
+
+	* src/filemixeroutput.c: Now writes proper wave files rather than
+	headerless raw PCM.
+
+	* src/wavefileinfo.c src/Makefile.am: Added Wave FileInfo retrieval.
+	
+	* src/prs_db_builder.c (main): Changed to use new FileInfo stuff.
+
+	* src/mixer.c (mixer_main_thread): Ensure mixer is slaved to near
+	realtime whether a soundcard is being used or not.
+	(mixer_destroy): Changed order of element destruction.
+
 2002-12-01  Matt Campbell  <mattcampbell@pobox.com>
 
 	* src/mp3fileinfo.c: Fixed capitalization error that prevented PRS

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <time.h>
 #include <string.h>
 #include <pthread.h>
@@ -35,12 +36,19 @@ mixer_main_thread (void *data)
 	mixer *m = (mixer *) data;
 	list *tmp, *tmp2;
 	double time_slice;
+	long slice_length, slice_spent;
+	long wait_time = 0l;
+	struct timeval start, end;
+	double sum = 0.0;
+	unsigned long count = 0;
 	
 	if (!m)
 		return NULL;
 
 	time_slice = (double) m->latency/88200;
-
+	slice_length = time_slice*1000000;
+	gettimeofday (&start, NULL);
+	
 	while (1) {
 		mixer_lock (m);
 		if (!m->running) {
@@ -49,13 +57,9 @@ mixer_main_thread (void *data)
 		}
 		if (m->notify_time > 0 && m->cur_time >= m->notify_time) {
 			pthread_cond_signal (&(m->notify_condition));
+			pthread_cond_wait (&(m->notify_condition),
+					   &(m->mutex));
 			m->notify_time = -1.0;
-		}
-		if (!m->outputs) {
-			m->cur_time += time_slice;
-			mixer_unlock (m);
-			usleep (time_slice*1000000);
-			continue;
 		}
 		for (tmp = m->busses; tmp; tmp = tmp->next) {
 			MixerBus *b = (MixerBus *) tmp->data;
@@ -111,6 +115,13 @@ mixer_main_thread (void *data)
 		}
 		m->cur_time += time_slice;
 		mixer_unlock (m);
+		gettimeofday (&end, NULL);
+		slice_spent = (end.tv_sec-start.tv_sec)*1000000+
+			(end.tv_usec-start.tv_usec);
+		wait_time += slice_length-slice_spent;
+		if (wait_time > 0)
+			usleep (wait_time);
+		start = end;
 	}
 	mixer_lock (m);
 	m->thread = 0;
@@ -221,22 +232,10 @@ mixer_destroy (mixer *m)
 		return;
 
 	/* Stop the mixer to destroy it */
-
+	
 	mixer_stop (m);
 
 	mixer_lock (m);
-
-	/* Free channel list */
-
-	for (tmp = m->channels; tmp; tmp = tmp->next)
-		mixer_channel_destroy ((MixerChannel *) tmp->data);
-	list_free (m->channels);
-
-	/* Free Busses list */
-
-	for (tmp = m->busses; tmp; tmp = tmp->next)
-		mixer_bus_destroy ((MixerBus *) tmp->data);
-	list_free (m->busses);
 
 	/* Free output list */
 
@@ -244,8 +243,19 @@ mixer_destroy (mixer *m)
 		mixer_output_destroy ((MixerOutput *) tmp->data);
 	list_free (m->outputs);
 
+	/* Free Busses list */
+
+	for (tmp = m->busses; tmp; tmp = tmp->next)
+		mixer_bus_destroy ((MixerBus *) tmp->data);
+	list_free (m->busses);
+
+	/* Free channel list */
+
+	for (tmp = m->channels; tmp; tmp = tmp->next)
+		mixer_channel_destroy ((MixerChannel *) tmp->data);
+	list_free (m->channels);
+
 	mixer_unlock (m);
-	free (m);
 }
 
 
@@ -707,12 +717,12 @@ mixer_wait_for_notification (mixer *m,
 		return;
 	mixer_lock (m);
 	m->notify_time = notify_time;
-	if (m->notify_time > 0 && m->notify_time < m->cur_time)
-	{
+	if (m->notify_time > 0 && m->notify_time < m->cur_time) {
 		m->notify_time = -1.0;
 		mixer_unlock (m);
 		return;
 	}
 	pthread_cond_wait (&(m->notify_condition), &(m->mutex));
+	pthread_cond_signal (&(m->notify_condition));
 	mixer_unlock (m);
 }

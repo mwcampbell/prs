@@ -10,7 +10,7 @@
 #include <sys/soundcard.h>
 #include <shout/shout.h>
 #include "shoutmixeroutput.h"
-
+#include "list.h"
 
 
 typedef struct {
@@ -18,6 +18,7 @@ typedef struct {
 	pid_t encoder_pid;
 	int encoder_output_fd;
 	int encoder_input_fd;
+	list *args_list;
 	int stream_reset;
 	int stereo;
 	pthread_t shout_thread_id;
@@ -31,7 +32,7 @@ start_encoder (MixerOutput *o)
 	shout_info *i;
 	int encoder_output[2];
 	int encoder_input[2];
-
+	
 	if (!o)
 		return;
 	if (!o->data)
@@ -46,20 +47,46 @@ start_encoder (MixerOutput *o)
 	/* Fork the encoder process */
 
 	i->encoder_pid = fork ();
-	if (!i->encoder_pid)
-	{
+	if (!i->encoder_pid) {
+		char *prog_name;
+		char **args_array;
 		char sample_rate_arg[128];
 		char channels_arg[128];
 		char bitrate_arg[128];
       
-		if (shout_get_format (i->shout) == SHOUT_FORMAT_MP3)
+		if (shout_get_format (i->shout) == SHOUT_FORMAT_MP3) {
+			prog_name = "lame";
 			sprintf (sample_rate_arg, "-s%lf", (double) o->rate/1000);
+			i->args_list = string_list_prepend (i->args_list,
+							    "-r");
+			i->args_list = string_list_prepend (i->args_list,
+							    sample_rate_arg);
+			i->args_list = string_list_prepend (i->args_list,
+							    "-x");
+			if (!i->stereo) {
+				i->args_list = string_list_prepend (i->args_list,
+								    "-mm");
+				if (o->channels == 2)
+					i->args_list = string_list_prepend (i->args_list,
+									    "-a");
+			}
+		}
 		else {
+			prog_name = "oggenc";
 			sprintf (sample_rate_arg, "-R%d", o->rate);
 			sprintf (channels_arg, "-C%d", o->channels);
+			i->args_list = string_list_prepend (i->args_list,
+							    sample_rate_arg);
+			i->args_list = string_list_prepend (i->args_list,
+					     channels_arg);
 		}
 		
 		sprintf (bitrate_arg, "-b%d", shout_get_bitrate (i->shout));
+		i->args_list = string_list_prepend (i->args_list, bitrate_arg);
+		i->args_list = string_list_prepend (i->args_list,
+						    "-");
+		i->args_list = string_list_prepend (i->args_list,
+						    "-");
 		close (0);
 		dup (encoder_input[0]);
 		close (encoder_input[1]);
@@ -69,57 +96,13 @@ start_encoder (MixerOutput *o)
 		dup (encoder_output[1]);
 		close (encoder_output[0]);
 
-		if (shout_get_format (i->shout) == SHOUT_FORMAT_MP3)
-
-                        /* Separate calls for stereo/mono encoding */
-
-			if (i->stereo)
-				execlp ("lame",
-					"lame",
-					"-r",
-					sample_rate_arg,
-					bitrate_arg,
-					"-x",
-					"-q0",
-					"-",
-					"-",
-					NULL);
-			else
-				if (o->channels == 2)
-					execlp ("lame",
-					"lame",
-					"-r",
-					sample_rate_arg,
-					bitrate_arg,
-					"-x",
-					"-a",
-					"-mm",
-					"-",
-					"-",
-					NULL);
-				else
-			execlp ("lame",
-					"lame",
-					"-r",
-					sample_rate_arg,
-					bitrate_arg,
-					"-x",
-					"-mm",
-					"-",
-					"-",
-					NULL);
-		else
-			execlp ("oggenc",
-				"oggenc",
-				"-r",
-				sample_rate_arg,
-				channels_arg,
-				bitrate_arg,
-				"-",
-				NULL);
+		i->args_list = list_reverse (i->args_list);
+		i->args_list = string_list_prepend (i->args_list,
+						    prog_name);
+		args_array = string_list_to_array (i->args_list);
+		execvp (prog_name, args_array);
 	}
-	else
-	{
+	else {
 		close (encoder_input[0]);
 		i->encoder_input_fd = encoder_input[1];
 		close (encoder_output[1]);
@@ -161,6 +144,8 @@ shout_mixer_output_free_data (MixerOutput *o)
 	if (i->shout)
 		shout_free (i->shout);
 	stop_encoder (o);
+	if (i->args_list)
+		string_list_free (i->args_list);
 	free (o->data);
 }
 
@@ -174,11 +159,9 @@ shout_thread (void *data)
 	char buffer[1024];
 	int bytes_read;
   
-	while (!i->stream_reset)
-	{
+	while (!i->stream_reset) {
 		bytes_read = read (i->encoder_output_fd, buffer, 1024);
-		if (bytes_read > 0)
-		{
+		if (bytes_read > 0) {
 			shout_send (i->shout, buffer, bytes_read);
 			shout_sync (i->shout);
 		}
@@ -206,11 +189,12 @@ shout_mixer_output_post_data (MixerOutput *o)
 
 MixerOutput *
 shout_mixer_output_new (const char *name,
-			int rate,
-			int channels,
-			int latency,
+			const int rate,
+			const int channels,
+			const int latency,
 			shout_t *s,
-			int stereo)
+			const int stereo,
+			list *encoder_args)
 {
 	MixerOutput *o;
 	shout_info *i;
@@ -224,7 +208,9 @@ shout_mixer_output_new (const char *name,
 
 	i->shout = s;
 	i->stereo = stereo;
+	i->args_list = encoder_args;
 	i->stream_reset = 0;
+
 	o = malloc (sizeof (MixerOutput));
 	if (!o) {
 		free (i);

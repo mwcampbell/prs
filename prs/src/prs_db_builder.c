@@ -6,8 +6,6 @@
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include "fileinfo.h"
-#include "mp3fileinfo.h"
-#include "vorbisfileinfo.h"
 #include "db.h"
 
 
@@ -56,7 +54,6 @@ main (int argc, char *argv[])
   char path[1024], find_cmd[1024], opt;
   char *category = NULL, *config_file = "prs.conf";
   FILE *fp;
-  FileInfoConstructor get_file_info;
   FileInfo *i;
   Database *db = db_new ();
   int recording_table_created, user_table_created;
@@ -115,23 +112,14 @@ main (int argc, char *argv[])
   while (!feof (fp))
     {
       Recording *r = NULL;
-      char *ext = NULL;
 
       fgets (path, 1024, fp);
       if (feof (fp))
 	break;
       path[strlen (path) - 1] = 0;
-      ext = path + strlen (path) - 4;
-      if (strcmp (ext, ".mp3") == 0)
-	get_file_info = get_mp3_file_info;
-      else if (strcmp (ext, ".ogg") == 0)
-	get_file_info = get_vorbis_file_info;
-      else
-	continue;
-
       if (!recording_table_created)
 	{
-	  i = get_file_info (path, 0, 0);
+	  i = file_info_new (path, 0, 0);
 	  r = find_recording_by_path (db, path);
 	  if (r && abs (i->length-r->length) <= .001 &&
 	      !strcmp (r->category, category == NULL ? i->genre : category) &&
@@ -147,14 +135,16 @@ main (int argc, char *argv[])
 	      delete_recording (r);
 	      recording_free (r);
 	    }
-	  i = get_file_info (path, 1000, 2000);
+	  i = file_info_new (path, 1000, 2000);
 	  r = (Recording *) malloc (sizeof(Recording));
 	}
       else
 	{
-	  i = get_file_info (path, 1000, 2000);
+	  i = file_info_new (path, 1000, 2000);
 	  r = (Recording *) malloc (sizeof(Recording));
 	}
+      if (!i)
+	      continue;
       if (i->name)
 	r->name = strdup (i->name);
       else

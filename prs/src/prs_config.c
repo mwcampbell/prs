@@ -11,6 +11,7 @@
 #include "ossmixeroutput.h"
 #include "ossmixerchannel.h"
 #include "shoutmixeroutput.h"
+#include "filemixeroutput.h"
 
 
 
@@ -20,10 +21,13 @@ stream_config (mixer *m, xmlNodePtr cur)
 {
 	MixerOutput *o;
 	shout_t *s;
-	xmlChar  *tmp;
+	xmlNodePtr child;
+	xmlChar *tmp;
+	xmlChar *name;
 	int stereo;
 	int rate, channels;
-	
+	list *args = NULL;
+
 	cur = cur->xmlChildrenNode;
 
 	while (cur != NULL) {
@@ -97,8 +101,22 @@ stream_config (mixer *m, xmlNodePtr cur)
 				channels = atoi (tmp);
 			else
 				channels = 2;
-			tmp = xmlGetProp (cur, "name");
-			o = shout_mixer_output_new (tmp, rate, channels, m->latency, s, stereo);
+			name = xmlGetProp (cur, "name");
+
+			/* Process encoder args */
+
+			child = cur->xmlChildrenNode;
+			while (child) {
+				if (!xmlStrcmp (child->name, "encoder_arg")) {
+					child = child->xmlChildrenNode;
+					fprintf (stderr, "Adding encoder arg %s.\n", child->content);
+					args = string_list_prepend (args, child->content);
+					child = child->parent;
+				}
+				child = child->next;
+			}
+			o = shout_mixer_output_new (name, rate, channels,
+						    m->latency, s, stereo, args);
 			mixer_add_output (m, o);
 		}
 		cur = cur->next;
@@ -191,6 +209,8 @@ mixer_output_config (mixer *m, xmlNodePtr cur)
 	channels = atoi (xmlGetProp (cur, "channels"));
 	if (!xmlStrcmp (type, "oss"))
 		o = oss_mixer_output_new (name, rate, channels, m->latency);
+	else if (!xmlStrcmp (type, "wave"))
+		o = file_mixer_output_new (name, rate, channels, m->latency);
 	if (o) {
 		mixer_add_output (m, o);   
 	}

@@ -29,7 +29,6 @@ prs_new (void)
       return NULL;
     }
 
-  mixer_sync_time (prs->mixer);
   prs->db = db_new ();
 
   if (prs->db == NULL)
@@ -38,6 +37,7 @@ prs_new (void)
       return NULL;
     }
 
+  mixer_sync_time (prs->mixer);
   prs->automation = mixer_automation_new (prs->mixer, prs->db);
 
   if (prs->automation == NULL)
@@ -47,7 +47,7 @@ prs_new (void)
     }
 
   prs->scheduler = scheduler_new (prs->automation, prs->db,
-				  mixer_get_time (prs->mixer)+10);
+				  mixer_get_time (prs->mixer));
 
   if (prs->scheduler == NULL)
     {
@@ -66,7 +66,7 @@ prs_start (PRS *prs)
   mixer_start (prs->mixer);
   scheduler_start (prs->scheduler, 10);
 
-  if (prs->telnet_interface)
+  // if (prs->telnet_interface)
     mixer_automation_start (prs->automation);
 }
 
@@ -77,7 +77,7 @@ prs_destroy (PRS *prs)
 {
   if (prs == NULL)
     return;
-  if (prs->scheduler != NULL)
+    if (prs->scheduler != NULL)
     scheduler_destroy (prs->scheduler);
   if (prs->automation != NULL)
     mixer_automation_destroy (prs->automation);

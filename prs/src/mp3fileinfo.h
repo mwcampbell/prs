@@ -6,7 +6,7 @@
 
 
 FileInfo *
-get_mp3_file_info (char *path, unsigned short in_threshhold,
+mp3_file_info_new (char *path, unsigned short in_threshhold,
 		   unsigned short out_threshhold);
   
 #endif
