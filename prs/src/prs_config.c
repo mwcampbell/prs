@@ -20,6 +20,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 	shout_t *s;
 	xmlChar  *tmp;
 	int stereo;
+	int rate, channels;
 	
 	cur = cur->xmlChildrenNode;
 
@@ -85,8 +86,18 @@ stream_config (mixer *m, xmlNodePtr cur)
 				stereo = atoi (tmp);
 			else
 				stereo = 1;
+			tmp = xmlGetProp (cur, "rate");
+			if (tmp)
+				rate = atoi (tmp);
+			else
+				rate = 44100;
+			tmp = xmlGetProp (cur, "channels");
+			if (tmp)
+				channels = atoi (tmp);
+			else
+				channels = 2;
 			tmp = xmlGetProp (cur, "name");
-			o = shout_mixer_output_new (tmp, 44100, 2, m->latency, s, stereo);
+			o = shout_mixer_output_new (tmp, rate, channels, m->latency, s, stereo);
 			mixer_add_output (m, o);
 		}
 		cur = cur->next;

@@ -92,14 +92,14 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 	sptr = p->input_buffer;
 	if (p->ch->channels > p->bus->channels)
 		while (i) {
-			*sptr++ = (SAMPLE)*input/32767+*(input+1)/32767/2;
+			*sptr++ = (SAMPLE)(*input+1)/32768+*((input+1)+1)/32768/2;
 			input += 2;
 			i-= 2;
 			j++;
 		}
 	else
 		while (i) {
-			*sptr++ = (SAMPLE)*input++/32767;
+			*sptr++ = (SAMPLE)(*input+++1)/32768;
 			i--;
 			j++;
 		}
@@ -114,14 +114,14 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 	tmp = p->tmp_buffer;
 	if (p->bus->channels > p->ch->channels)
 		while (i) {
-			*tmp = *(tmp+1) = 32767*(*sptr++);
+			*tmp = *(tmp+1) = 32768*(*sptr++);
 			tmp += 2;
 			i--;
 			j+= 2;
 		}
 	else
 		while (i) {
-			*tmp++ = 32767*(*sptr++);
+			*tmp++ = 32768*(*sptr++);
 			j++;
 			i--;
 		}

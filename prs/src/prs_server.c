@@ -114,7 +114,10 @@ int main (void)
   prs_config (m);
 
 
-  a = mixer_automation_new (m);
+  ch = vorbis_mixer_channel_new ("test", "test.ogg", m->latency);
+  mixer_add_channel (m, ch);
+  mixer_patch_channel_all (m, "test");
+			   a = mixer_automation_new (m);
   mixer_start (m);
 
   s = scheduler_new (a, mixer_get_time (m)+10);
