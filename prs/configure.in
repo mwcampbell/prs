@@ -17,7 +17,6 @@ dnl --------------------------------------------------
 dnl Check for libraries
 dnl --------------------------------------------------
 
-LIBS="-lreadline -lhistory -ltermcap"
 AC_CHECK_LIB(m, cos, LIBS="$LIBS -lm")
 AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
 AC_CHECK_LIB(vorbis, vorbis_block_init, LIBS="$LIBS -lvorbis")

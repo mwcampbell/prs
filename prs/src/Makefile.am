@@ -44,6 +44,5 @@ prs_server_SOURCES = \
 	logger.c \
 	scheduler.c \
 	debug.c \
-	completion.c \
 	prs_server.c
 

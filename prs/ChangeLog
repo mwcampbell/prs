@@ -1,3 +1,12 @@
+2003-07-17  Marc Mulcahy  <marc@plbb.net>
+
+	* configure.in: Remove readline dependency.
+	
+	* src/prs_server.c: Removed readline dependency.
+
+	* removed src/completion.c src/completion.h: REmoved readline
+	dependency.
+
 2003-07-12 Marc Mulcahy  <marc@plbb.net>
 
 	* src/mp3decoder.c src/mp3decoder.h: 

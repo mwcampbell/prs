@@ -37,8 +37,6 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
-#include <readline/readline.h>
-#include <readline/history.h>
 #include "debug.h"
 #include "db.h"
 #include "prs.h"
@@ -53,21 +51,10 @@
 #include "vorbismixerchannel.h"
 #include "ossmixerchannel.h"
 #include "scheduler.h"
-#include "completion.h"
 
 
 
 static double delta = 0.0;
-
-
-
-static void
-segv_handler (int signo)
-{
-	fflush (stdout);
-	fflush (stderr);
-	exit (0);
-}
 
 
 
@@ -109,58 +96,6 @@ add_file (MixerAutomation *a,
 	mixer_add_file (a->m, e->channel_name, path, -1);
 
 	mixer_automation_add_event (a, e);
-}
-
-
-static void
-load_file (MixerAutomation *a,
-	   Database *db)
-{
-	char *path;
-
-	path = readline ("Enter file name: ");
-	if (path[0] == '\'') {
-		char *new;
-		int i = strlen (path)-1;
-
-		while (path[i] != path[0])
-			i--;
-		if (i)
-			new = strndup (&path[1], i-1);
-		else
-			new = strdup ("");
-		free (path);
-		path = new;
-	}
-	add_file (a, db, path);
-}
-
-
-
-static void
-load_playlist (MixerAutomation *a, Database *db, FILE *in, FILE *out)
-{
-	char pl_name[1025];
-	char path[1025];
-	FILE *fp;
-	
-	fprintf (out, "Enter playlist name: ");
-	fgets (pl_name, 1024, in);
-	pl_name[strlen(pl_name)-1] = 0;
-	fp = fopen (pl_name, "rb");
-
-	if (!fp) {
-		fprintf (out, "File not found.\n");
-		return;
-	}
-
-	while (!feof (fp)) { 
-		fgets (path, 1024, fp);
-		path[strlen(path)-1] = 0;
-
-		add_file (a, db, path);
-	}
-	fclose (fp);
 }
 
 
@@ -259,10 +194,6 @@ prs_session (PRS *prs, FILE *in, FILE *out)
 	  t = time (NULL);
 	  fprintf (out, "system time: %s", ctime (&t));
 	}      
-      if (!strcmp (input, "load"))
-	load_playlist (prs->automation, prs->db, in, out);
-      if (!strcmp (input, "add"))
-	      load_file (prs->automation, prs->db);
       if (!strcmp (input, "N")) {
 	      mic_off (prs->mixer);
 	      mixer_automation_next_event (prs->automation);
@@ -296,7 +227,6 @@ main (int argc, char *argv[])
 
   free (malloc(8));
 
-  completion_init ();
 //  debug_set_flags (DEBUG_FLAGS_ALL);
 
   debug_printf (DEBUG_FLAGS_ALL,
