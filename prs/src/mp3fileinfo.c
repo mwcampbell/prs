@@ -28,7 +28,7 @@ mp3_scan (FileInfo *info)
 
 	assert (info != NULL);
 	fp = fopen (info->path, "rb");
-	if (fp != NULL)
+	if (fp == NULL)
 		return -1;
 
 	while (mp3_header_read (fp, &mh))
