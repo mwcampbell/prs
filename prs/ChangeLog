@@ -1,5 +1,16 @@
 2003-01-04  Marc Mulcahy  <marc@plbb.net>
 
+	* src/mixerpatchpoint.c (mixer_patch_point_post_data): Moved fading
+	and output pointer movement code to the mixer channel code so
+	multiple buses work.
+	
+	* src/mixerchannel.c (mixer_channel_process_levels): Moved this code
+	from mixerpatchpoint.c.
+	(mixer_channel_advance_pointers): Move this code from
+	mixerpatchpoint.c.
+
+	* src/mixer.c (mixer_main_thread): Changes to support multiple busses.
+
 	* src/soundcard.c (soundcard_setup): Added this function to
 	consolodate the soundcard setup in one place. Now initializes
 	soundcard to run at four times the latency of the software mixer.

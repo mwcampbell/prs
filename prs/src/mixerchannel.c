@@ -45,6 +45,7 @@ mixer_channel_new (const int rate,
 	ch->rate = rate;
 	ch->channels = channels;
 	ch->chunk_size = (latency/44100.0)*rate;
+	ch->this_chunk_size = 0;
 	ch->space_left = ch->buffer_size = ch->chunk_size*100;
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "mixer_channel_new: buffer_size = %d\n",
@@ -126,4 +127,58 @@ mixer_channel_get_data (MixerChannel *ch)
 		ch->input = ch->buffer;
 	ch->space_left -= rv;
 	return rv;
+}
+
+
+void
+mixer_channel_process_levels (MixerChannel *ch)
+{
+	short *tmp;
+	int j;
+	
+	/* Compute number of samples in this chunk */
+
+	if (ch->input > ch->output)
+		ch->this_chunk_size = ch->input-ch->output;
+	else if (ch->space_left != ch->buffer_size)
+		ch->this_chunk_size = ch->buffer_end-ch->output;
+	else
+		ch->this_chunk_size = 0;
+	ch->this_chunk_size  /= ch->channels;
+	if (ch->this_chunk_size >= ch->chunk_size)
+		ch->this_chunk_size = ch->chunk_size;
+	else if (ch->space_left != ch->buffer_size) {
+		ch->data_end_reached = 1;
+	}
+	if (ch->level != 1.0 || ch->fade != 1.0) {
+		if (ch->level != 1.0 || ch->fade != 1.0) {
+			tmp = ch->output;
+			j = ch->this_chunk_size;
+			while (j--) {
+				*tmp++ *= ch->level;
+				if (ch->channels == 2) {
+					*tmp++ *= ch->level;
+				}
+				if ((ch->fade < 1.0 && ch->level <= ch->fade_destination) ||
+				    (ch->fade > 1.0 && ch->level >= ch->fade_destination)) {
+					ch->level = ch->fade_destination;
+					ch->fade = 1.0;
+				}
+				if (ch->fade != 1.0)
+					ch->level *= ch->fade;
+			}
+		}
+	}
+}
+
+
+void
+mixer_channel_advance_pointers (MixerChannel *ch)
+{
+	pthread_mutex_lock (&(ch->mutex));
+	ch->output += ch->this_chunk_size*ch->channels;
+	if (ch->output >= ch->buffer_end)
+		ch->output = ch->buffer;
+	ch->space_left += ch->this_chunk_size;
+	pthread_mutex_unlock (&(ch->mutex));
 }

@@ -111,11 +111,13 @@ mixer_main_thread (void *data)
 				if (rv < ch->chunk_size)
 					ch->data_end_reached = 1;
 			}
+			mixer_channel_process_levels (ch);
 			for (tmp2 = ch->patchpoints; tmp2; tmp2 = tmp2->next) {
 				MixerPatchPoint  *p = (MixerPatchPoint *) tmp2->data;
 				assert (p != NULL);
 				mixer_patch_point_post_data (p);
 			}
+			mixer_channel_advance_pointers (ch);
 			tmp = next;
 		}
 		for (tmp = m->busses; tmp; tmp = tmp->next) {

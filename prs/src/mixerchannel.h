@@ -25,6 +25,7 @@ struct  _MixerChannel {
 	short *output;
 	short *buffer_end;
 	int chunk_size;
+	int this_chunk_size;
 	int buffer_size;
 	int space_left;
 	
@@ -62,5 +63,10 @@ int
 mixer_channel_get_data (MixerChannel *ch);
 void
 mixer_channel_start_reader (MixerChannel *ch);
+void
+mixer_channel_process_levels (MixerChannel *ch);
+void
+mixer_channel_advance_pointers (MixerChannel *ch);
+
 
 #endif

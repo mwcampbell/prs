@@ -65,74 +65,15 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 	short *tmp;
 	int i, j, resample_channels;
 	SAMPLE *sptr;
-	short *input_position;
-	short *output_position;
-	int space_left;
-	int input_samples;
-	MixerChannel *ch = p->ch;
-	MixerBus *bus = p->bus;
-	double level;
-	double fade;
-	double fade_destination;
-	
-	/* Compute number of samples in the input */
 
-	pthread_mutex_lock (&(ch->mutex));
-	input_position = ch->input;
-	output_position = ch->output;
-	space_left = ch->space_left;
-	level = ch->level;
-	fade = ch->fade;
-	fade_destination = ch->fade_destination;
-	pthread_mutex_unlock (&(ch->mutex));
-	
-	if (input_position > output_position)
-		input_samples = input_position-output_position;
-	else if (space_left != ch->buffer_size)
-		input_samples = ch->buffer_end-output_position;
-	else
-		input_samples = 0;
-	input_samples /= ch->channels;
-	if (input_samples >= ch->chunk_size)
-		input_samples = ch->chunk_size;
-	else if (space_left != ch->buffer_size) {
-		ch->data_end_reached = 1;
-	}
-	assert (p != NULL);
-
-	if (level != 1.0 || fade != 1.0) {
-
-                /* Fading */
-
-		if (level != 1.0 || fade != 1.0) {
-			input = output_position;
-			j = input_samples;
-			while (j--) {
-				*input *= level;
-				input++;
-				if (ch->channels == 2) {
-					*input *= level;
-					input++;
-				}
-				if ((fade < 1.0 && level <= fade_destination) ||
-				    (fade > 1.0 && level >= fade_destination)) {
-					level = fade_destination;
-					fade = 1.0;
-				}
-				if (fade != 1.0)
-					level *= fade;
-			}
-		}
-	}
 	if (p->no_processing) {
-		mixer_bus_add_data (bus, output_position, input_samples);
+		mixer_bus_add_data (p->bus, p->ch->output, p->ch->this_chunk_size);
 	}
 
 	else {
-		input = output_position;
-		i = input_samples*ch->channels;
+		input = p->ch->output;
+		i = p->ch->this_chunk_size*p->ch->channels;
 		tmp = p->tmp_buffer;
-		i = input_samples*ch->channels;
 		j = 0;
 
 		/*
@@ -143,7 +84,7 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 		 */
 	
 		if (!p->resampler) {
-			if (ch->channels > bus->channels)
+			if (p->ch->channels > p->bus->channels)
 				while (i) {
 					*tmp++ = (int) (*input+*(input+1))/2;
 					input += 2;
@@ -159,15 +100,14 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 				}
 			}
 			p->tmp_buffer_length = j;
-			mixer_bus_add_data (bus, p->tmp_buffer, j/p->bus->channels);
-			return;
+			mixer_bus_add_data (p->bus, p->tmp_buffer, j/p->bus->channels);
 		}
 		else {
 			sptr = p->input_buffer;
-			if (ch->channels > bus->channels) {
+			if (p->ch->channels > p->bus->channels) {
 				resample_channels =
-					(ch->channels > bus->channels) ? bus->channels
-					: ch->channels;
+					(p->ch->channels > p->bus->channels) ? p->bus->channels
+					: p->ch->channels;
 				
 				while (i) {
 					*sptr++ = (*input * (1.0f / 32768.0f) + *(input + 1) * (1.0f / 32768.0f)) / 2.0f;
@@ -177,7 +117,7 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 				}
 			}
 			else {
-				resample_channels = ch->channels;
+				resample_channels = p->ch->channels;
 				while (i) {
 					*sptr++ = *input++ * (1.0f / 32768.0f);
 					i--;
@@ -193,7 +133,7 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 			sptr = p->output_buffer;
 			j = 0;
 			tmp = p->tmp_buffer;
-			if (bus->channels > ch->channels)
+			if (p->bus->channels > p->ch->channels)
 				while (i) {
 					long sample = 32767 * (*sptr++);
 					if (sample < -32768)
@@ -216,19 +156,9 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 					j++;
 					i--;
 				}
-			mixer_bus_add_data (bus, p->tmp_buffer, j/bus->channels);		
+			mixer_bus_add_data (p->bus, p->tmp_buffer, j/p->bus->channels);		
 		}
 	}
-	output_position += input_samples*p->ch->channels;
-	if (output_position >= ch->buffer_end)
-		output_position = ch->buffer;
-	space_left += input_samples;
-	pthread_mutex_lock (&(ch->mutex));
-	ch->output = output_position;
-	ch->space_left = space_left;
-	ch->level = level;
-	ch->fade = fade;
-	pthread_mutex_unlock (&(ch->mutex));
 }
 
 
