@@ -600,7 +600,7 @@ get_playlist_template (Database *db, double cur_time)
     where playlist_template.template_id = schedule.template_id and
     ((repetition = 0 and start_time <= %lf and start_time+length > %lf) or
     (repetition != 0 and start_time <= %lf and mod(%lf-start_time-(daylight*3600)+%d, repetition) < length))
-    order by start_time desc";
+    order by time_slot_id desc";
 
 	daylight = is_daylight (cur_time);
 	assert (db != NULL);
