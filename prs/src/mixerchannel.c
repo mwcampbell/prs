@@ -35,7 +35,7 @@ mixer_channel_get_data (MixerChannel *ch,
 		      short *buffer,
 		      int size)
 {
-  int bytes_read, i;
+  int samples_read, i;
   short *ptr = buffer;
   short *end_buffer;
 
@@ -44,11 +44,11 @@ mixer_channel_get_data (MixerChannel *ch,
   if (!ch->get_data)
     return 0;
 
-  bytes_read = ch->get_data (ch, buffer, size);
+  samples_read = ch->get_data (ch, buffer, size);
 
   /* Fading and level processing */
 
-  end_buffer = buffer+bytes_read;
+  end_buffer = buffer+samples_read;
   while (ptr < end_buffer)
     {
       *ptr++ *= ch->level;
@@ -60,5 +60,5 @@ mixer_channel_get_data (MixerChannel *ch,
       if (ch->fade != 0.0)
 	ch->level += ch->fade;
     }
-  return bytes_read;
+  return samples_read;
 }

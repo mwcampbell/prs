@@ -219,6 +219,7 @@ shout_mixer_output_new (const char *name,
     }
   
   o->name = strdup (name);
+  o->enabled = 1;
   o->rate = rate;
   o->channels = channels;
   o->data = (void *) i;

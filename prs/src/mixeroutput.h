@@ -13,6 +13,8 @@ typedef struct _MixerOutput MixerOutput;
 struct _MixerOutput {
   char *name;
   
+  int enabled;
+
   /* Sample information */
 
   int rate;

@@ -17,5 +17,6 @@ prs_server_SOURCES = \
 	shoutmixeroutput.c \
 	mixerchannel.c \
 	vorbismixerchannel.c \
+	ossmixerchannel.c \
 	prs_server.c
 

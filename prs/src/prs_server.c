@@ -18,6 +18,52 @@
 
 
 static void
+sound_on (mixer *m)
+{
+  MixerOutput *o;
+  
+  o = mixer_get_output (m, "soundcard");
+  o->enabled = 1;
+}
+
+
+
+static void
+sound_off (mixer *m)
+{
+  MixerOutput *o;
+  
+  o = mixer_get_output (m, "soundcard");
+  o->enabled = 0;
+}
+
+
+
+static void
+mic_on (mixer *m)
+{
+  MixerChannel *ch;
+  MixerOutput *o;
+  
+  o = mixer_get_output (m, "soundcard");
+  ch = oss_mixer_channel_new ("mic", 44100, 2, oss_mixer_output_get_fd (o));
+  mixer_fade_all (m, .3, 1.0);
+  mixer_add_channel (m, ch);
+  mixer_patch_channel_all (m, "mic");
+}
+
+
+
+static void
+mic_off (mixer *m)
+{
+  mixer_delete_channel (m, "mic");
+  mixer_fade_all (m, 1.0, 1.0);
+}
+
+
+
+static void
 prs_signal_handler (int signum)
 {
   switch (signum)
@@ -392,6 +438,7 @@ int main (void)
 {
   mixer *m;
   MixerOutput *o;
+  MixerChannel *ch;
   pthread_t playlist_thread;
   char input[81];
   int done = 0;
@@ -405,7 +452,8 @@ int main (void)
 			    44100,
 			    2);
   mixer_add_output (m, o);
-
+  
+  
   printf ("Running as pid %d.\n", getpid ());
   pthread_create (&playlist_thread, NULL, playlist_main_thread, m);
 
@@ -416,6 +464,14 @@ int main (void)
       input[strlen(input)-1] = 0;
       if (!strcmp(input, "quit"))
 	break;
+      if (!strcmp (input, "on"))
+	mic_on (m);
+      if (!strcmp (input, "off"))
+	mic_off (m);
+      if (!strcmp (input, "soundon"))
+	sound_on (m);
+      if (!strcmp (input, "soundoff"))
+	sound_off (m);
       printf ("You typed %s.\n", input);
     }
   mixer_destroy (m);

@@ -18,7 +18,8 @@ static void
 oss_mixer_output_free_data (MixerOutput *o)
 {
   oss_info *i;
-
+  int tmp;
+  
   if (!o)
     return;
   if (!o->data)
@@ -59,7 +60,7 @@ oss_mixer_output_new (const char *name,
 
   /* Open the sound device */
 
-  i->fd = open ("/dev/dsp", O_WRONLY);
+  i->fd = open ("/dev/dsp", O_RDWR);
   if (i->fd < 0)
     {
       free (i);
@@ -68,6 +69,13 @@ oss_mixer_output_new (const char *name,
 
   /* Setup sound card */
 
+  tmp = 0x00040009;
+  if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0)
+    {
+      close (i->fd);
+      free (i);
+      return NULL;
+    }
   tmp = AFMT_S16_LE;
   if (ioctl (i->fd, SNDCTL_DSP_SAMPLESIZE, &tmp) < 0)
     {
@@ -92,13 +100,6 @@ oss_mixer_output_new (const char *name,
       free (i);
       return NULL;
     }
-  tmp = 0x8;
-  if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0)
-    {
-      close (i->fd);
-      free (i);
-      return NULL;
-    }
   
   o = malloc (sizeof (MixerOutput));
   if (!o)
@@ -118,6 +119,23 @@ oss_mixer_output_new (const char *name,
   o->free_data = oss_mixer_output_free_data;
   o->post_output = oss_mixer_output_post_output;
 
-  mixer_output_alloc_buffer (o);
+  mixer_output_alloc_buffer (o);  
+  o->enabled = 1;
   return o;
 }
+
+
+
+int
+oss_mixer_output_get_fd (MixerOutput *o)
+{
+  oss_info *i;
+  
+  if (!o)
+    return -1;
+  i = (oss_info *) o->data;
+  return i->fd;
+}
+
+
+

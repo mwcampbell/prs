@@ -127,7 +127,8 @@ mixer_main_thread (void *data)
 	{
 	  MixerOutput *o = (MixerOutput *) tmp->data;
 
-	  mixer_output_reset_output (o);
+	  if (o->enabled)
+	    mixer_output_reset_output (o);
 	}
       tmp = m->channels;
       while (tmp)
@@ -168,7 +169,8 @@ mixer_main_thread (void *data)
     for (tmp = m->outputs; tmp; tmp = tmp->next)
       {
 	MixerOutput *o = (MixerOutput *) tmp->data;
-	mixer_output_post_output (o);
+	if (o->enabled)
+	  mixer_output_post_output (o);
       }
     m->cur_time += MIXER_LATENCY;
     mixer_unlock (m);
