@@ -1,3 +1,11 @@
+2002-08-02  Marc Mulcahy <marc2plbb.net>
+
+	* src/mixerautomation.c src/mixerautomation.h src/mixer.c src/mixer.h:
+	Implemented new automation system.  Events were removed from the mixer
+	and moved to an external Mixerautomation object.  This required
+	changing the mixer to now allow the client to specify a time
+	to be notified.
+
 2002-08-01  Marc Mulcahy <marc@plbb.net>
 
 	* src/shoutmixeroutput.c: Disable output if connection to server fails.

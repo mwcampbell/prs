@@ -435,7 +435,8 @@ get_playlist_template (double cur_time)
   time_t day_start;
   double time_of_day;
   
-  time_of_day = (time_t) cur_time%86400;
+  tzset ();
+  time_of_day = (time_t) (cur_time-timezone+daylight*3600)%86400;
   day_start = (time_t) cur_time-time_of_day;
   time_of_day = cur_time-day_start;
   

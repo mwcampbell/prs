@@ -5,11 +5,9 @@
 #include <pthread.h>
 #include <malloc.h>
 #include "mixer.h"
-#include "mixerevent.h"
 #include "mixerchannel.h"
 #include "vorbismixerchannel.h"
 #include "mixeroutput.h"
-#include "mixerevent.h"
 
 
 
@@ -27,67 +25,6 @@ mixer_unlock (mixer *m)
   pthread_mutex_unlock (&(m->mutex));
 }
 
-
-
-
-static void
-mixer_do_events (mixer *m)
-{
-  MixerEvent *e;
-
-  if (!m)
-    return;
-  if (!m->events)
-    return;
-  e = (MixerEvent *) m->events->data;
-  if (!e)
-    return;
-  if (e->start_time <= m->cur_time)
-    {
-      MixerChannel *ch;
-      
-      /* Do event */
-
-      switch (e->type)
-	{
-	case MIXER_EVENT_TYPE_ADD_CHANNEL:
-	    ch = vorbis_mixer_channel_new (e->channel_name, e->detail1);
-	    ch->level = e->level;
-
-	    /* This looks backwards, since thie internal API is expected to be
-	     * called during a mutex lock, we should unlock it before calling
-	     * any external mixer API.
-	     */
-	    
-	    mixer_unlock (m);
-	    mixer_add_channel (m, ch);
-	    mixer_patch_channel_all (m, e->channel_name);
-	    mixer_lock (m);
-	    break;
-	case MIXER_EVENT_TYPE_FADE_CHANNEL:
-	  mixer_unlock (m);
-	  mixer_fade_channel (m, e->channel_name, e->level, atof (e->detail1));
-	  mixer_lock (m);
-	  break;
-	case MIXER_EVENT_TYPE_FADE_ALL:
-	mixer_unlock (m);
-	mixer_fade_all (m, e->level, e->end_time-e->start_time);
-	mixer_lock (m);
-	break;
-	case MIXER_EVENT_TYPE_DELETE_ALL:
-	  mixer_unlock (m);
-	  mixer_delete_all_channels (m);
-	  mixer_lock (m);
-	  break;
-	default:
-	  fprintf (stderr, "Bad mixer event.\n");
-	  abort ();
-	}
-      mixer_event_free (e);
-      m->events = list_delete_item (m->events, m->events);
-    }
-  return;
-}
 
 
 
@@ -115,7 +52,11 @@ mixer_main_thread (void *data)
 	  mixer_unlock (m);
 	  break;
 	}
-      mixer_do_events (m);
+      if (m->notify_time > 0 && m->cur_time >= m->notify_time)
+	{
+	  pthread_cond_signal (&(m->notify_condition));
+	  m->notify_time = -1.0;
+	}
       if (!m->outputs)
 	{
 	  m->cur_time += MIXER_LATENCY;
@@ -193,9 +134,13 @@ mixer_new (void)
 
   pthread_mutex_init (&(m->mutex), NULL);
 
+  /* Setup notification condition */
+
+  pthread_cond_init (&(m->notify_condition), NULL);
+
   tzset ();
   m->cur_time = (double) time (NULL)+timezone+daylight*3600;
-  m->channels = m->outputs = m->events = NULL;
+  m->channels = m->outputs = NULL;
 
   m->running = 0;
   m->thread = 0;
@@ -524,45 +469,10 @@ mixer_sync_time (mixer *m)
 
   while (cur_time == time (NULL));
 
-  tzset ();
-  cur_time = time (NULL)-timezone+daylight*3600;
+  cur_time = time (NULL);
   mixer_lock (m);
   m->cur_time = cur_time;
   mixer_unlock (m);
-}
-
-
-
-void
-mixer_insert_event (mixer *m,
-		    MixerEvent *new_event)
-{
-  list *tmp;
-  int running;
-  
-  if (!m)
-   return;
-
-  mixer_lock (m);
-  for (tmp = m->events; tmp; tmp = tmp->next)
-   {
-     MixerEvent *e = (MixerEvent *) tmp->data;
-
-     if (new_event->start_time < e->start_time)
-       break;
-   }
-  if (tmp)
-    {
-      list *new_item = list_insert_before (tmp, new_event);
-      if (tmp == m->events)
-	m->events = new_item;
-    }
-  else
-    m->events = list_append (m->events, new_event);
-  running = m->running;
-  mixer_unlock (m);
-  if (!running)
-    mixer_start (m);
 }
 
 
@@ -620,5 +530,37 @@ mixer_fade_all (mixer *m,
       ch->fade = (fade_distance/fade_time)/ch->rate;
       ch->fade_destination = level;
     }
+  mixer_unlock (m);
+}
+
+
+
+void
+mixer_reset_notification_time (mixer *m,
+		       double notify_time)
+{
+  mixer_lock (m);
+  m->notify_time = notify_time;
+  mixer_unlock (m);
+}
+
+
+
+
+void
+mixer_wait_for_notification (mixer *m,
+			     double notify_time)
+{
+  if (!m)
+    return;
+  mixer_lock (m);
+  m->notify_time = notify_time;
+  if (m->notify_time > 0 && m->notify_time < m->cur_time)
+    {
+      m->notify_time = -1.0;
+      mixer_unlock (m);
+      return;
+    }
+  pthread_cond_wait (&(m->notify_condition), &(m->mutex));
   mixer_unlock (m);
 }

@@ -4,7 +4,6 @@
 #include "list.h"
 #include "mixerchannel.h"
 #include "mixeroutput.h"
-#include "mixerevent.h"
 
 
 typedef struct _mixer mixer;
@@ -13,6 +12,12 @@ struct _mixer {
   pthread_t thread;
   pthread_mutex_t mutex;
 
+
+  /* Notification */
+
+  pthread_cond_t notify_condition;
+  double notify_time;
+  
   /* Flag indicating whether mixer is running */
 
   int running;
@@ -20,7 +25,6 @@ struct _mixer {
   double cur_time;
   list *channels;
   list *outputs;
-  list *events;
 };
 
 
@@ -65,9 +69,6 @@ mixer_get_time (mixer *m);
 void
 mixer_sync_time (mixer *m);
 void
-mixer_insert_event (mixer *m,
-		    MixerEvent *e);
-void
 mixer_fade_channel (mixer *m,
 		    const char *channel_name,
 		    double fade_destination,
@@ -76,6 +77,13 @@ void
 mixer_fade_all (mixer *m,
 		double level,
 		double fade_time);
+void
+mixer_reset_notification_time (mixer *m,
+			     double notification_time);
+void
+mixer_wait_for_notification (mixer *m,
+			     double notify_time);
+
 
 
 #endif
