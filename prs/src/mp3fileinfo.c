@@ -11,7 +11,7 @@
 
 /* Ugly hack to get around C API change in id3lib 3.8 */
 #ifdef HAVE_ID3FIELD_GETASCIIITEM
-#define ID3Field_GetASCII ID3FIeld_GetASCIIItem
+#define ID3Field_GetASCII ID3Field_GetASCIIItem
 #endif
 
 
