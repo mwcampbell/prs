@@ -134,6 +134,7 @@ list_length (list *l)
     i++;
     l = l->next;
   }
+  return i;
 }
 
 

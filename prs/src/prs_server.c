@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <unistd.h>
 #include "db.h"
 #include "mixer.h"
 #include "ossmixeroutput.h"
@@ -28,11 +29,12 @@ process_playlist_event (PlaylistEvent *e,
   /* Create the mixer event */
 
   me = (MixerEvent *) malloc (sizeof (MixerEvent));
-
+  memset (me, 0, sizeof(MixerEvent));
+  
   /* Compute the start time of this event */
 
-  if (last_start_time = -1.0)
-    last_start_time = mixer_get_time (m);
+  if (last_start_time == -1.0)
+    last_start_time = last_end_time = mixer_get_time (m);
 
   me->start_time = last_start_time = 
     (e->anchor ? last_end_time : last_start_time)+e->offset;
@@ -83,7 +85,8 @@ process_playlist_event (PlaylistEvent *e,
       me->detail1 = strdup (r->path);
       me->level = 1.0;
 
-      me->end_time = me->start_time+(r->audio_out-r->audio_in);
+      me->start_time -= r->audio_in;
+      me->end_time = me->start_time+r->audio_out;
       recording_free (r);
       break;
     case EVENT_TYPE_FADE_CHANNEL:
@@ -91,6 +94,18 @@ process_playlist_event (PlaylistEvent *e,
       me->type = MIXER_EVENT_TYPE_FADE_CHANNEL;
       me->level = atof (e->detail1);
       me->end_time = me->start_time + atof (e->detail2);
+      break;
+
+    case EVENT_TYPE_PATH:
+
+      r = find_recording_by_path (e->detail1);
+      me->type = MIXER_EVENT_TYPE_ADD_CHANNEL;
+      me->detail1 = strdup (r->path);
+      me->level = 1.0;
+
+      me->start_time -= r->audio_in;
+      me->end_time = me->start_time+r->audio_out;
+      recording_free (r);
       break;
     }
   
@@ -114,7 +129,7 @@ process_playlist_event (PlaylistEvent *e,
 static double
 execute_playlist_template (PlaylistTemplate *t,
 			   mixer *m,
-			   double time)
+			   double cur_time)
 {
   list *events, *tmp;
   RecordingPicker *p;
@@ -135,24 +150,20 @@ execute_playlist_template (PlaylistTemplate *t,
 	   * wait the difference less ten seconds
 	   */
 
-	  if (start_time > time+10)
+	  if (start_time > cur_time+10)
 	    {
-	      usleep (start_time-time-10);
-	      time = mixer_get_time (m);
+	      usleep ((unsigned long)(start_time-cur_time-10)*1000000);
+	      cur_time = mixer_get_time (m)-10;
 	    }
 
-	  /* An end_time of -1 means don't worry about the end time, otherwise
-	   * if the current time is past the end time of this template, stop
-	   */
-
-	  if (time > t->end_time || time < t->start_time)
+	  if (cur_time > t->end_time || cur_time < t->start_time)
 	    break;
 	}
     }
-  while (t->repeat_events && time > t->start_time && time < t->end_time);
+  while (t->repeat_events && cur_time > t->start_time && cur_time < t->end_time);
   playlist_event_list_free (events);
   recording_picker_free (p);
-  return time;
+  return cur_time;
 }
 
 
@@ -161,21 +172,26 @@ static void *
 playlist_main_thread (void *data)
 {
   mixer *m = (mixer *) data;
-  double time = mixer_get_time (m);
+  double cur_time;
   PlaylistTemplate *t;
+
+  cur_time = mixer_get_time (m);
   
+  printf ("Mixer time is now %lf.\n", cur_time);
   while (1)
     {
-      t = get_playlist_template (time);
+      double new_time;
+
+      t = get_playlist_template (cur_time);
       if (t)
-	time = execute_playlist_template (t, m, time);
+	new_time = execute_playlist_template (t, m, cur_time);
     else
       {
 
 	/* Wait ten seconds, then re-sync wih the mixer and try again */
 
 	usleep (10000000);
-	time = mixer_get_time (m);
+	cur_time = mixer_get_time (m);
       }
     }
   return 0;

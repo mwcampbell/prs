@@ -29,7 +29,7 @@ mixer_output_alloc_buffer (MixerOutput *o)
   if (!o)
     return;
   o->buffer_size = o->rate*o->channels*MIXER_LATENCY;
-  o->buffer = malloc (o->buffer_size*sizeof(short));
+  o->buffer = (short *) malloc (o->buffer_size*sizeof(short));
 }
 
 

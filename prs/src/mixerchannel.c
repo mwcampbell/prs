@@ -48,7 +48,7 @@ mixer_channel_get_data (MixerChannel *ch,
 
   /* Fading and level processing */
 
-  end_buffer = buffer+(bytes_read/sizeof(short));
+  end_buffer = buffer+bytes_read;
   while (ptr < end_buffer)
     {
       *ptr++ *= ch->level;

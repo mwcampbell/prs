@@ -1,4 +1,27 @@
-2002-07-14  Marc Mulcahy <marc@plbb.net>
+2002-07-14 Marc Mulcahy <marc@plbb.net>
+
+	* src/vorbismixerchannel.c: Get rid of warnings.
+
+	* src/prs_server.c: Included unistd.h to make usleep work.  Cleared
+	mixer event structure before posting it to the mixer.  Ensured that
+	the end time of the last event is remembered.  Ensure that the
+	audio_in is factered into the start time of mixer events.  Added
+	processing for playing audio from a specific path.  Added cur_time
+	parameter to execute_playlist_template.
+			
+	* src/mixeroutput.h: Changed mixer latency to .01 seconds.
+
+	* src/mixeroutput.c src/ossmixeroutput.c: Fixed warnings.
+
+	* src/mixerchannel.c: Fixed pointer arithmetic.
+
+	* src/mixer.c src/mixer.h: re-factered mutex code and made two static
+	functions called mixer_lock and mixer_unlock, so now all functions
+	needing to lock and unlock the mutex use these functions to do so.
+	Changed references to a variable named time to cur_time to avoid conflicts with time.h.
+	
+	* src/list.c: Actually returned the computed length of the list
+	(which is nice since the name of the function is list_length).
 
 	* src/mixerevent.h: Changed tim to start_time and added an end_time
 	field to support fades.

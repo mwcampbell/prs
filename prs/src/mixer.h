@@ -17,7 +17,7 @@ struct _mixer {
 
   int running;
   
-  double time;
+  double cur_time;
   list *channels;
   list *outputs;
   list *events;

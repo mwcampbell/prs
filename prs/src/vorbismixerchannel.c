@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <malloc.h>
 #include <vorbis/vorbisfile.h>
 #include "mixerchannel.h"
@@ -27,7 +28,7 @@ vorbis_mixer_channel_get_data (MixerChannel *ch,
   i = (vorbis_file_info *) ch->data;
   while (remainder > 0)
     {
-      rv = ov_read ((i->vf), tmp, remainder*sizeof(short), 0, sizeof(short), 1, &(i->section));
+      rv = ov_read ((i->vf), (char *)tmp, remainder*sizeof(short), 0, sizeof(short), 1, &(i->section));
       if (rv <= 0)
 	break;
       remainder -= rv/sizeof(short);

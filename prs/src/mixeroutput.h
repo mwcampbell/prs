@@ -2,7 +2,7 @@
 #define _MIXER_OUTPUT_H
 
 
-#define MIXER_LATENCY .05
+#define MIXER_LATENCY .01
 
 
 

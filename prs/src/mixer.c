@@ -13,6 +13,23 @@
 
 
 
+static void
+mixer_lock (mixer *m)
+{
+  pthread_mutex_lock (&(m->mutex));
+}
+
+
+
+static void
+mixer_unlock (mixer *m)
+{
+  pthread_mutex_unlock (&(m->mutex));
+}
+
+
+
+
 static MixerChannel *
 mixer_find_channel (mixer *m,
 		    const char *channel_name)
@@ -69,7 +86,7 @@ mixer_do_events (mixer *m)
   e = (MixerEvent *) m->events->data;
   if (!e)
     return;
-  if (e->start_time <= m->time)
+  if (e->start_time <= m->cur_time)
     {
       MixerChannel *ch;
       
@@ -77,12 +94,19 @@ mixer_do_events (mixer *m)
 
       switch (e->type)
 	{
-	  case MIXER_EVENT_TYPE_ADD_CHANNEL:
+	case MIXER_EVENT_TYPE_ADD_CHANNEL:
 	    ch = vorbis_mixer_channel_new (e->channel_name, e->detail1);
-	    pthread_mutex_unlock (&m->mutex);
+	    ch->level = e->level;
+
+	    /* This looks backwards, since thie internal API is expected to be
+	     * called during a mutex lock, we should unlock it before calling
+	     * any external mixer API.
+	     */
+	    
+	    mixer_unlock (m);
 	    mixer_add_channel (m, ch);
-	    mixer_patch_channel_all (m, e->detail1);
-	    pthread_mutex_lock (&m->mutex);
+	    mixer_patch_channel_all (m, e->channel_name);
+	    mixer_lock (m);
 	    break;
 	}
       mixer_event_free (e);
@@ -112,14 +136,14 @@ mixer_main_thread (void *data)
   
   while (m->running)
     {
-      pthread_mutex_lock (&m->mutex);
-      if (m->time > 86400)
-	m->time -= 86400;
+      mixer_lock (m);
+      if (m->cur_time > 86400)
+	m->cur_time -= 86400;
       mixer_do_events (m);
       if (!m->outputs)
 	{
-	  m->time += MIXER_LATENCY;
-	  pthread_mutex_unlock (&m->mutex);
+	  m->cur_time += MIXER_LATENCY;
+	  mixer_unlock (m);
 	  usleep (MIXER_LATENCY*1000000);
 	  continue;
 	}
@@ -170,8 +194,8 @@ mixer_main_thread (void *data)
 	MixerOutput *o = (MixerOutput *) tmp->data;
 	mixer_output_post_output (o);
       }
-    m->time += MIXER_LATENCY;
-    pthread_mutex_unlock (&m->mutex);
+    m->cur_time += MIXER_LATENCY;
+    mixer_unlock (m);
     }
 }
 
@@ -190,7 +214,7 @@ mixer_new (void)
 
   pthread_mutex_init (&(m->mutex), NULL);
 
-  m->time = 0.0;
+  m->cur_time = 0.0;
   m->channels = m->outputs = m->events = NULL;
 
   m->running = 0;
@@ -205,10 +229,16 @@ mixer_start (mixer *m)
 {
   if (!m)
     return -1;
+
+  mixer_lock (m);
+
   /* If we're already running, don't try to start again */
 
   if (m->thread)
-    return -1;
+    {
+      mixer_unlock (m);
+      return -1;
+    }
   
   /* Create mixer main thread */
 
@@ -217,8 +247,12 @@ mixer_start (mixer *m)
 		      NULL,
 		      mixer_main_thread,
 		      (void *) m))
-    return -1;
+    {
+      mixer_unlock (m);
+      return -1;
+    }
   m->running = 1;
+  mixer_unlock (m);
   return 0;
 }
 
@@ -234,10 +268,10 @@ mixer_stop (mixer *m)
 
   /* This could be incredibly broken */
 
-  pthread_mutex_lock (&m->mutex);
+  mixer_lock (m);
   m->running = 0;
   m->thread = 0;
-  pthread_mutex_unlock (&m->mutex);
+  mixer_unlock (m);
   return 0;
 }
 
@@ -251,7 +285,7 @@ mixer_destroy (mixer *m)
   if (!m)
     return;
   
-  pthread_mutex_lock (&(m->mutex));
+  mixer_lock (m);
   
   /* Free channel list */
 
@@ -265,7 +299,7 @@ mixer_destroy (mixer *m)
     mixer_output_destroy ((MixerOutput *) tmp->data);
   list_free (m->outputs);
 
-  pthread_mutex_unlock (&(m->mutex));
+  mixer_unlock (m);
   free (m);
 }
 
@@ -277,9 +311,9 @@ mixer_add_channel (mixer *m,
 {
   if (!m)
     return;
-  pthread_mutex_lock (&(m->mutex));
+  mixer_lock (m);
   m->channels = list_prepend (m->channels, ch);
-  pthread_mutex_unlock (&(m->mutex));
+  mixer_unlock (m);
 }
 
 
@@ -289,9 +323,9 @@ mixer_add_output (mixer *m,
 {
   if (!m)
     return;
-  pthread_mutex_lock (&(m->mutex));
+  mixer_lock (m);
   m->outputs = list_prepend (m->outputs, o);
-  pthread_mutex_unlock (&(m->mutex));
+  mixer_unlock (m);
 }
 
 
@@ -307,7 +341,7 @@ mixer_patch_channel (mixer *m,
 
   if (!m)
     return;
-  pthread_mutex_lock (&(m->mutex));
+  mixer_lock (m);
   ch = mixer_find_channel (m, channel_name);
   o = mixer_find_output (m, output_name);
 
@@ -315,7 +349,7 @@ mixer_patch_channel (mixer *m,
     return;
 
   ch->outputs = list_prepend (ch->outputs, o);
-  pthread_mutex_unlock (&(m->mutex));
+  mixer_unlock (m);
 }
 
 
@@ -328,16 +362,19 @@ mixer_patch_channel_all (mixer *m,
 
   if (!m)
     return;
-  pthread_mutex_lock (&(m->mutex));
+  mixer_lock (m);
   ch = mixer_find_channel (m, channel_name);
 
   if (!ch)
-    return;
-
+    {
+      mixer_unlock (m);
+      return;
+    }
+  
   if (ch->outputs)
     list_free (ch->outputs);
   ch->outputs = list_copy (m->outputs);
-  pthread_mutex_unlock (&(m->mutex));
+  mixer_unlock (m);
 }
 
 
@@ -346,12 +383,12 @@ double
 mixer_get_time (mixer *m)
 {
   double rv;
-
+  
   if (!m)
     return 0.0;
-  pthread_mutex_lock (&(m->mutex));
-  rv = m->time;
-  pthread_mutex_unlock (&(m->mutex));
+  mixer_lock (m);
+  rv = m->cur_time;
+  mixer_unlock (m);
   return rv;
 }
 
@@ -371,9 +408,9 @@ mixer_sync_time (mixer *m)
   tp = localtime (&cur_time);
 
   mixer_time = tp->tm_hour*3600+tp->tm_min*60+tp->tm_sec;
-  pthread_mutex_lock (&m->mutex);
-  m->time = mixer_time;
-  pthread_mutex_unlock (&m->mutex);
+  mixer_lock (m);
+  m->cur_time = mixer_time;
+  mixer_unlock (m);
 }
 
 
@@ -383,11 +420,12 @@ mixer_insert_event (mixer *m,
 		    MixerEvent *new_event)
 {
   list *tmp;
-
+  int running;
+  
   if (!m)
    return;
 
-  pthread_mutex_lock (&m->mutex);
+  mixer_lock (m);
   for (tmp = m->events; tmp; tmp = tmp->next)
    {
      MixerEvent *e = (MixerEvent *) tmp->data;
@@ -403,9 +441,10 @@ mixer_insert_event (mixer *m,
     }
   else
     m->events = list_append (m->events, new_event);
-  if (!m->running)
+  running = m->running;
+  mixer_unlock (m);
+  if (!running)
     mixer_start (m);
-  pthread_mutex_unlock (&m->mutex);
 }
 
 
@@ -427,9 +466,9 @@ mixer_fade_channel (mixer *m,
   if (!ch)
     return;
 
-  pthread_mutex_lock (&m->mutex);
+  mixer_lock (m);
   fade_distance = fade_destination-(ch->level);
   ch->fade = (fade_distance/fade_time)/ch->rate;
   ch->fade_destination = fade_destination;
-  pthread_mutex_unlock (&m->mutex);
+  mixer_unlock (m);
 }
