@@ -437,6 +437,7 @@ logger_config (xmlNodePtr cur)
 {
 	logger *l = NULL;
 	LOGGER_TYPE type;
+	xmlChar *url = xmlGetProp (cur, "url");
 	xmlChar *username = xmlGetProp (cur, "username");
 	xmlChar *password = xmlGetProp (cur, "password");
 	xmlChar *type_string = xmlGetProp (cur, "type");
@@ -447,6 +448,13 @@ logger_config (xmlNodePtr cur)
 				log_file_name, NULL,
 				   username, password);
 	}
+	if (!xmlStrcmp (type_string, "shoutcast")) {
+		l = logger_new (LOGGER_TYPE_SHOUTCAST,
+				log_file_name, url,
+				   username, password);
+	}
+	if (url)
+		xmlFree (url);
 	if (username)
 		xmlFree (username);
 	if (password)

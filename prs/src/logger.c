@@ -242,6 +242,53 @@ live365_log_file (logger_data *d)
 }
 
 
+static void
+shoutcast_log_file (logger_data *d)
+{
+	CURL *url;
+	struct HttpPost *post = NULL;
+	struct HttpPost *end = NULL;
+	char *filename = NULL;
+	char *address;
+
+        /* Create mock file name for "least popular tracks" feature */
+
+	if (d->l->url)
+		asprintf (&address, "%s/admin.cgi", d->l->url);
+	asprintf (&filename, "%s - %s - %s", d->artist, d->name, d->album);
+	
+	url = curl_easy_init ();
+	curl_easy_setopt (url, CURLOPT_URL,
+			  address);
+	
+	curl_easy_setopt (url, CURLOPT_NOSIGNAL, 1);
+
+        /* Setup post data */
+
+	curl_formadd (&post, &end,
+		      CURLFORM_COPYNAME, "mode",
+		      CURLFORM_COPYCONTENTS, "updinfo",
+		      CURLFORM_END);
+	curl_formadd (&post, &end,
+		      CURLFORM_COPYNAME, "pass",
+		      CURLFORM_COPYCONTENTS, d->l->password,
+		      CURLFORM_END);
+	curl_formadd (&post, &end,
+		      CURLFORM_COPYNAME, "song",
+		      CURLFORM_COPYCONTENTS, filename,
+		      CURLFORM_END);
+	curl_easy_setopt (url, CURLOPT_HTTPPOST, post);
+	curl_easy_perform (url);
+	curl_easy_cleanup (url);
+	curl_formfree (post);
+	logger_data_destroy (d);
+	if (address)
+		free (address);
+	if (filename)
+		free (filename);
+}
+
+
 static void *
 logger_log_file_thread (void *data)
 {
@@ -254,6 +301,9 @@ logger_log_file_thread (void *data)
 	switch (d->l->type) {
 	case LOGGER_TYPE_LIVE365:
 		live365_log_file (d);
+		break;
+	case LOGGER_TYPE_SHOUTCAST:
+		shoutcast_log_file (d);
 		break;
 	}
 }
