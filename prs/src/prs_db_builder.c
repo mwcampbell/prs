@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 #include <string.h>
 #include "fileinfo.h"
 #include "db.h"
@@ -62,7 +64,9 @@ int main (void)
 	{
 	  i = get_vorbis_file_info (path, 0);
 	  r = find_recording_by_path (path);
-	  if (!r || i->length-r->length <= .001)
+	  if (r && abs (i->length-r->length) <= .001 &&
+	      !strcmp (r->category, i->genre) &&
+	      !strcmp (r->name, i->name))
 	    {
 	      file_info_free (i);
 	      recording_free (r);

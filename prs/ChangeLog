@@ -1,3 +1,8 @@
+2002-07-09  Marc Mulcahy <marc@plbb.net
+
+	* prs_db_builder.c: An entry in the database is now updated when the
+	name, genre or length changes in the corresponding audio file.
+
 2002-07-09  Marc Mulcahy <marc.mulcahy@sun.com>
 
 	* src/db.c src/prs_db_builder.c: Fixed stupidity when handling
