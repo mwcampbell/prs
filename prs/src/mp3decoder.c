@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <signal.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include "mp3decoder.h"
 
@@ -81,5 +82,6 @@ mp3_decoder_destroy (MP3Decoder *d)
     return;
 
   close (d->fd);
+  kill (d->pid, SIGTERM);
   free (d);
 }
