@@ -151,16 +151,19 @@ logger_data_complete (logger_data *d)
 		return;
 
 	info = file_info_new (d->path, 0, 0);
-	if (info && info->name)
+	if (!info)
+		return;
+	if (info->name)
 		d->name = strdup (info->name);
-	if (info && info->artist)
+	if (info->artist)
 		d->artist = strdup (info->artist);
-	if (info && info->album)
+	if (info->album)
 		d->album = strdup (info->album);
 	length = (int) (info->audio_out-info->audio_in);
 
 	sprintf (length_string, "%d", length);
 	d->length = strdup (length_string);
+	file_info_free (info);
 }
 
 
