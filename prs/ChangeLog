@@ -1,3 +1,7 @@
+2003-04-06  Matt Campbell  <mattcampbell@pobox.com>
+
+	* TODO: Updated the to-do list.
+
 2003-03-23    <marc@plbb.net>
 
 	* src/scheduler.c (scheduler_switch_templates): Added support for

@@ -1,13 +1,7 @@
 Mixer:
 
-Implement mixer channels and outputs that run in their own threads, to
-reduce glitches in the output, especially the sound card output.
-
-Fix the mixer so that when the mic is on, all other channels are
-turned down, even if another channel is created and started while the
-mic is turned on.  This way a DJ doing a live airbreak can start the
-music with the mic still on, talk over the music, and then turn the
-mic off.
+Modify the shout mixer output to use stdio instead of direct system
+calls to open, write, and close the archive file.
 
 Database:
 
@@ -15,8 +9,6 @@ Change format of log table to take a time and a recording path rather
 than a recording id.
 
 Scheduler:
-
-Allow scheduling recurring time slots.
 
 Make it possible for the user to manually alter the playlist.
 
