@@ -118,6 +118,7 @@ mixer_channel_new (const int rate,
 	pthread_mutex_init (&(ch->mutex), NULL);
 	ch->data_reader_thread = 0;
 	ch->reader_thread_running = 0;
+	ch->has_data_reader_thread = 0;
 	return ch;
 }
 	
@@ -167,8 +168,9 @@ void
 mixer_channel_start_reader (MixerChannel *ch)
 {
 	if (!ch->reader_thread_running) {
-		pthread_create (&(ch->data_reader_thread), NULL, data_reader, ch);
+		ch->has_data_reader_thread = 1;
 		ch->reader_thread_running = 1;
+		pthread_create (&(ch->data_reader_thread), NULL, data_reader, ch);
 	}
 }
 
@@ -230,6 +232,12 @@ void
 mixer_channel_advance_pointers (MixerChannel *ch)
 {
 	pthread_mutex_lock (&(ch->mutex));
+	if (ch->has_data_reader_thread && ch->space_left >= ch->buffer_size &&
+	    !ch->reader_thread_running) {
+		ch->data_end_reached = 1;
+		pthread_mutex_unlock (&(ch->mutex));
+		return;
+	}
 	ch->output += ch->this_chunk_size*ch->channels;
 	if (ch->output >= ch->buffer_end)
 		ch->output = ch->buffer;

@@ -48,6 +48,7 @@ struct  _MixerChannel {
 
 	/* Reader thread stuff */
 
+	int has_data_reader_thread;
 	int reader_thread_running;
 	pthread_t data_reader_thread;
 
