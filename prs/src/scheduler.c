@@ -161,7 +161,7 @@ scheduler_switch_templates (scheduler *s)
 		e = (template_stack_entry *) s->template_stack->data;
 		if (e->t->fallback_id != -1 &&
 			(e->t->handle_overlap == HANDLE_OVERLAP_FALLBACK ||
-			 s->last_event_end_time < t->end_time)) {
+			 s->last_event_end_time < e->t->end_time)) {
 			t = get_playlist_template_by_id (s->db, e->t->fallback_id);
 			t->type = TEMPLATE_TYPE_FALLBACK;
 			t->start_time = s->last_event_end_time;
