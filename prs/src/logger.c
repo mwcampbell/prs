@@ -177,7 +177,10 @@ live365_log_file (void *data)
 	curl_easy_setopt (url, CURLOPT_URL,
 			  "http://asong.live365.com/cgi-bin/add_song.cgi");
 	
-	/* Setup post data */
+	curl_easy_setopt (url, CURLOPT_NOSIGNAL, 1);
+	curl_easy_setopt (url, CURLOPT_TIMEOUT, 30);
+
+        /* Setup post data */
 
 	curl_formadd (&post, &end,
 		      CURLFORM_COPYNAME, "handle",
