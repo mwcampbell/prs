@@ -41,7 +41,7 @@ file_info_new (char *path,
 		if (tmp - path == l - strlen (links[i].ext)) {
 			info = links[i].constructor (path, in_threshhold,
 						     out_threshhold);
-			break;
+			return info;
 		}
 	}
 	debug_printf (DEBUG_FLAGS_FILE_INFO,
