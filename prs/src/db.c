@@ -673,7 +673,7 @@ get_playlist_template_by_id (Database *db, int id)
 	t->start_time = -1;
 	t->end_time = -1;
 	t->fallback_id = -1;
-	t->end_prefade = -1.0;
+	t->end_prefade = 0.0;
 	mysql_free_result (res);
 	db_unlock (db);
   
