@@ -1,3 +1,18 @@
+2003-03-23    <marc@plbb.net>
+
+	* src/scheduler.c (scheduler_switch_templates): Added support for
+	prescheduling mixer channels from a previous template to be deleted.
+	(scheduler_new): Initialize scheduled_delete_time and
+	scheduled_delete_key.
+	(scheduler_schedule_next_event): Support deleting mixer channels
+	from a previous template.
+	(scheduler_schedule_next_event): Automation events with deltas of less
+	than 0 no longer throw the automation object and scheduler object out
+	of sync.
+
+	* src/scheduler.h: Adde scheduled_delete_time and scheduled_delete_key
+	member variables to schedule mixer channels to be deleted.
+	
 2003-02-12  Matt Campbell  <mattcampbell@pobox.com>
 
 	* src/mp3decoder.c: Made a couple of fixes to ensure that decoder

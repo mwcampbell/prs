@@ -31,19 +31,24 @@
 
 
 typedef struct {
-  pthread_mutex_t mut;
-  MixerAutomation *a;
-  Database *db;
-  double prev_event_start_time;
-  double prev_event_end_time;
-  double last_event_end_time;
-  list *template_stack;
+	pthread_mutex_t mut;
+	MixerAutomation *a;
+	Database *db;
+	double prev_event_start_time;
+	double prev_event_end_time;
+	double last_event_end_time;
+	list *template_stack;
 
-  /* Scheduler thread */
+	/* Scheduler thread */
 
-  pthread_t scheduler_thread;
-  double preschedule;
-  double running;
+	pthread_t scheduler_thread;
+	double preschedule;
+	double running;
+
+	/* Scheduled channel deletes */
+
+	time_t scheduled_delete_time;
+	int scheduled_delete_key;
 } scheduler;
 
 
@@ -57,6 +62,7 @@ scheduler_schedule_next_event (scheduler *s);
 void
 scheduler_start (scheduler *s,
 		 double preschedule);
+indent-region
 void
 scheduler_reset (scheduler *s);
 

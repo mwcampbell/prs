@@ -116,6 +116,8 @@ scheduler_new (MixerAutomation *a, Database *db, double cur_time)
 	s->running = 0;
 	s->preschedule = 0.0;
 	pthread_mutex_init (&(s->mut), NULL);
+	s->scheduled_delete_time = 0;
+	s->scheduled_delete_key = 0;
 	debug_printf (DEBUG_FLAGS_SCHEDULER, "Creating scheduler object");
 	return s;
 }
@@ -202,7 +204,7 @@ scheduler_switch_templates (scheduler *s)
 	if (start_time < s->prev_event_start_time)
 		start_time = s->prev_event_start_time;
 
-	start_delta = start_time-s->prev_event_start_time-fade;
+	start_delta = start_time-s->prev_event_start_time-(fade*.8);
 
 	/* If the new template starts before the end of the last event in the scheduler, schedule a fade event */
 
@@ -214,8 +216,7 @@ scheduler_switch_templates (scheduler *s)
 		ae->length = fade;
 		ae->level = 0;
 		mixer_automation_add_event (s->a, ae);
-		s->prev_event_start_time = start_time-fade;
-		start_delta = fade;
+		s->prev_event_start_time = start_time-(fade*.8);
 	}
 
 	/*
@@ -227,12 +228,10 @@ scheduler_switch_templates (scheduler *s)
 
 	if (prev_template_id != -1 &&
 	    handle_overlap != HANDLE_OVERLAP_IGNORE) {
-		ae = automation_event_new ();
-		ae->type = AUTOMATION_EVENT_TYPE_DELETE_CHANNELS;
-		ae->data = prev_template_end_time;
-		ae->delta_time = start_delta;
-		mixer_automation_add_event (s->a, ae);
-		s->prev_event_start_time = start_time;
+		if (s->scheduled_delete_time > 0)
+			mixer_delete_channels (s->a->m, s->scheduled_delete_key);
+		s->scheduled_delete_time = start_time+300;
+		s->scheduled_delete_key = prev_template_end_time;
 	}
 	s->last_event_end_time = s->prev_event_end_time = start_time;
 
@@ -308,8 +307,11 @@ url_manager (void *data)
 				mixer_patch_channel_all (i->m, i->url);
 			}
 		}
-		else
+		else {
+			if (ch->fade_destination != 1.0)
+				mixer_fade_channel (i->m, i->url 1.0, 1.0);
 			ch = NULL;
+		}
 		usleep (retry_sleep_delay);
 		if (ch && mixer_get_channel (i->m, i->url)) {
 			if (ch->level < 1.0) {
@@ -326,6 +328,7 @@ url_manager (void *data)
 
         mixer_set_default_level (i->m, 1.0);
 	mixer_automation_enable_logger (i->a, 1);
+	mixer_fade_channel (i->m, i->url, 0, 1);
 	
         /* Free stuff to exit */
 
@@ -355,6 +358,17 @@ scheduler_schedule_next_event (scheduler *s)
 	
 	pthread_mutex_lock (&(s->mut));
 
+	/* If there are channels hanging around from a previous template
+	 * to be deleted, delete them
+	 */
+
+	if (s->scheduled_delete_time > 0 &&
+	    s->last_event_end_time > s->scheduled_delete_time) {
+		mixer_delete_channels (s->a->m, s->scheduled_delete_key);
+		s->scheduled_delete_time = 0;
+		s->scheduled_delete_key = 0;
+	}
+	
 	if (s->template_stack)
 		stack_entry = (template_stack_entry *) s->template_stack->data;
 	if (!stack_entry ||
@@ -551,8 +565,13 @@ scheduler_schedule_next_event (scheduler *s)
 		scheduler_switch_templates (s);
 	}
 	else if (stack_entry) {
-		if (ae) 
+		if (ae) {
+			if (ae->delta_time < 0) {
+				e->start_time -= ae->delta_time;
+				e->end_time -= ae->delta_time;
+			}
 			mixer_automation_add_event (s->a, ae);
+		}
 		s->prev_event_start_time = e->start_time;
 		s->prev_event_end_time = e->end_time;
 		if (e->end_time > s->last_event_end_time)
