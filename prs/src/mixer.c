@@ -181,6 +181,16 @@ mixer_main_thread (void *data)
 		slice_spent = (end.tv_sec-start.tv_sec)*1000000+
 			(end.tv_usec-start.tv_usec);
 		wait_time += slice_length-slice_spent;
+
+		/* Sync every hour */
+
+		if (!end.tv_sec%3600) {
+			double cur_time = end.tv_sec+(double)end.tv_usec/1000000;
+			mixer_lock (m);
+			m->cur_time = cur_time;
+			mixer_unlock (m);
+		}
+
 		if (wait_time > 0)
 			usleep (wait_time);
 		start = end;
