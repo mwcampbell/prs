@@ -74,6 +74,7 @@ struct _PlaylistTemplate {
   int repeat_events;
   double artist_exclude;
   double recording_exclude;
+  list *events;
 };
 
 
@@ -105,7 +106,7 @@ typedef enum {
   EVENT_TYPE_SIMPLE_RANDOM,
   EVENT_TYPE_RANDOM,
   EVENT_TYPE_PATH,
-  EVENT_TYPE_FADE_CHANNEL
+  EVENT_TYPE_FADE
 } playlist_event_type;
 
 struct _PlaylistEvent {
@@ -113,32 +114,26 @@ struct _PlaylistEvent {
   int number;
   playlist_event_type type;
   char *channel_name;
-  int anchor;
+  double level;
+  int anchor_event_number;
+  int anchor_position;
   double offset;
   char *detail1;
   char *detail2;
   char *detail3;
   char *detail4;
   char *detail5;
+  double start_time;
+  double end_time;
 };
 
 
 
 void
 playlist_event_free (PlaylistEvent *e);
-
-
-
-/*
- *
- * Playlist event list
- *
- */
-
-void
-playlist_event_list_free (list *l);
-list *
-get_playlist_events_from_template (PlaylistTemplate *t);
+PlaylistEvent *
+playlist_template_get_event (PlaylistTemplate *t,
+			     int event_number);
 
 
 
@@ -211,6 +206,29 @@ Recording *
 recording_picker_select (RecordingPicker *p,
 			 list *category_list,
 			 double cur_time);
+
+
+
+/*
+ *
+ * Configuration and status tables
+ *
+ */
+
+int
+check_config_status_tables (void);
+void
+create_config_status_tables (list *read_only_users,
+			     list *total_access_users);
+char *
+get_config_value (const char *key);
+void
+set_config_value (const char *key, const char *value);
+char *
+get_status_value (const char *key);
+void
+set_status_value (const char *key, const char *value);
+
 
 
 

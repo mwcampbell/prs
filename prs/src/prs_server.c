@@ -3,17 +3,152 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <signal.h>
 #include "db.h"
 #include "mixer.h"
 #include "ossmixeroutput.h"
 #include "shoutmixeroutput.h"
+#include <shout/shout.h>
 #include "vorbismixerchannel.h"
 
 
 
+static mixer *global_mixer = NULL;
+
+
+
+static void
+prs_signal_handler (int signum)
+{
+  switch (signum)
+    {
+    case SIGUSR1:
+      fprintf (stderr, "User signal 1 trapped.\n");
+      setup_streams (global_mixer);
+      break;
+    }
+}
+
+
+
+static shout_conn_t *
+get_shout_connection (const char * stream,
+		      shout_conn_t *orig)
+{
+  char key[1024];
+  char *value;
+  shout_conn_t *c = malloc (sizeof (shout_conn_t));
+  if (orig)
+    memcpy (c, orig, sizeof (shout_conn_t));
+  else
+    memset (c, 0, sizeof (shout_conn_t));
+  
+  sprintf (key, "%s_ip", stream);
+  value = get_config_value (key);
+  if (value)
+    c->ip = value;
+  sprintf (key, "%s_port", stream);
+  value = get_config_value (key);
+  if (value)
+    c->port = atoi (value);
+  free (value);
+
+
+  /* I f we don't have  a valid ip and port, stop now */
+
+  if (!c->ip || c->port <= 0)
+    {
+      free (c);
+      return NULL;
+    }
+
+  sprintf (key, "%s_mount", stream);
+  value = get_config_value (key);
+  if (value)
+    c->mount = value;
+  sprintf (key, "%s_password", stream);
+  value = get_config_value (key);
+  if (value)
+    c->password = value;
+  sprintf (key, "%s_aim", stream);
+  value = get_config_value (key);
+  if (value)
+    c->aim = value;
+  sprintf (key, "%s_icq", stream);
+  value = get_config_value (key);
+  if (value)
+    c->icq = value;
+  sprintf (key, "%s_irc", stream);
+  value = get_config_value (key);
+  if (value)
+    c->irc = value;
+  sprintf (key, "%s_name", stream);
+  value = get_config_value (key);
+  if (value)
+    c->name = value;
+  sprintf (key, "%s_url", stream);
+  value = get_config_value (key);
+  if (value)
+    c->url = value;
+  sprintf (key, "%s_genre", stream);
+  value = get_config_value (key);
+  if (value)
+    c->genre = value;
+  sprintf (key, "%s_description", stream);
+  value = get_config_value (key);
+  if (value)
+    c->description = value;
+  sprintf (key, "%s_bitrate", stream);
+  value = get_config_value (key);
+  if (value)
+    c->bitrate = atoi (value);
+  free (value);
+  sprintf (key, "%s_ispublic", stream);
+  value = get_config_value (key);
+  if (value)
+    c->ispublic = atoi (value);
+  free (value);
+  return c;
+}
+
+
+
+static void
+setup_streams (mixer *m)
+{
+  int i;
+  char stream_name[1024];
+  MixerOutput *o;
+  shout_conn_t *original, *new;
+  
+  for (i = 1; i <= 5; i++)
+    {
+      sprintf (stream_name, "stream%d", i);
+      o = mixer_get_output (m, stream_name);
+      if (o)
+	original = shout_mixer_output_get_connection (o);
+      else
+	original = NULL;
+      new = get_shout_connection (stream_name, original);    
+      if (o)
+	shout_mixer_output_set_connection (o, new);
+    else
+      {
+	if (new)
+	  {
+	    o = shout_mixer_output_new (stream_name, 44100, 2, new);
+	    mixer_add_output (m, o);
+	  }
+      }
+    }
+}
+
+
+
+
 static double
-process_playlist_event (PlaylistEvent *e,
-			PlaylistTemplate *t,
+process_playlist_event (PlaylistTemplate *t,
+			int event_number,
 			RecordingPicker *p,
 			mixer *m)
 {
@@ -22,9 +157,29 @@ process_playlist_event (PlaylistEvent *e,
 
   static double last_start_time = -1.0, last_end_time = -1.0;
 
+  PlaylistEvent *e;
+  PlaylistEvent *anchor_event;
   Recording *r;
   list *categories;
   MixerEvent *me;
+  
+  /* Ensure that last_start_time and last_end_time are initialized */
+  
+  if (last_start_time == -1.0)
+    last_start_time = last_end_time = mixer_get_time (m);
+
+  /* Get the PlaylistEvent from the template */
+
+  e = playlist_template_get_event (t, event_number);
+  if (!e)
+    return last_start_time;
+
+  /* Get the event to which this event is anchored */
+
+  if (e->anchor_event_number >= 0)
+    anchor_event = playlist_template_get_event (t, e->anchor_event_number);
+  else
+    anchor_event = NULL;
   
   /* Create the mixer event */
 
@@ -33,12 +188,17 @@ process_playlist_event (PlaylistEvent *e,
   
   /* Compute the start time of this event */
 
-  if (last_start_time == -1.0)
-    last_start_time = last_end_time = mixer_get_time (m);
-
-  me->start_time = last_start_time = 
-    (e->anchor ? last_end_time : last_start_time)+e->offset;
-
+  if (anchor_event && anchor_event->start_time != -1.0)
+    me->start_time = last_start_time = 
+    (e->anchor_position)
+      ? (anchor_event->end_time+e->offset)
+      : (anchor_event->start_time+e->offset);
+  else
+    me->start_time =
+      (e->anchor_position)
+      ? (last_end_time+e->offset)
+      : (last_start_time+e->offset);
+  
   /* Set the channel name */
   
   me->channel_name = strdup (e->channel_name);
@@ -83,17 +243,17 @@ process_playlist_event (PlaylistEvent *e,
       
       me->type = MIXER_EVENT_TYPE_ADD_CHANNEL;
       me->detail1 = strdup (r->path);
-      me->level = 1.0;
-
+      me->level = e->level;
       me->start_time -= r->audio_in;
       me->end_time = me->start_time+r->audio_out;
       recording_free (r);
       break;
-    case EVENT_TYPE_FADE_CHANNEL:
+    case EVENT_TYPE_FADE:
     
       me->type = MIXER_EVENT_TYPE_FADE_CHANNEL;
-      me->level = atof (e->detail1);
-      me->end_time = me->start_time + atof (e->detail2);
+      me->level = e->level;
+      me->end_time = me->start_time + atof (e->detail1);
+      me->detail1 = strdup (e->detail1);
       break;
 
     case EVENT_TYPE_PATH:
@@ -101,8 +261,7 @@ process_playlist_event (PlaylistEvent *e,
       r = find_recording_by_path (e->detail1);
       me->type = MIXER_EVENT_TYPE_ADD_CHANNEL;
       me->detail1 = strdup (r->path);
-      me->level = 1.0;
-
+      me->level = e->level;
       me->start_time -= r->audio_in;
       me->end_time = me->start_time+r->audio_out;
       recording_free (r);
@@ -116,7 +275,8 @@ process_playlist_event (PlaylistEvent *e,
 
       if (me->end_time > 86400)
 	me->end_time -= 86400;
-      last_end_time = me->end_time;
+      e->start_time = last_start_time = me->start_time;
+      e->end_time = last_end_time = me->end_time;
       mixer_insert_event (m, me);
       return me->start_time;
     }
@@ -131,20 +291,23 @@ execute_playlist_template (PlaylistTemplate *t,
 			   mixer *m,
 			   double cur_time)
 {
-  list *events, *tmp;
+  int length;
+  int i;
   RecordingPicker *p;
 	        
   if (!t)
-    return;
+    return cur_time;
 
-  events = get_playlist_events_from_template (t);
   p = recording_picker_new (t->artist_exclude, t->recording_exclude);
   do
     {
-      for (tmp = events; tmp; tmp = tmp->next)
+      length = list_length (t->events);
+      for (i = 1; i <= length; i++)
 	{
-	  double start_time = process_playlist_event ((PlaylistEvent *) tmp->data,
-						      t, p, m);
+	  double start_time = process_playlist_event (t,
+						      i,
+						      p,
+						      m);
 	    
 	  /* If we just queued an event more than 10 seconds in the future,
 	   * wait the difference less ten seconds
@@ -161,7 +324,6 @@ execute_playlist_template (PlaylistTemplate *t,
 	}
     }
   while (t->repeat_events && cur_time > t->start_time && cur_time < t->end_time);
-  playlist_event_list_free (events);
   recording_picker_free (p);
   return cur_time;
 }
@@ -177,15 +339,17 @@ playlist_main_thread (void *data)
 
   cur_time = mixer_get_time (m);
   
-  printf ("Mixer time is now %lf.\n", cur_time);
   while (1)
     {
       double new_time;
 
       t = get_playlist_template (cur_time);
       if (t)
-	new_time = execute_playlist_template (t, m, cur_time);
-    else
+	{
+	  new_time = execute_playlist_template (t, m, cur_time);
+playlist_template_free (t);
+	}
+      else
       {
 
 	/* Wait ten seconds, then re-sync wih the mixer and try again */
@@ -208,21 +372,17 @@ int main (void)
   char input[81];
   int done = 0;
   
+  signal (SIGUSR1, prs_signal_handler);
   connect_to_database ("prs");
-  m = mixer_new ();
-  o = shout_mixer_output_new ("shoutcast",
-			      44100,
-			      2,
-			      "127.0.0.1",
-			      8000,
-			      "marcplanet");
-  mixer_add_output (m, o);
+  global_mixer = m = mixer_new ();
+  setup_streams (m);
   o = oss_mixer_output_new ("soundcard",
 			    44100,
 			    2);
   mixer_add_output (m, o);
   mixer_sync_time (m);
 
+  printf ("Running as pid %d.\n", getpid ());
   pthread_create (&playlist_thread, NULL, playlist_main_thread, m);
 
   while (!done)

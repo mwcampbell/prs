@@ -11,6 +11,17 @@
 
 
 
+void *
+list_get_item (list *l, int item)
+{
+  while (item-- && l)
+    l = l->next;
+  if (l)
+    return l->data;
+}
+
+
+
 void
 list_free (list *l)
 {

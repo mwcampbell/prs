@@ -19,6 +19,8 @@ oss_mixer_output_free_data (MixerOutput *o)
 {
   oss_info *i;
 
+  if (!o)
+    return;
   if (!o->data)
     return;
   i = (oss_info *) o->data;

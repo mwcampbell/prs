@@ -12,7 +12,7 @@ mixer_output_destroy (MixerOutput *o)
   if (o->buffer)
     free (o->buffer);
   if (o->free_data)
-    o->free_data (o->data);
+    o->free_data (o);
   else
     {
       if (o->data)

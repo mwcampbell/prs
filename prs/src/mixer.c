@@ -30,50 +30,6 @@ mixer_unlock (mixer *m)
 
 
 
-static MixerChannel *
-mixer_find_channel (mixer *m,
-		    const char *channel_name)
-{
-  list *tmp;
-
-  if (!m)
-    return NULL;
-  for (tmp = m->channels; tmp; tmp = tmp->next)
-    {
-      MixerChannel *ch = (MixerChannel *) tmp->data;
-
-      if (!strcmp (channel_name, ch->name))
-	break;
-    }
-  if (tmp)
-    return (MixerChannel *) tmp->data;
-  else
-    return NULL;
-}
-
-
-
-static MixerOutput *
-mixer_find_output (mixer *m,
-		   const char *output_name)
-{
-  list *tmp;
-
-  for (tmp = m->outputs; tmp; tmp = tmp->next)
-    {
-      MixerOutput *o = (MixerOutput *) tmp->data;
-
-      if (!strcmp (output_name, o->name))
-	break;
-    }
-  if (tmp)
-    return (MixerOutput *) tmp->data;
-  else
-    return NULL;
-}
-
-
-
 static void
 mixer_do_events (mixer *m)
 {
@@ -108,6 +64,11 @@ mixer_do_events (mixer *m)
 	    mixer_patch_channel_all (m, e->channel_name);
 	    mixer_lock (m);
 	    break;
+	case MIXER_EVENT_TYPE_FADE_CHANNEL:
+	  mixer_unlock (m);
+	  mixer_fade_channel (m, e->channel_name, e->level, atof (e->detail1));
+	  mixer_lock (m);
+	  break;
 	}
       mixer_event_free (e);
       m->events = list_delete_item (m->events, m->events);
@@ -229,17 +190,11 @@ mixer_start (mixer *m)
 {
   if (!m)
     return -1;
-
+  if (m->running || m->thread)
+    return -1;
+  
   mixer_lock (m);
 
-  /* If we're already running, don't try to start again */
-
-  if (m->thread)
-    {
-      mixer_unlock (m);
-      return -1;
-    }
-  
   /* Create mixer main thread */
 
   m->running = 1;
@@ -248,10 +203,10 @@ mixer_start (mixer *m)
 		      mixer_main_thread,
 		      (void *) m))
     {
+      m->running = 0;
       mixer_unlock (m);
       return -1;
     }
-  m->running = 1;
   mixer_unlock (m);
   return 0;
 }
@@ -270,8 +225,9 @@ mixer_stop (mixer *m)
 
   mixer_lock (m);
   m->running = 0;
-  m->thread = 0;
   mixer_unlock (m);
+  pthread_join (m->thread, NULL);
+  m->thread = 0;
   return 0;
 }
 
@@ -285,6 +241,10 @@ mixer_destroy (mixer *m)
   if (!m)
     return;
   
+  /* Stop the mixer to destroy it */
+
+  mixer_stop (m);
+
   mixer_lock (m);
   
   /* Free channel list */
@@ -317,6 +277,54 @@ mixer_add_channel (mixer *m,
 }
 
 
+
+void
+mixer_delete_channel (mixer *m,
+		      const char *channel_name)
+{
+  list *tmp;
+
+  if (!m)
+    return;
+  if (!channel_name)
+    return;
+  mixer_lock (m);
+  for (tmp = m->channels; tmp; tmp = tmp->next)
+    {
+      MixerChannel *ch = (MixerChannel *) tmp->data;
+      if (!strcmp (ch->name, channel_name))
+	break;
+    }
+  if (tmp)
+    list_delete_item (m->channels, tmp);
+  mixer_unlock (m);
+}
+
+
+
+MixerChannel *
+mixer_get_channel (mixer *m,
+		    const char *channel_name)
+{
+  list *tmp;
+
+  if (!m)
+    return NULL;
+  for (tmp = m->channels; tmp; tmp = tmp->next)
+    {
+      MixerChannel *ch = (MixerChannel *) tmp->data;
+
+      if (!strcmp (channel_name, ch->name))
+	break;
+    }
+  if (tmp)
+    return (MixerChannel *) tmp->data;
+  else
+    return NULL;
+}
+
+
+
 void
 mixer_add_output (mixer *m,
 		  MixerOutput *o)
@@ -332,6 +340,52 @@ mixer_add_output (mixer *m,
 
 
 void
+mixer_delete_output (mixer *m,
+		     const char *output_name)
+{
+  list *tmp;
+
+  if (!m)
+    return;
+  if (!output_name)
+    return;
+  mixer_lock (m);
+  for (tmp = m->outputs; tmp; tmp = tmp->next)
+    {
+      MixerOutput *o = (MixerOutput *) tmp->data;
+      if (!strcmp (o->name, output_name))
+	break;
+    }
+  if (tmp)
+    list_delete_item (m->outputs, tmp);
+  mixer_unlock (m);
+}
+
+
+
+
+MixerOutput *
+mixer_get_output (mixer *m,
+		  const char *output_name)
+{
+  list *tmp;
+
+  for (tmp = m->outputs; tmp; tmp = tmp->next)
+    {
+      MixerOutput *o = (MixerOutput *) tmp->data;
+
+      if (!strcmp (output_name, o->name))
+	break;
+    }
+  if (tmp)
+    return (MixerOutput *) tmp->data;
+  else
+    return NULL;
+}
+
+
+
+void
 mixer_patch_channel (mixer *m,
 		     const char *channel_name,
 		     const char *output_name)
@@ -342,8 +396,8 @@ mixer_patch_channel (mixer *m,
   if (!m)
     return;
   mixer_lock (m);
-  ch = mixer_find_channel (m, channel_name);
-  o = mixer_find_output (m, output_name);
+  ch = mixer_get_channel (m, channel_name);
+  o = mixer_get_output (m, output_name);
 
   if (!ch || !o)
     return;
@@ -363,7 +417,7 @@ mixer_patch_channel_all (mixer *m,
   if (!m)
     return;
   mixer_lock (m);
-  ch = mixer_find_channel (m, channel_name);
+  ch = mixer_get_channel (m, channel_name);
 
   if (!ch)
     {
@@ -461,7 +515,7 @@ mixer_fade_channel (mixer *m,
   if (!m)
     return;
 
-  ch = mixer_find_channel (m, channel_name);
+  ch = mixer_get_channel (m, channel_name);
   
   if (!ch)
     return;

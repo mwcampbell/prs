@@ -37,8 +37,20 @@ void
 mixer_add_channel (mixer *m,
 		   MixerChannel *ch);
 void
+mixer_delete_channel (mixer *m,
+		      const char *channel_name);
+MixerChannel *
+mixer_get_channel (mixer *m,
+		   const char *channel_name);
+void
 mixer_add_output (mixer *m,
 		  MixerOutput *o);
+void
+mixer_delete_output (mixer *m,
+		     const char *output_name);
+MixerOutput *
+mixer_get_output (mixer *m,
+		  const char *output_name);
 void
 mixer_patch_channel (mixer *m,
 		     const char *channel_name,

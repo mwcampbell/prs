@@ -172,6 +172,86 @@ get_recording_from_result (PGresult *res,
 
 
 
+static PlaylistEvent *
+get_playlist_event_from_result (PGresult *res,
+			       int row)
+{
+  PlaylistEvent *e = (PlaylistEvent *) malloc (sizeof(PlaylistEvent));
+  char *type;
+ 
+  e->template_id = atoi (PQgetvalue (res, row, 0));
+  e->number = atoi (PQgetvalue (res, row, 1));
+  type = PQgetvalue (res, row, 3);
+  if (!strcmp (type, "simple_random"))
+    e->type = EVENT_TYPE_SIMPLE_RANDOM;
+  else if (!strcmp (type, "random"))
+    e->type = EVENT_TYPE_RANDOM;
+  else if (!strcmp (type, "fade"))
+    e->type = EVENT_TYPE_FADE;
+
+  e->channel_name = strdup (PQgetvalue (res, row, 4));
+  e->level = atof (PQgetvalue (res, row, 5));
+  e->anchor_event_number = atoi (PQgetvalue (res, row, 6));
+  e->anchor_position = atoi (PQgetvalue (res, row, 7));
+  e->offset = atof (PQgetvalue (res, row, 8));
+  e->detail1 = strdup (PQgetvalue (res, row, 9));
+  e->detail2 = strdup (PQgetvalue (res, row, 10));
+  e->detail3 = strdup (PQgetvalue (res, row, 11));
+  e->detail4 = strdup (PQgetvalue (res, row, 12));
+  e->detail5 = strdup (PQgetvalue (res, row, 13));
+  e->start_time = e->end_time = -1.0;
+  return e;
+}
+
+
+
+static void
+playlist_event_list_free (list *l)
+{
+  list *tmp;
+
+  if (!l)
+    return;
+  for (tmp = l; tmp; tmp = tmp->next)
+    {
+      if (tmp->data)
+	playlist_event_free ((PlaylistEvent *)tmp->data);
+    }
+  list_free (l);
+}
+
+
+
+static list *
+get_playlist_events_from_template (int template_id)
+{
+  PGresult *res;
+  int i;
+  char buffer[1024];
+  list *events = NULL;
+  
+  if (template_id < 0)
+    return NULL;
+  sprintf (buffer, "select * from playlist_event where template_id = %d order by event_number;", template_id);
+  res = PQexec (connection, buffer);
+  if (PQntuples (res) <= 0)
+    {
+      PQclear (res);
+      return NULL;
+    }
+  i = PQntuples (res)-1;
+  while (i >= 0)
+    {
+      PlaylistEvent *e = get_playlist_event_from_result (res, i);
+      events = list_prepend (events, (void *) e);
+      i--;
+    }
+  PQclear (res);
+  return events;
+}
+
+
+
 int
 check_recording_tables (void)
 {
@@ -284,10 +364,13 @@ create_playlist_tables (list *read_only_users,
     "create table playlist_event (
       template_id int references playlist_template,
       event_number int,
+      event_name varchar (100),
       event_type varchar (20),
-      event_anchor int,
-      event_offset float,
       event_channel_name varchar (100),
+      event_level float,
+      event_anchor_event_number  int,
+      event_anchor_position int,
+      event_offset float,
       detail1 varchar (64),
       detail2 varchar (64),
       detail3 varchar (64),
@@ -315,6 +398,8 @@ playlist_template_free (PlaylistTemplate *t)
     return;
   if (t->name)
     free (t->name);
+  if (t->events)
+    playlist_event_list_free (t->events);
   free (t);
 }
 
@@ -333,6 +418,7 @@ get_playlist_template_from_result (PGresult *res,
   t->repeat_events = atoi (PQgetvalue (res, row, 4));
   t->artist_exclude = atof (PQgetvalue (res, row, 5));
   t->recording_exclude = atof (PQgetvalue (res, row, 6));
+  t->events = get_playlist_events_from_template (t->id);
   return t;
 }
 
@@ -382,78 +468,20 @@ playlist_event_free (PlaylistEvent *e)
 
 
 
-void
-playlist_event_list_free (list *l)
+PlaylistEvent *
+playlist_template_get_event (PlaylistTemplate *t,
+			     int event_number)
 {
-  list *tmp;
-
-  if (!l)
-    return;
-  for (tmp = l; tmp; tmp = tmp->next)
-    {
-      if (tmp->data)
-	playlist_event_free ((PlaylistEvent *)tmp->data);
-    }
-  list_free (l);
-}
-
-
-
-static PlaylistEvent *
-get_playlist_event_from_result (PGresult *res,
-			       int row)
-{
-  PlaylistEvent *e = (PlaylistEvent *) malloc (sizeof(PlaylistEvent));
-  char *type;
- 
-  e->template_id = atoi (PQgetvalue (res, row, 0));
-  e->number = atoi (PQgetvalue (res, row, 1));
-  type = PQgetvalue (res, row, 2);
-  if (!strcmp (type, "simple_random"))
-    e->type = EVENT_TYPE_SIMPLE_RANDOM;
-  else if (!strcmp (type, "random"))
-    e->type = EVENT_TYPE_RANDOM;
-  
-  e->anchor = atoi (PQgetvalue (res, row, 3));
-  e->offset = atof (PQgetvalue (res, row, 4));
-  e->channel_name = strdup (PQgetvalue (res, row, 5));
-  e->detail1 = strdup (PQgetvalue (res, row, 6));
-  e->detail2 = strdup (PQgetvalue (res, row, 7));
-  e->detail3 = strdup (PQgetvalue (res, row, 8));
-  e->detail4 = strdup (PQgetvalue (res, row, 9));
-  e->detail5 = strdup (PQgetvalue (res, row, 10));
-   return e;
-}
-
-
-
-list *
-get_playlist_events_from_template (PlaylistTemplate *t)
-{
-  PGresult *res;
-  int i;
-  char buffer[1024];
-  list *events = NULL;
+  PlaylistEvent *e;
   
   if (!t)
     return NULL;
-  sprintf (buffer, "select * from playlist_event where template_id = %d order by event_number;", t->id);
-  res = PQexec (connection, buffer);
-  if (PQntuples (res) <= 0)
-    {
-      PQclear (res);
-      return NULL;
-    }
-  i = PQntuples (res)-1;
-  while (i >= 0)
-    {
-      PlaylistEvent *e = get_playlist_event_from_result (res, i);
-      events = list_prepend (events, (void *) e);
-      i--;
-    }
-  PQclear (res);
-  return events;
+  if (!t->events)
+    return NULL;
+  e = (PlaylistEvent *) list_get_item (t->events, event_number-1);
+  return e;
 }
+
 
 
 
@@ -659,11 +687,8 @@ recording_picker_new (double artist_exclude,
       srand (time (NULL));
       randomized = 1;
     }
-  i = rand ()%3;
-  sprintf (buffer, "artist_exc%d", i);
-  p->artist_exclude_table_name = strdup (buffer);
-  sprintf (buffer, "recording_exc%d", i);
-  p->recording_exclude_table_name = strdup (buffer);
+  p->artist_exclude_table_name = strdup ("artist_exclude");
+  p->recording_exclude_table_name = strdup ("recording_exclude");
 
   /* Create the tables */
 
@@ -777,6 +802,7 @@ recording_picker_select (RecordingPicker *p,
   if (PQntuples (res) <= 0)
     {
       PQclear (res);
+      fprintf (stderr, "Query failed\n%s\n", buffer);
       return NULL;
     }
   n = rand ()%PQntuples (res);
@@ -798,3 +824,137 @@ recording_picker_select (RecordingPicker *p,
     }  
   return r;
 }
+
+
+
+int
+check_config_status_tables (void)
+{
+  return (does_table_exist ("config") && does_table_exist ("status"));
+}
+
+
+
+void
+create_config_status_tables (list *read_only_users,
+			     list *total_access_users)
+{
+char *config_create_query = 
+  "create table config (
+      config_key varchar (256),
+      config_value varchar (256));";
+ char *status_create_query = "create table status (
+      status_key varchar (256),
+status_value varchar (256));";
+
+ create_table ("config",
+	      config_create_query,
+	      read_only_users,
+	      total_access_users,
+	      1);
+ create_table ("status",
+	      status_create_query,
+	      read_only_users,
+	      total_access_users,
+	      1);
+}
+
+
+
+char *
+get_config_value (const char *key)
+{
+  PGresult *res;
+  char buffer[1024];
+  char *rv;
+  char *processed_key;
+  
+  processed_key = process_for_sql (key);
+  sprintf (buffer, "select config_value from config where config_key = '%s';", processed_key);
+  res = PQexec (connection, buffer);
+  if (PQntuples (res) != 1)
+    {
+      PQclear (res);
+      return NULL;
+    }
+  rv = strdup (PQgetvalue (res, 0, 0));
+  PQclear (res);
+  free (processed_key);
+  return rv;
+}
+
+
+
+void
+set_config_value (const char *key,
+		  const char *value)
+{
+  PGresult *res;
+  char buffer[1024];
+  char *processed_key, *processed_value;
+  
+  processed_key = process_for_sql (key);
+  processed_value = process_for_sql (value);
+
+  sprintf (buffer, "delete from config where config_key = '%s';", processed_key);
+  res = PQexec (connection, buffer);
+  PQclear (res);
+  sprintf (buffer, "insert into config values ('%s', '%s');", processed_key, processed_value);
+  res = PQexec (connection, buffer);
+  PQclear (res);
+  free (processed_key);
+  free (processed_value);
+}
+
+
+
+
+char *
+get_status_value (const char *key)
+{
+  PGresult *res;
+  char buffer[1024];
+  char *rv;
+  char *processed_key;
+  
+  processed_key = process_for_sql (key);
+
+  sprintf (buffer, "select status_value from status where status_key = '%s';", processed_key);
+  res = PQexec (connection, buffer);
+  if (PQntuples (res) != 1)
+    {
+      PQclear (res);
+      return NULL;
+    }
+  rv = strdup (PQgetvalue (res, 0, 0));
+  PQclear (res);
+  free (processed_key);
+  return rv;
+}
+
+
+
+void
+set_status_value (const char *key,
+		  const char *value)
+{
+  PGresult *res;
+  char buffer[1024];
+  char *processed_key, *processed_value;
+  
+  processed_key = process_for_sql (key);
+  processed_value = process_for_sql (value);
+
+  sprintf (buffer, "delete from status where status_key = '%s';", processed_key);
+  res = PQexec (connection, buffer);
+  PQclear (res);
+  sprintf (buffer, "insert into status values ('%s', '%s');", processed_key, processed_value);
+  res = PQexec (connection, buffer);
+  PQclear (res);
+  free (processed_key);
+  free (processed_value);
+}
+
+
+
+

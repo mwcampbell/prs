@@ -30,6 +30,8 @@ struct _list {
 
 
 
+void *
+list_get_item (list *l, int item);
 void
 list_free (list *l);
 list *

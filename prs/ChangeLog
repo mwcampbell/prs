@@ -1,3 +1,82 @@
+2002-07-22  Marc Mulcahy <marc@plbb.net>
+	
+	* src/prs_server.c: Added a signal handler for SIGUSR1.  Added
+	support for re-configuring the shoutcast stream based on the
+	config database.
+
+	* src/shoutmixeroutput.c: Added shout_conn_t_free for freeing
+	shout_conn_t structures with dynamically allocated strings in
+	them.  Abstracted out the code for starting and stopping the
+	encoder, so the stream can be dynamically re-configured.  Made the
+	shout_thread function static.  Changed the signature of the
+	shout_mixer_output_new function to take the output name, the rate,
+	the number of channels, and a pointer to a shout_conn_t structure.
+	Added a function called shout_mixer_output_get_connection to
+	return the shout_conn_t structure.  added a
+	shout_mixer_output_set_connection to reset the shout connection--
+	has smarts to only restart the stream when critical parameters
+	like ip or port chang, restarts encoder when bitrate changes.
+
+	* src/mixer.c src/mixer.h: Renamed mixer_find_channel to
+	mixer_get_channel and mixer_find_output to mixer_get_output.
+	Exported those two functions.  Added mixer_delete_channel and
+	mixer_delete_output.
+
+	* src/db.c src/db.h: Added support for configuration and status
+	tables.
+
+	* src/mixer.c: Fixed mixer_stop so it actually works.  Made
+	mixer_destroy use mixer_stop before destroying the channels and
+	outputs and the mixer itself.
+
+	* src/mixeroutput.c: Fixed mixer_channel_destroy to pass the
+	output to the virtual method mixer_channel_free_data rather than
+	just the data.
+
+	* src/ossmixeroutput.c: Protect mixer_output_free_data from NULL
+	MixerOutput pointer.
+	
+2002-07-20  Marc Mulcahy <marc.mulcahy@sun.com>
+
+	* src/db.c: Added debug message to recording_picker_select to
+	indicate when recording selection fails.
+
+2002-07-19  Marc Mulcahy <marc.mulcahy@sun.com>
+
+	* src/db.c: Added the following fields to the playlist_event
+	   database table: event_name - so events can be referenced by
+	   other events event_level - so events can contain audio level
+	   information event_anchor_event_number - the event to which this
+	   event is attached (anchored) event_anchor_position - 0 to
+	   anchor to the beginning of the specified event, 1 to anchor to
+	   the end.  event_offset - time offset from anchor position
+	
+	* src/db.h: Added level, anchor_event_number, and achor_position
+	fields corresponding to the new columns in the playlist_event
+	table.  Added a start_time and end_time field so the last start
+	and end time of an event can be stored with the copy of the event
+	in the playlist template.
+
+	* src/db.c src/db.h: Added the list of events to the template data
+	structure.  Made get_playlist_events_from_template static since it
+	is no longer needed externally-- also changed it's signature to
+	take a template_id rather than the entire template data structure
+	for efficiency.  Made playlist_event_list_free static since it is
+	no longer needed externally.  Added a function called
+	playlist_template+get+event, which takes a playlist_template and
+	an event number.
+
+	* src/db.c: Made recording_picker_new use two standard table names
+	(recording_exclude, artist_exclude) so that they can easily be
+	referenced by other parts of the app/web interface.
+
+	* src/db.h: Changed event type name to EVENT_TYPE_FADE.
+
+	* src/list.c src/list.h: Added list_get_item.
+
+	* src/mixer.c: Added support for MIXER_EVENT_TYPE_FADE_CHANNEL
+	events.
+
 2002-07-14 Marc Mulcahy <marc@plbb.net>
 
 	* src/vorbismixerchannel.c: Get rid of warnings.

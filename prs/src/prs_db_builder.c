@@ -49,7 +49,9 @@ int main (void)
     user_table_created = 0;
   if (!check_playlist_tables ())
     create_playlist_tables (NULL, users);
-
+  if (!check_config_status_tables ())
+    create_config_status_tables (NULL, users);
+  
   /* Loop through all files found */
 
   while (!feof (fp))
