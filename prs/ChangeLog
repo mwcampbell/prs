@@ -1,3 +1,8 @@
+2003-01-21  Matt Campbell  <mattcampbell@pobox.com>
+
+	* src/mp3fileinfo.c: Finally compatible with both id3lib 3.7 and
+	3.8.
+
 2003-01-16  Marc Mulcahy  <marc@plbb.net>
 
 	* src/urlmixerchannel.c: More attempts to get this thing to work.
@@ -41,7 +46,6 @@
 
 	* AUTHORS: Added my name and email address.
 
->>>>>>> 1.89
 2003-01-15  Marc Mulcahy  <marc@plbb.net>
 
 	* src/mixerautomation.c (mixer_automation_start): If the event at the
