@@ -31,6 +31,7 @@ AC_CHECK_LIB(curl, curl_easy_init, LIBS="$LIBS -lcurl")
 dnl Ensure C++ support gets linked in for id3lib
 LIBS="$LIBS -lstdc++"
 AC_CHECK_LIB(id3, ID3Tag_New, LIBS="$LIBS -lid3")
+AC_CHECK_FUNCS(ID3Field_GetASCIIItem)
 
 dnl MySQL configuration
 

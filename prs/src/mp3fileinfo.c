@@ -9,37 +9,10 @@
 
 
 
-/* Genre list taken from mp3info.h in the mp3info package */
-#define MAX_GENRE 147
-static char *genres[MAX_GENRE + 2] = {
-  "Blues","Classic Rock","Country","Dance","Disco","Funk","Grunge",
-  "Hip-Hop","Jazz","Metal","New Age","Oldies","Other","Pop","R&B",
-  "Rap","Reggae","Rock","Techno","Industrial","Alternative","Ska",
-  "Death Metal","Pranks","Soundtrack","Euro-Techno","Ambient",
-  "Trip-Hop","Vocal","Jazz+Funk","Fusion","Trance","Classical",
-  "Instrumental","Acid","House","Game","Sound Clip","Gospel","Noise",
-  "Alt. Rock","Bass","Soul","Punk","Space","Meditative",
-  "Instrumental Pop","Instrumental Rock","Ethnic","Gothic",
-  "Darkwave","Techno-Industrial","Electronic","Pop-Folk","Eurodance",
-  "Dream","Southern Rock","Comedy","Cult","Gangsta Rap","Top 40",
-  "Christian Rap","Pop/Funk","Jungle","Native American","Cabaret",
-  "New Wave","Psychedelic","Rave","Showtunes","Trailer","Lo-Fi",
-  "Tribal","Acid Punk","Acid Jazz","Polka","Retro","Musical",
-  "Rock & Roll","Hard Rock","Folk","Folk/Rock","National Folk",
-  "Swing","Fast-Fusion","Bebob","Latin","Revival","Celtic",
-  "Bluegrass","Avantgarde","Gothic Rock","Progressive Rock",
-  "Psychedelic Rock","Symphonic Rock","Slow Rock","Big Band",
-  "Chorus","Easy Listening","Acoustic","Humour","Speech","Chanson",
-  "Opera","Chamber Music","Sonata","Symphony","Booty Bass","Primus",
-  "Porn Groove","Satire","Slow Jam","Club","Tango","Samba",
-  "Folklore","Ballad","Power Ballad","Rhythmic Soul","Freestyle",
-  "Duet","Punk Rock","Drum Solo","A Cappella","Euro-House",
-  "Dance Hall","Goa","Drum & Bass","Club-House","Hardcore","Terror",
-  "Indie","BritPop","Negerpunk","Polsk Punk","Beat",
-  "Christian Gangsta Rap","Heavy Metal","Black Metal","Crossover",
-  "Contemporary Christian","Christian Rock","Merengue","Salsa",
-  "Thrash Metal","Anime","JPop","Synthpop",""
-};
+/* Ugly hack to get around C API change in id3lib 3.8 */
+#ifdef HAVE_ID3FIELD_GETASCIIITEM
+#define ID3FIeld_GetASCII ID3FIeld_GetASCIIItem
+#endif
 
 
 
@@ -185,7 +158,7 @@ get_mp3_file_info (char *path, unsigned short in_threshhold,
       (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
       char title[256];
-      ID3Field_GetASCII (field, title, 256);
+      ID3Field_GetASCII (field, title, 256, 1);
       info->name = strdup (title);
     }
   
@@ -193,7 +166,7 @@ get_mp3_file_info (char *path, unsigned short in_threshhold,
       (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
       char artist[256];
-      ID3Field_GetASCII (field, artist, 256);
+      ID3Field_GetASCII (field, artist, 256, 1);
       info->artist = strdup (artist);
     }
   
@@ -201,7 +174,7 @@ get_mp3_file_info (char *path, unsigned short in_threshhold,
       (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
       char album[256];
-      ID3Field_GetASCII (field, album, 256);
+      ID3Field_GetASCII (field, album, 256, 1);
       info->album = strdup (album);
     }
   
@@ -209,7 +182,7 @@ get_mp3_file_info (char *path, unsigned short in_threshhold,
       (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
       char date[256];
-      ID3Field_GetASCII (field, date, 256);
+      ID3Field_GetASCII (field, date, 256, 1);
       info->date = strdup (date);
     }
   
@@ -217,7 +190,7 @@ get_mp3_file_info (char *path, unsigned short in_threshhold,
       (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
       char genre[256];
-      ID3Field_GetASCII (field, genre, 256);
+      ID3Field_GetASCII (field, genre, 256, 1);
       info->genre = strdup (genre);
     }
   
