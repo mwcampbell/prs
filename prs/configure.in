@@ -26,6 +26,8 @@ CFLAGS="$CFLAGS $XML_CFLAGS"
 AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
 AC_CHECK_LIB(pq, PQconnectdb, LIBS="$LIBS -lpq")
 AC_CHECK_LIB(shout, shout_open, LIBS="$LIBS -lshout")
+AC_CHECK_LIB(curl, curl_easy_init, LIBS="$LIBS -lcurl")
+
 
 dnl --------------------------------------------------
 dnl Do substitutions
