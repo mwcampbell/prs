@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <tremor/ivorbisfile.h>
+#include <vorbis/vorbisfile.h>
 #include "debug.h"
 #include "fileinfo.h"
 #include "vorbisfileinfo.h"
@@ -48,7 +48,7 @@ vorbis_get_data (OggVorbis_File *vf,
 	assert (length >= 0);
 	while (bytes_left > 0)
 	{
-		bytes_read = ov_read (vf, ptr, bytes_left, &section);
+		bytes_read = ov_read (vf, ptr, bytes_left, 0, sizeof (short), 1, &section);
 		if (bytes_read <= 0)
 			break;
 		bytes_left -= bytes_read;
