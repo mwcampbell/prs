@@ -95,6 +95,8 @@ get_mp3_audio_in (FileInfo *info, int threshhold)
 	while (!done)
 	{
 		samples_read = mp3_decoder_get_data (d, buffer, buffer_size);
+		if (!samples_read)
+			done = 1;
 		end_buffer = buffer + samples_read;
 		ptr = buffer;
 		while (ptr < end_buffer)

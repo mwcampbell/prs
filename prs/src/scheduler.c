@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <string.h>
 #include <malloc.h>
 #include <unistd.h>
@@ -170,6 +171,10 @@ scheduler_switch_templates (scheduler *s)
 		prev_template_end_time = e->t->end_time;
 		fade = e->t->end_prefade;
 		scheduler_pop_template (s);
+		if (s->template_stack) {
+			debug_printf (DEBUG_FLAGS_SCHEDULER, "Template underneath.\n");
+			return;
+		}
 		if (t) {
 			s->prev_event_end_time = s->last_event_end_time = t->start_time;
 			scheduler_push_template (s, t, 1);
@@ -193,7 +198,7 @@ scheduler_switch_templates (scheduler *s)
 
 	/* If the new template starts before the end of the last event in the scheduler, schedule a fade event */
 
-	if (start_time < s->last_event_end_time) {
+	if (fade != 0) {
 		ae = automation_event_new ();
 		ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
 		ae->delta_time = start_delta;
@@ -261,6 +266,7 @@ url_manager (void *data)
 	if (ch) {
 		ch->level = .001;
 		ch->enabled = 1;
+		ch->key = i->end_time;
 		mixer_add_channel (i->m, ch);
 		mixer_patch_channel_all (i->m, i->url);
 		mixer_automation_stop (i->a);
@@ -324,7 +330,7 @@ scheduler_schedule_next_event (scheduler *s)
 {
 	PlaylistTemplate *t;
 	PlaylistEvent *e, *anchor;
-	template_stack_entry *stack_entry;
+	template_stack_entry *stack_entry = NULL;
 	AutomationEvent *ae;
 	list *categories = NULL;
 	Recording *r;
@@ -335,7 +341,11 @@ scheduler_schedule_next_event (scheduler *s)
 	char channel_name[1024];
 	
 	pthread_mutex_lock (&(s->mut));
-	if (!s->template_stack)
+
+	if (s->template_stack)
+		stack_entry = (template_stack_entry *) s->template_stack->data;
+	if (!stack_entry ||
+	    (stack_entry && stack_entry->t->end_time < s->prev_event_end_time))
 		scheduler_switch_templates (s);
 	if (s->template_stack)
 		stack_entry = (template_stack_entry *) s->template_stack->data;
@@ -453,21 +463,19 @@ scheduler_schedule_next_event (scheduler *s)
 			ae = NULL;
 			e->end_time = e->start_time;
 		}
-
-                /* Add channel to the mixer */
-
-		mixer_add_file (s->a->m, ae->channel_name, e->detail1, stack_entry->t->id);
-
-		ae->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
-		ae->detail1 = strdup (e->detail1);
-		ae->level = e->level;
-		if (e->start_time-info->audio_in > stack_entry->t->start_time) {
-			e->start_time -= info->audio_in;
-			ae->delta_time -= info->audio_in;
+		else {
+			mixer_add_file (s->a->m, ae->channel_name, e->detail1, stack_entry->t->id);
+			ae->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
+			ae->detail1 = strdup (e->detail1);
+			ae->level = e->level;
+			if (e->start_time-info->audio_in > stack_entry->t->start_time) {
+				e->start_time -= info->audio_in;
+				ae->delta_time -= info->audio_in;
+			}
+			ae->length = info->audio_out;
+			e->end_time = e->start_time+info->audio_out;
+			file_info_free (info);
 		}
-		ae->length = info->audio_out;
-		e->end_time = e->start_time+info->audio_out;
-		file_info_free (info);
 		break;
 	case EVENT_TYPE_URL:
 
@@ -478,7 +486,6 @@ scheduler_schedule_next_event (scheduler *s)
 		i->end_time = i->start_time+atof (e->detail2);
 		if (i->end_time > stack_entry->t->end_time)
 				i->end_time = stack_entry->t->end_time;
-		e->start_time = i->start_time;
 		e->end_time = i->end_time;
 		i->retry_delay = 1;
 		i->end_fade = stack_entry->t->end_prefade;
@@ -501,10 +508,11 @@ scheduler_schedule_next_event (scheduler *s)
 			}
 			else if (stack_entry->event_number > stack_entry->length)
 				stack_entry->event_number = 1;
-			s->prev_event_start_time = s->prev_event_end_time = s->last_event_end_time = i->start_time;
+			stack_entry->t->fallback_id = -1;
+			s->prev_event_end_time = s->last_event_end_time = i->start_time;
 			scheduler_push_template (s, t, 1);
+			stack_entry = NULL;
 		}
-		stack_entry = NULL;
 		ae = NULL;
 		break;
 	}

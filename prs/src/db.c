@@ -983,18 +983,6 @@ recording_picker_destroy (RecordingPicker *p)
 		      "recording_picker_destroy called\n");
 
 	db_lock (p->db);
-	if (p->recording_exclude_table_name)
-	{
-		sprintf (buffer, "drop table %s", p->recording_exclude_table_name);
-		db_execute (p->db, buffer);
-		free (p->recording_exclude_table_name);
-	}
-	if (p->artist_exclude_table_name)
-	{
-		sprintf (buffer, "drop table %s", p->artist_exclude_table_name);
-		db_execute (p->db, buffer);
-		free (p->artist_exclude_table_name);
-	}
 	db_unlock (p->db);
 	free (p);
 }
