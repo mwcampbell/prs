@@ -173,7 +173,6 @@ setup_streams (mixer *m)
   char stream_name[1024];
   MixerOutput *o;
   shout_conn_t *new;
-  AudioFilter *f;
   
   for (i = 1; i <= 5; i++)
     {
@@ -184,15 +183,7 @@ setup_streams (mixer *m)
 	shout_mixer_output_set_connection (o, new);
       else if (new)
 	{
-	  f = audio_compressor_new (44100, 2,
-				    44100*2*MIXER_LATENCY,
-				    -20,
-				    5.0,
-				    .01,
-				    2);
-
 	  o = shout_mixer_output_new (stream_name, 44100, 2, new);
-	  mixer_output_add_filter (o, f);
 	  mixer_add_output (m, o);
 	}
     }
@@ -210,6 +201,7 @@ int main (void)
   int done = 0;
   MixerAutomation *a;
   scheduler *s;
+  AudioFilter *f;
   
   signal (SIGUSR1, prs_signal_handler);
   m = mixer_new ();
@@ -218,9 +210,52 @@ int main (void)
   o = oss_mixer_output_new ("soundcard",
 			    44100,
 			    2);
- mixer_add_output (m, o);
+  f = audio_compressor_new (44100, 2, 44100*2*MIXER_LATENCY);
+  audio_compressor_add_band (f,
+			     50,
+			     -30,
+			     3,
+			     .01,
+			     5,
+			     4);
+  audio_compressor_add_band (f,
+			     100,
+			     -30,
+			     3,
+			     .01,
+			     5,
+			     4);
+  audio_compressor_add_band (f,
+			     4000,
+			     -30,
+			     3,
+			     .01,
+			     5,
+			     5);
+  audio_compressor_add_band (f,
+			     9000,
+			     -25,
+			     3,
+			     .01,
+			     5,
+			     5);
+  audio_compressor_add_band (f,
+			     15000,
+			     -5,
+			     10,
+			     .01,
+			     5,
+			     4);
+  mixer_output_add_filter (o, f);
+  mixer_add_output (m, o);
   
   
+			   
+#if 0
+  ch = vorbis_mixer_channel_new ("test", "test.ogg");
+  mixer_add_channel (m, ch);
+  mixer_patch_channel_all (m, "test");
+#endif
   printf ("Running as pid %d.\n", getpid ());
   a = mixer_automation_new (m);
   mixer_start (m);

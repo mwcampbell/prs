@@ -5,8 +5,7 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_INIT(ChangeLog)
-AM_INIT_AUTOMAKE(prs)
-
+AM_INIT_AUTOMAKE(prs, 0.1)
 
 AC_PROG_CC
 AC_PROG_CPP
