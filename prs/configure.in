@@ -28,18 +28,14 @@ AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
 AC_CHECK_LIB(shout, shout_open, LIBS="$LIBS -lshout")
 AC_CHECK_LIB(curl, curl_easy_init, LIBS="$LIBS -lcurl")
 
-dnl Ensure C++ support gets linked in for id3lib
-LIBS="$LIBS -lstdc++"
+dnl Ensure C++ support and zlib get linked in for id3lib
+LIBS="$LIBS -lstdc++ -lz"
 AC_CHECK_LIB(id3, ID3Tag_New, LIBS="$LIBS -lid3")
 AC_CHECK_FUNCS(ID3Field_GetASCIIItem)
 
-dnl MySQL configuration
+dnl SQLite configuration
 
-MYSQL_LIBS=`mysql_config --libs`
-if test "x$MYSQL_LIBS" = x ; then
-  AC_CHECK_LIB(mysqlclient, mysql_init, MYSQL_LIBS="-lmysqlclient")
-fi
-LIBS="$LIBS $MYSQL_LIBS"
+AC_CHECK_LIB(sqlite, sqlite_close, LIBS="-lsqlite $LIBS")
 
 dnl --------------------------------------------------
 dnl Do substitutions
