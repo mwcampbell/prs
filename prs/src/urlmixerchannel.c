@@ -107,6 +107,7 @@ static void
 channel_info_destroy (channel_info *i)
 {
 	list *tmp, *next;
+	char buffer[1024];
 	
 	if (!i)
 		return;
@@ -116,6 +117,8 @@ channel_info_destroy (channel_info *i)
 	pthread_mutex_lock (&(i->mutex));
 	i->destroyed = 1;
 	pthread_mutex_unlock (&(i->mutex));
+	if (i->decoder_connected)
+		while (read (i->decoder_output_fd, buffer, 1024) > 0);
 	if (i->transfer_thread > 0)
 		pthread_join (&(i->transfer_thread), NULL);
 	
@@ -455,8 +458,11 @@ curl_transfer_thread_func (void *data)
 	curl_easy_cleanup (url);
 	pthread_mutex_lock (&(i->mutex));
 	if (i->connected) {
-		if (i->ch && !i->destroyed)
+		if (i->ch && !i->destroyed) {
 			i->ch->data_end_reached = 1;
+			i->transfer_thread = 0;
+			i->decoder_connected = 0;
+		}
 	}
 	pthread_cond_broadcast (&(i->cond));
 	pthread_mutex_unlock (&(i->mutex));
