@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include "debug.h"
 
@@ -24,15 +25,17 @@ debug_printf (int flags,
 	      ...)
 {
 	va_list args;
-	time_t cur_time;
+	struct timeval v;
 	char *timestring;
 
 	va_start (args, format);
-	cur_time = time (NULL);
-	timestring = ctime (&cur_time);
+	gettimeofday (&v, NULL);
+	timestring = strdup (ctime (&v.tv_sec));
+	timestring[strlen(timestring)-6] = 0;
 	if (flags & debug_flags) {
-		fprintf (stdout, "%s\t", timestring);
+		fprintf (stdout, "%s.%03d\n\t", timestring, v.tv_usec/1000);
 		vfprintf (stdout, format, args);
 	}
+	free (timestring);
 	va_end (args);
 }
