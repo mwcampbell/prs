@@ -74,7 +74,7 @@
 	file from the mp3info file for parsing the ID3 tags and MP3
 	header.
 
-2002-10-24  Marc Mulcahy <marc.mulcahy@sun.com>
+2002-10-24  Marc Mulcahy <marc@plbb.net>
 
 	* src/prs_server.c src/shoutmixeroutput.c: Added support for
 	stereo/mono encoding.  added support for both Vorbis and mp3 encoding.
@@ -82,7 +82,7 @@
 	* src/prs_config.c: Added XML configuration file rather than databse
 	table.
 
-2002-10-08  Marc Mulcahy <marc.mulcahy@sun.com>
+2002-10-08  Marc Mulcahy <marc@plbb.net>
 
 	*  src/mixerbus.c: Added declipper to the mixer.
 
@@ -159,7 +159,7 @@
 	* src/mixerautomation.c src/mixerautomation.h: Started work on new
 	automation system.
 
-2002-07-29  Marc Mulcahy <marc.mulcahy@sun.com>
+2002-07-29  Marc Mulcahy <marc@plbb.net>
 
 	* src/prs_server.c: Fixed end of template bug.
 
@@ -167,7 +167,7 @@
 
 	* src/ db.c src/prs_server.c: Delete debug fprintf statements.
 
-2002-07-29  Marc Mulcahy <marc.mulcahy@sun.com>
+2002-07-29  Marc Mulcahy <marc@plbb.net>
 
 	* src/mixer.c: Made mixer_fade_channel_fade fail if a fade is
 	currently in progress.  This allows mixer_fade_ll to take precidence.
@@ -220,12 +220,12 @@
 	* src/ossmixeroutput.c: Protect mixer_output_free_data from NULL
 	MixerOutput pointer.
 	
-2002-07-20  Marc Mulcahy <marc.mulcahy@sun.com>
+2002-07-20  Marc Mulcahy <marc@plbb.net>
 
 	* src/db.c: Added debug message to recording_picker_select to
 	indicate when recording selection fails.
 
-2002-07-19  Marc Mulcahy <marc.mulcahy@sun.com>
+2002-07-19  Marc Mulcahy <marc@plbb.net>
 
 	* src/db.c: Added the following fields to the playlist_event
 	   database table: event_name - so events can be referenced by
@@ -298,7 +298,7 @@
 	enabled flag so mixer channels can be enabled and disabled (in the
 	case of files this means paused and unpaused.
 
-2002-07-12  Marc Mulcahy <marc.mulcahy@sun.com>
+2002-07-12  Marc Mulcahy <marc@plbb.net>
 
 	* src/fileinfo.c: Fixed rounding errors in finding audio out queue points.
 
@@ -314,7 +314,7 @@
 	* prs_db_builder.c: An entry in the database is now updated when the
 	name, genre or length changes in the corresponding audio file.
 
-2002-07-09  Marc Mulcahy <marc.mulcahy@sun.com>
+2002-07-09  Marc Mulcahy <marc@plbb.net>
 
 	* src/db.c src/prs_db_builder.c: Fixed stupidity when handling
 	recordings not being in the database on database rebuild.
