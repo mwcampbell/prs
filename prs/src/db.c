@@ -267,7 +267,7 @@ get_playlist_events_from_template (Database *db,
   
 	if (template_id < 0)
 		return NULL;
-	sprintf (buffer, "select * from playlist_event where template_id = %d order by event_number", template_id);
+	sprintf (buffer, "select * from playlist_event where template_id = %d order by event_number desc", template_id);
 	if (mysql_real_query (db->conn, buffer, strlen (buffer)) == 0 &&
 	    (res = mysql_store_result (db->conn)) != NULL &&
 	    mysql_num_rows (res) > 0)
