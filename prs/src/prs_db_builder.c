@@ -13,6 +13,7 @@ int main (void)
   FILE *fp;
   FileInfo *i;
   list *users;
+  int recording_table_created, user_table_created;
   
   /* Create list of audio files */
 
@@ -30,45 +31,79 @@ int main (void)
 
   /* Create tables */
 
-  create_recording_table (NULL, users);
-  create_user_table (NULL, users);
-  create_playlist_template_table (NULL, users);
-  create_playlist_event_table (NULL, users);
+  if (!check_recording_tables ())
+    {
+      recording_table_created = 1;
+      create_recording_tables (NULL, users);
+    }
+  else
+    recording_table_created = 0;
+  if (!check_user_table ())
+    {
+      user_table_created = 1;
+      create_user_table (NULL, users);
+    }
+  else
+    user_table_created = 0;
+  if (!check_playlist_tables ())
+    create_playlist_tables (NULL, users);
 
   /* Loop through all files found */
 
   while (!feof (fp))
     {
-      RecordingInfo *ri = (RecordingInfo *) malloc (sizeof(RecordingInfo));
+      Recording *r;
+
       fgets (path, 1024, fp);
       if (feof (fp))
 	break;
       path[strlen(path)-1] = 0;
-      i = get_vorbis_file_info (path, 1000);
+      if (!recording_table_created)
+	{
+	  i = get_vorbis_file_info (path, 0);
+	  r = find_recording_by_path (path);
+	  if (i->length-r->length <= .001)
+	    {
+	      file_info_free (i);
+	      recording_free (r);
+	      continue;
+	    }
+	  file_info_free (i);
+	  delete_recording (r);
+	  recording_free (r);
+	  i = get_vorbis_file_info (path, 1000);
+	  r = (Recording *) malloc (sizeof(Recording));
+	}
+      else
+	{
+	  i = get_vorbis_file_info (path, 1000);
+	  r = (Recording *) malloc (sizeof(Recording));
+	}
       if (i->name)
-	ri->name = strdup (i->name);
+	r->name = strdup (i->name);
       else
-	ri->name = strdup ("");
-      ri->path = strdup (i->path);
+	r->name = strdup ("");
+      r->path = strdup (i->path);
       if (i->artist)
-	ri->artist = strdup (i->artist);
+	r->artist = strdup (i->artist);
       else
-	ri->artist = strdup ("");
+	r->artist = strdup ("");
       if (i->genre)
-	ri->category = strdup (i->genre);
+	r->category = strdup (i->genre);
       else
-	ri->category = strdup ("");
+	r->category = strdup ("");
       if (i->date)
-	ri->date = strdup (i->date);
+	r->date = strdup (i->date);
       else
-	ri->date = strdup ("");
-      ri->rate = i->rate;
-      ri->channels = i->channels;
-      ri->length = i->length;
-      ri->audio_in = i->audio_in;
-      ri->audio_out = i->audio_out;
-      add_recording (ri);
-      recording_info_free (ri);
+	r->date = strdup ("");
+      r->rate = i->rate;
+      r->channels = i->channels;
+      r->length = i->length;
+      r->audio_in = i->audio_in;
+      r->audio_out = i->audio_out;
+      printf ("Adding %s.\n", r->name);
+      add_recording (r);
+      recording_free (r);
       file_info_free (i);
     }
 }

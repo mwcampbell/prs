@@ -1,3 +1,26 @@
+2002-07-08  Marc Mulcahy <marc@plbb.net>
+
+	* src/db.c src/db.h: Added functions to check for the existence of the
+	various database tables.
+
+	* src/db.c src/db.h: Consolidated the functions for creating the two
+	playlist-related tables into 1 function.
+
+	* src/db.c src/db.h src/prs_db_builder.c src/prs_server.c: Removed the
+	Info naming convention for data structure relating to database stuff
+	for convenience.
+
+	* fileinfo.c: Now if you pass 0 as the threshhold value, the
+	get_vorbis_file_info function doesn't try to find the audio_in and
+	audio_out values which is presumably the most time consuming part of
+	building the database.
+
+	* src/db.c src/db.h: Added functions for deleting recordings from the
+	database and finding recordings by path.
+
+	* src/prs_db_builder.c: Only updates entries in the database which
+	have file lengths which have changed.
+		
 2002-06-02  Marc Mulcahy <marc@plbb.net>
 
 	* Initial coding begins.

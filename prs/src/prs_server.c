@@ -16,7 +16,7 @@ process_playlist_event (PlaylistEvent *e,
 			mixer *m,
 			double cur_time)
 {
-  RecordingInfo *ri;
+  Recording *r;
   list *categories;
   MixerEvent *me;
   double rv;
@@ -36,13 +36,13 @@ process_playlist_event (PlaylistEvent *e,
       if (*e->detail5)
 	categories = string_list_prepend (categories, e->detail5);
       if (e->type == EVENT_TYPE_SIMPLE_RANDOM)
-	ri = recording_picker_select (p, categories, -1);
+	r = recording_picker_select (p, categories, -1);
       else
-	ri = recording_picker_select (p, categories, cur_time);
+	r = recording_picker_select (p, categories, cur_time);
 
       /* if the recording selection failed, return -1 */
 
-      if (!ri)
+      if (!r)
 	{
 	  rv = -1.0;
 	  break;
@@ -52,12 +52,12 @@ process_playlist_event (PlaylistEvent *e,
 
       me = (MixerEvent *) malloc (sizeof (MixerEvent));
       me->type = MIXER_EVENT_TYPE_ADD_CHANNEL;
-      me->detail1 = strdup (ri->name);
-      me->detail2 = strdup (ri->path);
-      me->time = cur_time-ri->audio_in;
+      me->detail1 = strdup (r->name);
+      me->detail2 = strdup (r->path);
+      me->time = cur_time-r->audio_in;
       mixer_insert_event (m, me);
-      rv = ri->audio_out-ri->audio_in;
-      recording_info_free (ri);
+      rv = r->audio_out-r->audio_in;
+      recording_free (r);
       break;
     }
   return rv;
@@ -73,7 +73,7 @@ playlist_main_thread (void *data)
   
   while (1)
     {
-      PlaylistTemplateInfo *t = get_playlist_template (mixer_time);
+      PlaylistTemplate *t = get_playlist_template (mixer_time);
       list *events, *tmp;
       RecordingPicker *p;
 	        
@@ -105,7 +105,7 @@ playlist_main_thread (void *data)
 	    }
 	  }
       while (t->repeat_events && mixer_time > t->start_time && mixer_time < t->end_time);
-      playlist_template_info_free (t);
+      playlist_template_free (t);
       playlist_event_list_free (events);
       recording_picker_free (p);
     }

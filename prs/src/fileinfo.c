@@ -210,8 +210,14 @@ get_vorbis_file_info (char *path,
   info->length = ov_time_total(&vf, -1);
   process_vorbis_comments (&vf, info);
   
-  info->audio_in = get_vorbis_audio_in (&vf, threshhold);
-  info->audio_out = get_vorbis_audio_out (&vf, threshhold);
+  if (threshhold > 0)
+    info->audio_in = get_vorbis_audio_in (&vf, threshhold);
+  else
+    info->audio_in = -1.0;
+  if (threshhold > 0)
+    info->audio_out = get_vorbis_audio_out (&vf, threshhold);
+  else
+    info->audio_out = -1.0;
   
   ov_clear(&vf);
   return info;

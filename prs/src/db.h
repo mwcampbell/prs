@@ -10,9 +10,9 @@
 
 
 
-typedef struct _RecordingInfo RecordingInfo;
+typedef struct _Recording Recording;
 
-struct _RecordingInfo {
+struct _Recording {
   int id;
   char *name;
   char *path;
@@ -28,24 +28,32 @@ struct _RecordingInfo {
 
 
 
+int
+check_recording_tables (void);
 void
-create_recording_table (list *read_only_users,
+create_recording_tables (list *read_only_users,
 			list *total_access_users);
 void
-recording_info_free (RecordingInfo *i);
+recording_free (Recording *r);
+void
+add_recording (Recording *r);
+void
+delete_recording (Recording *r);
+Recording *
+find_recording_by_path (const char *path);
 
 
 
 /*
  *
- * Lists of recording information
+ * Lists of recordings
  *
  */
 
 
 
 void
-recording_info_list_free (list *l);
+recording_list_free (list *l);
 
 
 
@@ -57,8 +65,8 @@ recording_info_list_free (list *l);
 
 
 
-typedef struct _PlaylistTemplateInfo PlaylistTemplateInfo;
-struct _PlaylistTemplateInfo {
+typedef struct _PlaylistTemplate PlaylistTemplate;
+struct _PlaylistTemplate {
   int id;
   char *name;
   double start_time;
@@ -70,13 +78,15 @@ struct _PlaylistTemplateInfo {
 
 
 
+int
+check_playlist_tables (void);
 void
-create_playlist_template_table (list *read_only_users,
+create_playlist_tables (list *read_only_users,
 				list *total_access_users);
 void
-playlist_template_info_free (PlaylistTemplateInfo *i);
+playlist_template_free (PlaylistTemplate *t);
 
-PlaylistTemplateInfo *
+PlaylistTemplate *
 get_playlist_template (double time);
 
 
@@ -112,9 +122,6 @@ struct _PlaylistEvent {
 
 
 void
-create_playlist_event_table (list *read_only_users,
-			     list *total_access_users);
-void
 playlist_event_free (PlaylistEvent *e);
 
 
@@ -128,7 +135,7 @@ playlist_event_free (PlaylistEvent *e);
 void
 playlist_event_list_free (list *l);
 list *
-get_playlist_events_from_template (PlaylistTemplateInfo *t);
+get_playlist_events_from_template (PlaylistTemplate *t);
 
 
 
@@ -140,6 +147,8 @@ get_playlist_events_from_template (PlaylistTemplateInfo *t);
 
 
 
+int
+check_user_table (void);
 void
 create_user_table (list *read_only_users,
 		   list *total_access_users);
@@ -169,12 +178,6 @@ disconnect_from_database (void);
 
 
 
-int
-create_table (const char *table_name,
-	      const char *create_query,
-	      list *read_only_access_list,
-	      list *total_access_list,
-	      int erase_existing);
 
 
 
@@ -201,7 +204,7 @@ recording_picker_new (double artist_exclude,
 		      double recording_exclude);
 void
 recording_picker_free (RecordingPicker *p);
-RecordingInfo *
+Recording *
 recording_picker_select (RecordingPicker *p,
 			 list *category_list,
 			 double cur_time);
