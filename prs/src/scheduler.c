@@ -230,7 +230,7 @@ scheduler_switch_templates (scheduler *s)
 	    handle_overlap != HANDLE_OVERLAP_IGNORE) {
 		if (s->scheduled_delete_time > 0)
 			mixer_delete_channels (s->a->m, s->scheduled_delete_key);
-		s->scheduled_delete_time = start_time+300;
+		s->scheduled_delete_time = start_time+s->preschedule*2;
 		s->scheduled_delete_key = prev_template_end_time;
 	}
 	s->last_event_end_time = s->prev_event_end_time = start_time;
