@@ -231,6 +231,7 @@ logger_log_file (logger *l,
 	switch (l->type) {
 	case LOGGER_TYPE_LIVE365:
 		pthread_create (&id, NULL, live365_log_file, d);
+		pthread_detach (id);
 		break;
 	}
 	return;
