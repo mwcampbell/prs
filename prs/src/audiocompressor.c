@@ -6,6 +6,7 @@
 
 typedef struct {
   double threshhold;
+  short ithreshhold;
   double ratio;
   double attack_time;
   double release_time;
@@ -13,12 +14,9 @@ typedef struct {
   
   /* Processing state variables */
 
-  double level1;
-  double level2;
-  double fade1;
-  double fade2;
-  double fade_destination1;
-  double fade_destination2;
+  double level;
+  double fade;
+  double fade_destination;
 } CompressorData;
 
 
@@ -33,10 +31,8 @@ audio_compressor_process_data (AudioFilter *f,
   short peak1, peak2;
   short *buffer_end;
   short *iptr, *optr;
-  short ithreshhold;
   CompressorData *d = (CompressorData *) f->data;
 
-  ithreshhold = pow (10.0, d->threshhold/20)*32767;
   peak1 = peak2 = 0;
   iptr = input;
   buffer_end = input+input_length;
@@ -52,60 +48,34 @@ audio_compressor_process_data (AudioFilter *f,
 	    peak2 = val;
 	}
     }
-  if (peak1 > ithreshhold)
+  if ((double)(peak1+peak2)/2 > d->ithreshhold)
     {
-      double peak_gain = log10 ((double)peak1/32767)*20;      
+      double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;      
       double delta = d->threshhold-peak_gain;
-      d->fade_destination1 = delta-delta/d->ratio;
-      d->fade1 = d->attack_time;
+      d->fade_destination = delta-delta/d->ratio;
+      d->fade = d->attack_time;
     }
-  else if (d->fade_destination1 != 0)
+  else if (d->fade_destination != 0)
     {
-      d->fade_destination1 = 0;
-      d->fade1 = d->release_time;
-    }
-  if (f->channels == 2)
-    {
-      if (peak2 > ithreshhold)
-	{
-	  double peak_gain = log10 ((double)peak2/32767)*20;
-	  double delta = d->threshhold-peak_gain;
-	  d->fade_destination2 = delta-delta/d->ratio;
-	  d->fade2 = d->attack_time;
-	}
-      else if (d->fade_destination2 != 0)
-	{
-	  d->fade_destination2 = 0;
-	  d->fade2 = d->release_time;
-	}
+      d->fade_destination = 0;
+      d->fade = d->release_time;
     }
   iptr = input;
   optr = output;
   while (iptr < buffer_end)
     {
-      double fl = pow (10.0, d->level1/20);
+      double fl = pow (10.0, d->level/20);
       *optr++ = *iptr++*fl*d->output_gain;
-      if (d->fade1 != 0)
+      if (d->fade != 0)
 	{
-	  if ((d->fade1 > 0 && d->level1 >= d->fade_destination1)
-	      || (d->fade1 < 0 && d->level1 <= d->fade_destination1))
-	    d->fade1 = 0.0;
+	  if ((d->fade > 0 && d->level >= d->fade_destination)
+	      || (d->fade < 0 && d->level <= d->fade_destination))
+	    d->fade = 0.0;
 	  else
-	    d->level1 += d->fade1;
+	    d->level += d->fade;
 	}
       if (f->channels == 2)
-	{
-	  double fl = pow (10.0, d->level2/20);
-	  *optr++ = *iptr++*fl*d->output_gain;
-	  if (d->fade2 != 0)
-	    {
-	      if ((d->fade2 > 0 && d->level2 >= d->fade_destination2)
-		  || (d->fade2 < 0 && d->level2 <= d->fade_destination2))
-		d->fade2 = 0.0;
-	      else
-		d->level2 += d->fade2;
-	    }
-	}
+	*optr++ = *iptr++*fl*d->output_gain;
     }
   return input_length;
 }
@@ -126,11 +96,12 @@ audio_compressor_new (int rate,
   CompressorData *d = malloc (sizeof (CompressorData));
   d->attack_time = attack_time;
   d->release_time = release_time;
-  d->fade1 = d->fade2 = 0.0;
-  d->level1 = d->level2 = 0;
-  d->fade_destination1 = d->fade_destination2 = 0;
+  d->fade = 0.0;
+  d->level = 0;
+  d->fade_destination = 0;
   d->ratio = ratio;
   d->threshhold = threshhold;
+  d->ithreshhold = pow (10.0, threshhold/20)*32767;
   d->output_gain = output_gain;
   
   /* Convert attack/release times to sample-based values */
