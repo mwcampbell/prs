@@ -228,10 +228,6 @@ scheduler_switch_templates (scheduler *s)
 
 	if (prev_template_id != -1 &&
 	    handle_overlap != HANDLE_OVERLAP_IGNORE) {
-		if (s->scheduled_delete_time > 0)
-			mixer_delete_channels (s->a->m, s->scheduled_delete_key);
-		s->scheduled_delete_time = start_time+s->preschedule*2;
-		s->scheduled_delete_key = prev_template_end_time;
 	}
 	s->last_event_end_time = s->prev_event_end_time = start_time;
 
@@ -358,17 +354,6 @@ scheduler_schedule_next_event (scheduler *s)
 	
 	pthread_mutex_lock (&(s->mut));
 
-	/* If there are channels hanging around from a previous template
-	 * to be deleted, delete them
-	 */
-
-	if (s->scheduled_delete_time > 0 &&
-	    s->scheduled_delete_time > s->last_event_end_time) {
-		mixer_delete_channels (s->a->m, s->scheduled_delete_key);
-		s->scheduled_delete_time = 0;
-		s->scheduled_delete_key = 0;
-	}
-	
 	if (s->template_stack)
 		stack_entry = (template_stack_entry *) s->template_stack->data;
 	if (!stack_entry ||
