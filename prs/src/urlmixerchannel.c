@@ -69,7 +69,6 @@ typedef struct {
 	int destroyed;
 	int bytes_sent;
 	int decoder_connected;
-	int bad_blocks;
 
 	/* Decoder process ID and input and output fds */
 
@@ -125,7 +124,7 @@ channel_info_destroy (channel_info *i)
 	transfer_thread = i->transfer_thread;
 	pthread_mutex_unlock (&(i->mutex));
 	if (transfer_thread > 0)
-		pthread_join (transfer_thread, NULL);
+		pthread_cancel (transfer_thread);
 	
 	pthread_mutex_lock (&(i->mutex));
 	if (i->url)
@@ -184,16 +183,12 @@ url_mixer_channel_get_data (MixerChannel *ch)
 			break;
 		}
 		if (rv < 0) {
-			i->bad_blocks++;
 			rv = 0;
 			break;
 		}
-		i->bad_blocks = 0;
 		remainder -= rv/sizeof(short);
 		tmp += rv/sizeof(short);
 	}
-	if (i->bad_blocks > 100)
-		ch->data_end_reached = 1;
 	return ch->chunk_size-(remainder/ch->channels);
 }
 
@@ -286,7 +281,6 @@ start_mp3_decoder (channel_info *i)
 	i->decoder_input_fd = input[1];
 	i->decoder_output_fd = output[0];
 	i->decoder_connected = 1;
-	i->bad_blocks = 0;
 
 	close (output[1]);
 	close (input[0]);
@@ -316,7 +310,7 @@ mp3_process_first_block (channel_info *i,
 					(*(buf+3)));
 			mp3_header_parse (ulong_header, &mh);
 			if (mh.syncword == 0X0FFF &&
-			    mh.version > 0 && mh.layer > 0 &&
+			    mh.layer > 0 &&
 			    mh.bitrate > 0 && mh.samplerate > 0) {
 				rv = buf;
 				break;
@@ -403,16 +397,6 @@ curl_write_func (void *ptr,
 			start_mp3_decoder (i);
 		}
 	}
-	
-	if (i->archive_file_fd != -1 && bytes_to_process > 0)
-		write (i->archive_file_fd, (void *) buf, bytes_to_process);
-	if (i->decoder_connected && bytes_to_process > 0) {
-		int rv = write (i->decoder_input_fd, (void *) buf, bytes_to_process);
- 		if (rv <= 0) {
-			if (errno == EPIPE)
-				size = 0;
-		}
-	}
 	if (i->connected)
 		bytes_sent = bytes_sent +  mem*size;
 	if (i->bytes_sent <= 4096 && bytes_sent > 4096 && i->connected) {
@@ -424,6 +408,23 @@ curl_write_func (void *ptr,
 		}
 		else
 			i->archive_file_fd = -1;
+	}
+	
+	if (i->archive_file_fd != -1 && bytes_to_process > 0) {
+		pthread_mutex_unlock (&(i->mutex));
+		write (i->archive_file_fd, (void *) buf, bytes_to_process);
+		pthread_mutex_lock (&(i->mutex));
+	}
+	if (i->decoder_connected && bytes_to_process > 0) {
+		int rv;
+
+		pthread_mutex_unlock (&(i->mutex));
+		rv = write (i->decoder_input_fd, (void *) buf, bytes_to_process);
+ 		pthread_mutex_lock (&(i->mutex));
+		if (rv <= 0) {
+			if (errno == EPIPE)
+				size = 0;
+		}
 	}
 	i->bytes_sent = bytes_sent;
 	pthread_mutex_unlock (&(i->mutex));
@@ -439,6 +440,7 @@ curl_transfer_thread_func (void *data)
 	
 	url = curl_easy_init ();
 	curl_easy_setopt (url, CURLOPT_URL, i->url);
+	curl_easy_setopt (url, CURLOPT_NOSIGNAL, 1);
 	curl_easy_setopt (url, CURLOPT_WRITEFUNCTION, curl_write_func);
 	curl_easy_setopt (url, CURLOPT_WRITEDATA, i);
 	curl_easy_setopt (url, CURLOPT_HEADERFUNCTION, curl_header_func);
@@ -448,7 +450,7 @@ curl_transfer_thread_func (void *data)
 	curl_easy_setopt (url, CURLOPT_MAXREDIRS, 5);
 	curl_easy_perform (url);
 	curl_easy_cleanup (url);
-	fprintf (stderr, "Transfer thread complete.\n");
+	pthread_testcancel ();
 	pthread_mutex_lock (&(i->mutex));
 	if (i->connected) {
 		if (i->ch && !i->destroyed) {
