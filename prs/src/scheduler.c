@@ -194,6 +194,8 @@ scheduler_switch_templates (scheduler *s)
 		start_time = prev_template_end_time;
 	t = get_playlist_template (s->db, start_time);
 	
+	if (!t)
+	  return;
 	t->start_time = start_time;
 
 	if (start_time < s->prev_event_start_time)
@@ -254,12 +256,10 @@ url_manager (void *data)
 	
 	/* Wait until start time */
 
-	cur_time = i->start_time;
-
-	start_delay = i->start_time;
-	start_delay -= mixer_get_time (i->m);
+	start_delay = i->start_time-mixer_get_time (i->m)-1;
+	debug_printf (DEBUG_FLAGS_SCHEDULER, "Starting url handler, start delay %lf, start_time %lf, end_time %lf, prefade %lf\n", start_delay, i->start_time, i->end_time, i->end_fade);
 	if (start_delay > 0)
-		usleep ((unsigned int) start_delay*1000000);
+		sleep ((unsigned int) start_delay);
 	
 	cur_time = mixer_get_time (i->m);
 	
@@ -279,10 +279,10 @@ url_manager (void *data)
 		ch->enabled = 1;
 		ch->key = i->end_time;
 		mixer_add_channel (i->m, ch);
+		mixer_set_default_level (i->m, .0001);
 		mixer_patch_channel_all (i->m, i->url);
 		mixer_fade_all (i->m, 0, 1);
 		mixer_fade_channel (i->m, i->url, 1, 1);
-		mixer_set_default_level (i->m, .0001);
 	}
 	while (cur_time < i->end_time-i->end_fade) {
 		ch = mixer_get_channel (i->m, i->url);
@@ -308,9 +308,11 @@ url_manager (void *data)
 			ch = NULL;
 		usleep (retry_sleep_delay);
 		if (ch && mixer_get_channel (i->m, i->url)) {
-			mixer_fade_all (i->m, 0, 1);
-			mixer_set_default_level (i->m, .0001);
-			mixer_fade_channel (i->m, i->url, 1, 1);
+		  if (ch->level < 1.0) {
+		    mixer_fade_all (i->m, 0, 1);
+		    mixer_set_default_level (i->m, .0001);
+		    mixer_fade_channel (i->m, i->url, 1, 1);
+		  }
 		}
 		cur_time = mixer_get_time (i->m);
 	}
@@ -583,7 +585,7 @@ scheduler_main_thread (void *data)
 	double target, current;
   
 	pthread_mutex_lock (&(s->mut));
-	current = target = s->prev_event_end_time;
+	current = s->prev_event_start_time;
 	pthread_mutex_unlock (&(s->mut));
 	debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler main thread started\n");
 	while (1) {
@@ -592,14 +594,13 @@ scheduler_main_thread (void *data)
 			pthread_mutex_unlock (&(s->mut));
 			break;
 		}
-		target += s->preschedule;
+		target = mixer_get_time(s->a->m)+s->preschedule;
 		pthread_mutex_unlock (&(s->mut));
 		while (current <= target) {
 			current = scheduler_schedule_next_event (s);
 		}
 		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler sleeping for %lf seconds\n", current-target);
-		sleep ((unsigned int) (current-target));
-		target = current;
+		sleep ((unsigned int) (current-target)+1);
 	}
 }
 
