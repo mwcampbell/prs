@@ -1,3 +1,10 @@
+2002-12-13  Marc Mulcahy  <marc@plbb.net>
+
+	* php/main.php php/login.php php/index.php php/config.php
+	php/comon.php: Added support for database updates.  Database
+	information such as host, username, password etc. is now retrieved
+	from the prs.conf file for the particular station.
+	
 2002-12-12  Marc Mulcahy  <marc@plbb.net>
 
 	* src/shoutmixeroutput.c (shout_thread): Eliminated use of shout_sync since the mixer does it's own syncronization now.

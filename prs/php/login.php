@@ -1,5 +1,8 @@
 <?
 require_once ("common.php");
+
+parse_config_file ($station);
+
 db_connect ();
 
 if (!$username && !$user_username)
@@ -27,7 +30,8 @@ else if (!$user_username)
 		$user_username = $username;
 		$user_password = $real_password;
 		$user_type = $real_type;
-		session_register ("user_username", "user_password", "user_type", "station");
+		session_register ("user_username", "user_password", "user_type");
+		session_register ("station", "DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD");
 	}
 }
 redirect ("main.php");
