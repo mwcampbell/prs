@@ -39,7 +39,7 @@ typedef struct {
 } extension_constructor_link;
 
 
-#define SUPPORTED_EXTENSIONS 2
+#define SUPPORTED_EXTENSIONS 3
 
 extension_constructor_link links[] = {
 	{".mp2", mp3_file_info_new},
