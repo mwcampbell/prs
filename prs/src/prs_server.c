@@ -54,10 +54,10 @@ mic_on (mixer *m)
       fprintf (stderr, "Couldn't turn mic on\n");
       return;
     }
-  mixer_fade_all  (m, .3, 1.0);
+  mixer_fade_all  (m, .2, 1.0);
   if (!global_data_get_soundcard_duplex ())
     mixer_delete_output (m, "soundcard");
-  ch->level = .7;
+  ch->level = .8;
   mixer_add_channel (m, ch);
   mixer_patch_channel_all (m, "mic");
 }
@@ -225,31 +225,31 @@ int main (void)
   mixer_bus_add_filter (b, f);
 #define OUTPUT_GAIN 1 
 #define ATTACK_TIME .01
-#define RELEASE_TIME 2
+#define RELEASE_TIME 3
   f = multiband_audio_compressor_new (44100, 2, 44100*2*MIXER_LATENCY);
   multiband_audio_compressor_add_band
     (f,
-     100,
-     -30,
-     3,
-     ATTACK_TIME,
-     RELEASE_TIME,
-     1,
-     OUTPUT_GAIN*7); 
-  multiband_audio_compressor_add_band
-    (f,
-     400,
-     -30,
-     3,
-     ATTACK_TIME,
-     RELEASE_TIME,
-     1,
-     OUTPUT_GAIN*7); 
-  multiband_audio_compressor_add_band
-    (f,
-     2500,
+     150,
      -40,
-     2,
+     4,
+     ATTACK_TIME,
+     RELEASE_TIME,
+     1,
+     OUTPUT_GAIN*30); 
+  multiband_audio_compressor_add_band
+    (f,
+     300,
+     -40,
+     4,
+     ATTACK_TIME,
+     RELEASE_TIME,
+     1,
+     OUTPUT_GAIN*30); 
+  multiband_audio_compressor_add_band
+    (f,
+     600,
+     -30,
+     3,
      ATTACK_TIME,
      RELEASE_TIME,
      1,
@@ -257,8 +257,8 @@ int main (void)
   multiband_audio_compressor_add_band
     (f,
      6000,
-     -40,
-     2,
+     -30,
+     3,
      ATTACK_TIME,
      RELEASE_TIME,
      1,
@@ -271,17 +271,15 @@ int main (void)
      ATTACK_TIME,
      RELEASE_TIME,
      1,
-     OUTPUT_GAIN*10); 
+     OUTPUT_GAIN*6); 
   mixer_bus_add_filter (b, f);
   mixer_add_output (m, o);
   mixer_patch_bus (m, "air", "soundcard");
   
   
-#if 0
   ch = vorbis_mixer_channel_new ("test", "test.ogg");
   mixer_add_channel (m, ch);
   mixer_patch_channel_all (m, "test");
-#endif
   printf ("Running as pid %d.\n", getpid ());
   a = mixer_automation_new (m);
   mixer_start (m);
