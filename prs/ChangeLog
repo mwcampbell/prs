@@ -1,11 +1,20 @@
 2003-01-16  Marc Mulcahy  <marc@plbb.net>
 
+	* src/prs.c (prs_start): Switch to 60 second prescheduling.
+
+	* src/scheduler.c (scheduler_main_thread): Use sleep instead of
+	usleep.
+	(scheduler_switch_templates): Fixed problem when switching from a
+	one-time event to the last part of a previously scheduled recurring
+	event.
+
 	* src/mixerchannel.c (mixer_channel_get_data): Make thread safe.
 
 2003-01-16  Matt Campbell  <mattcampbell@pobox.com>
 
 	* AUTHORS: Added my name and email address.
 
+>>>>>>> 1.89
 2003-01-15  Marc Mulcahy  <marc@plbb.net>
 
 	* src/mixerautomation.c (mixer_automation_start): If the event at the

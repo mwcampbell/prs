@@ -202,7 +202,8 @@ scheduler_switch_templates (scheduler *s)
 			start_time = t->start_time;
 		if (t->start_time > start_time)
 			start_time = t->start_time;
-		s->last_event_end_time = s->prev_event_end_time = start_time;
+		if (start_time < s->prev_event_start_time)
+			start_time = s->prev_event_end_time;
 		if (!e) {
 			s->prev_event_start_time = start_time;
 			mixer_automation_set_start_time (s->a, start_time);
@@ -587,7 +588,7 @@ scheduler_main_thread (void *data)
 			current = scheduler_schedule_next_event (s);
 		}
 		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler sleeping for %lf seconds\n", current-target-s->preschedule);
-		usleep ((current-target-s->preschedule)*1000000);
+		sleep (current-target-s->preschedule);
 		target = current;
 	}
 }
