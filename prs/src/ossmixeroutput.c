@@ -98,7 +98,11 @@ oss_mixer_output_new (const char *name,
 		soundcard_set_rate (rate);
 		soundcard_set_channels (channels);
 		
-		/* Setup sound card */
+		/* Set the soundcard to non-blocking */
+
+		fcntl (i->fd, F_SETFL, O_NONBLOCK);
+
+                /* Setup sound card */
 
 		fragment_size = log (2*(latency/44100.0)*rate * sizeof (short) )  / log (2);
 		tmp = 0x00010000|fragment_size;

@@ -28,13 +28,14 @@ mixer_patch_point_new (MixerChannel *ch,
 		p->input_buffer = NULL;
 		p->output_buffer = NULL;
 		p->resampler = NULL;
-	} else {
+	}
+	else {
 		p->no_processing = 0;
 
 		/* Allocate buffers */
 
 		p->input_buffer_size = (latency/44100.0)*ch->rate;
-		p->input_buffer = (SAMPLE *) malloc (p->input_buffer_size*sizeof(SAMPLE));
+		p->input_buffer = (SAMPLE *) malloc (p->input_buffer_size*sizeof(SAMPLE)*b->channels);
 		assert (p->input_buffer != NULL);
 		p->output_buffer_size = p->tmp_buffer_size =
 			(latency/44100.0)*b->rate;
@@ -103,20 +104,24 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 
                 /* Fading */
 
-		input = output_position;
-		j = input_samples;
-		while (j--) {
-			*input *= level;
-			input++;
-			if (ch->channels == 2) {
+		if (level != 1.0 || fade != 1.0) {
+			input = output_position;
+			j = input_samples;
+			while (j--) {
 				*input *= level;
 				input++;
+				if (ch->channels == 2) {
+					*input *= level;
+					input++;
+				}
+				if ((fade < 1.0 && level <= fade_destination) ||
+				    (fade > 1.0 && level >= fade_destination)) {
+					level = fade_destination;
+					fade = 1.0;
+				}
+				if (fade != 1.0)
+					level *= fade;
 			}
-			if ((fade < 1.0 && level <= fade_destination) ||
-			    (fade > 1.0 && level >= fade_destination))
-				fade = 1.0;
-			if (fade != 1.0)
-				level *= fade;
 		}
 	}
 	if (p->no_processing) {

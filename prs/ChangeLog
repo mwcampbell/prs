@@ -1,3 +1,8 @@
+2003-01-03  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixerpatchpoint.c (mixer_patch_point_post_data): Fix
+	overshooting or undershooting on fades.
+
 2003-01-02  Marc Mulcahy  <marc@plbb.net>
 
 	* src/mixer.c (mixer_main_thread): Changed all length specifications
