@@ -115,7 +115,7 @@ channel_info_destroy (channel_info *i)
 	pthread_mutex_lock (&(i->mutex));
 	i->destroyed = 1;
 	pthread_mutex_unlock (&(i->mutex));
-	pthread_join (&(i->transfer_thread));
+	pthread_join (&(i->transfer_thread), NULL);
 	
 	if (i->url)
 		free (i->url);
