@@ -174,7 +174,6 @@ mixer_main_thread (void *data)
 			if (o->enabled)
 				mixer_output_post_data (o);
 		}
-		m->cur_time += time_slice;
 		mixer_unlock (m);
 		gettimeofday (&end, NULL);
 		slice_spent = (end.tv_sec-start.tv_sec)*1000000+
@@ -193,6 +192,9 @@ mixer_main_thread (void *data)
 		if (wait_time > 0)
 			usleep (wait_time);
 		start = end;
+		mixer_lock (m);
+		m->cur_time += (slice_spent/1000000);
+		mixer_unlock (m);
 	}
 	mixer_lock (m);
 	m->thread = 0;
