@@ -17,7 +17,7 @@
 
 
 
-static PGconn *connection = NULL;
+static char *db_connection_string = "dbname = prs";
 
 
 
@@ -54,7 +54,8 @@ process_for_sql (const char *s)
 
 
 static int
-create_table (const char *table_name,
+create_table (PGconn *connection,
+	      const char *table_name,
 	      const char *create_query,
 	      list *read_only_access_list,
 	      list *total_access_list,
@@ -129,7 +130,8 @@ create_table (const char *table_name,
 
 
 static int
-does_table_exist (const char *table_name)
+does_table_exist (PGconn *connection,
+		  const char *table_name)
 {
   PGresult *res;
   char query[1024];
@@ -148,7 +150,8 @@ does_table_exist (const char *table_name)
 
 
 static Recording *
-get_recording_from_result (PGresult *res,
+get_recording_from_result (PGconn *connection,
+			   PGresult *res,
 			   int row)
 {
   Recording *r = (Recording *) malloc (sizeof(Recording));
@@ -175,7 +178,8 @@ get_recording_from_result (PGresult *res,
 
 
 static PlaylistEvent *
-get_playlist_event_from_result (PGresult *res,
+get_playlist_event_from_result (PGconn *connection,
+				PGresult *res,
 			       int row)
 {
   PlaylistEvent *e = (PlaylistEvent *) malloc (sizeof(PlaylistEvent));
@@ -225,7 +229,8 @@ playlist_event_list_free (list *l)
 
 
 static list *
-get_playlist_events_from_template (int template_id)
+get_playlist_events_from_template (PGconn *connection,
+				   int template_id)
 {
   PGresult *res;
   int i;
@@ -244,7 +249,7 @@ get_playlist_events_from_template (int template_id)
   i = PQntuples (res)-1;
   while (i >= 0)
     {
-      PlaylistEvent *e = get_playlist_event_from_result (res, i);
+      PlaylistEvent *e = get_playlist_event_from_result (connection, res, i);
       events = list_prepend (events, (void *) e);
       i--;
     }
@@ -257,9 +262,20 @@ get_playlist_events_from_template (int template_id)
 int
 check_recording_tables (void)
 {
-  return (does_table_exist ("artist") &&
-	  does_table_exist ("category") &&
-	  does_table_exist ("recording"));
+  int rv;
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    rv = 0;
+  else
+    {
+      rv = (does_table_exist (connection, "artist") &&
+	    does_table_exist (connection, "category") &&
+	    does_table_exist (connection, "recording"));
+      PQfinish (connection);
+    }
+  return rv;
 }
 
 
@@ -289,21 +305,31 @@ create_recording_tables (list *read_only_users,
       length float,
       audio_in float,
       audio_out float);";
-  create_table ("artist",
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return;
+  
+  create_table (connection,
+		"artist",
 		artist_create_query,
 		read_only_users,
 		total_access_users,
 		1);
-  create_table ("category",
+  create_table (connection,
+		"category",
 		category_create_query,
 		read_only_users,
 		total_access_users,
 		1);
-  create_table ("recording",
+  create_table (connection,
+		"recording",
 		recording_create_query,
 		read_only_users,
 		total_access_users,
 		1);
+  PQfinish (connection);
 }
 
 
@@ -347,8 +373,23 @@ recording_list_free (list *l)
 int
 check_playlist_tables (void)
 {
-  return (does_table_exist ("playlist_template") && does_table_exist ("playlist_event"));
+  int rv;
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    rv = 0;
+  else
+    {
+      rv =  (does_table_exist (connection, "playlist_template") && does_table_exist (connection, "playlist_event"));
+      PQfinish (connection);
+    }
+  return rv;
 }
+
+
+
+
 void
 create_playlist_tables (list *read_only_users,
 				list *total_access_users)
@@ -378,17 +419,25 @@ create_playlist_tables (list *read_only_users,
       detail3 varchar (64),
       detail4 varchar (64),
       detail5 varchar (64));";
+  PGconn *connection;
 
-  create_table ("playlist_template",
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return;
+
+  create_table (connection,
+		"playlist_template",
 		playlist_template_create_query,
 		read_only_users,
 		total_access_users,
 		1);
-  create_table ("playlist_event",
-	      create_playlist_event_query,
-	      read_only_users,
-	      total_access_users,
-	      1);
+  create_table (connection,
+		"playlist_event",
+		create_playlist_event_query,
+		read_only_users,
+		total_access_users,
+		1);
+  PQfinish (connection);
 }
 
 
@@ -408,16 +457,16 @@ playlist_template_destroy (PlaylistTemplate *t)
 
 
 static PlaylistTemplate *
-get_playlist_template_from_result (PGresult *res,
+get_playlist_template_from_result (PGconn *connection,
+				   PGresult *res,
 				   int row)
 {
   PlaylistTemplate *t = (PlaylistTemplate *) malloc (sizeof(PlaylistTemplate));
 
   if (!t)
     {
-      fprintf (stderr, "Something is very broken.\n");
-      abort ();
-      }
+      return NULL;
+    }
   t->id = atoi (PQgetvalue (res, row, 0));
   t->name = strdup (PQgetvalue (res, row, 1));
   t->start_time = atof (PQgetvalue (res, row, 2));
@@ -425,7 +474,7 @@ get_playlist_template_from_result (PGresult *res,
   t->repeat_events = atoi (PQgetvalue (res, row, 4));
   t->artist_exclude = atof (PQgetvalue (res, row, 5));
   t->recording_exclude = atof (PQgetvalue (res, row, 6));
-  t->events = get_playlist_events_from_template (t->id);
+  t->events = get_playlist_events_from_template (connection, t->id);
   return t;
 }
 
@@ -439,6 +488,11 @@ get_playlist_template (double cur_time)
   char buffer[1024];
   time_t day_start;
   double time_of_day;
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return NULL;
   
   tzset ();
   time_of_day = (time_t) (cur_time-timezone+daylight*3600)%86400;
@@ -450,11 +504,13 @@ get_playlist_template (double cur_time)
   if (PQntuples (res) != 1)
     {
       PQclear (res);
+      PQfinish (connection);
       return NULL;
     }
-  t = get_playlist_template_from_result (res, 0);
+  t = get_playlist_template_from_result (connection, res, 0);
   PQclear (res);
-
+  PQfinish (connection);
+  
   /* Find the start and end times for this instance of the template */
   
   t->start_time += day_start;
@@ -506,7 +562,18 @@ playlist_template_get_event (PlaylistTemplate *t,
 int
 check_user_table (void)
 {
-  return does_table_exist ("prs_user");
+  int rv;
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    rv = 0;
+  else
+    {
+      rv = does_table_exist (connection, "prs_user");
+      PQfinish (connection);
+    }
+  return rv;
 }
 
 
@@ -522,33 +589,18 @@ create_user_table (list *read_only_users,
       password varchar (20),
       email varchar (1024),
       type varchar (20));";
-  create_table ("prs_user",
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return;
+
+  create_table (connection,
+		"prs_user",
 		prs_users_create_query,
 		read_only_users,
 		total_access_users,
 		1);
-}
-
-
-
-int
-connect_to_database (const char *dbname)
-{
-  char buffer[1024];
-
-  sprintf (buffer, "dbname = %s", dbname);
-  connection = PQconnectdb (buffer);
-  if (PQstatus (connection) != CONNECTION_OK)
-    return -1;
-  else
-    return 0;
-}
-
-
-
-void
-disconnect_from_database (void)
-{
   PQfinish (connection);
 }
 
@@ -577,10 +629,14 @@ add_recording (Recording *r)
        audio_out) values (
       %d, '%s', '%s', %d, %d, '%s',
       %d, %d, %lf, %lf, %lf);";
+  PGconn *connection;
       
   if (!r)
     return;
 
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return;
   recording_name = process_for_sql (r->name);
   recording_path = process_for_sql (r->path);
   artist_name = process_for_sql (r->artist);
@@ -644,6 +700,7 @@ add_recording (Recording *r)
   free (artist_name);
   free (category_name);
   free (recording_date);
+  PQfinish (connection); 
 }
 
 
@@ -653,10 +710,16 @@ delete_recording (Recording *r)
 {
   PGresult *res;
   char buffer[1024];
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return;
 
   sprintf (buffer, "delete from recording where recording_id = %d;", r->id);
   res = PQexec (connection, buffer);
   PQclear (res);
+  PQfinish (connection);
 }
 
 
@@ -676,6 +739,11 @@ find_recording_by_path (const char *path)
       from recording, artist, category
       where recording.artist_id = artist.artist_id and
       recording.category_id = category.category_id";
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return NULL;
 
   recording_path = process_for_sql (path);
   sprintf (buffer, "%s and recording.recording_path = '%s';", select_query, recording_path);
@@ -683,8 +751,9 @@ find_recording_by_path (const char *path)
   if (PQntuples (res) <= 0)
     r = NULL;
   else
-    r = get_recording_from_result (res, 0);
+    r = get_recording_from_result (connection, res, 0);
   PQclear (res);
+  PQfinish (connection);
   return r;
 }
 
@@ -699,6 +768,11 @@ recording_picker_new (double artist_exclude,
   int i;
   RecordingPicker *p = (RecordingPicker *) malloc (sizeof (RecordingPicker));
   PGresult *res;
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return NULL;
   
   if (!randomized)
     {
@@ -711,19 +785,22 @@ recording_picker_new (double artist_exclude,
   /* Create the tables */
 
   sprintf (buffer, "create table %s (recording_id int, time float);", p->recording_exclude_table_name);
-  create_table (p->recording_exclude_table_name,
+  create_table (connection,
+		p->recording_exclude_table_name,
 		buffer,
 		NULL,
 		NULL,
-		1);
+		0);
   sprintf (buffer, "create table %s (artist_name varchar(200), time float);", p->artist_exclude_table_name);
-  create_table (p->artist_exclude_table_name,
+  create_table (connection,
+		p->artist_exclude_table_name,
 		buffer,
 		NULL,
 		NULL,
-		1);
+		0);
   p->recording_exclude = recording_exclude;
   p->artist_exclude = artist_exclude;
+  PQfinish (connection);
   return p;
 }
 
@@ -734,8 +811,13 @@ recording_picker_destroy (RecordingPicker *p)
 {
   PGresult *res;
   char buffer[1024];
+  PGconn *connection;
   
   if (!p)
+    return;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
     return;
   if (p->recording_exclude_table_name)
     {
@@ -752,6 +834,7 @@ recording_picker_destroy (RecordingPicker *p)
       free (p->artist_exclude_table_name);
     }
   free (p);
+  PQfinish (connection);
 }
 
 
@@ -775,10 +858,16 @@ recording_picker_select (RecordingPicker *p,
       from recording, artist, category
       where recording.artist_id = artist.artist_id and
       recording.category_id = category.category_id";
-
+  time_t ct;
+  PGconn *connection;
+    
   if (!p)
     return NULL;
 
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return NULL;
+  ct = cur_time;
   strcpy (buffer, select_query);  
   *category_part = 0;
   for (tmp = category_list; tmp; tmp = tmp->next)
@@ -803,12 +892,16 @@ recording_picker_select (RecordingPicker *p,
 
       /* Delete old items from exclude tables */
 
-      sprintf (temp, "delete from %s where time < %lf;",
-	       p->recording_exclude_table_name, cur_time-p->recording_exclude);
+      sprintf (temp, "delete from %s where %s.time < %ld;",
+	       p->recording_exclude_table_name,
+	       p->recording_exclude_table_name,
+	       (long) (cur_time-p->recording_exclude));
       res = PQexec (connection, temp);
       PQclear (res);
-      sprintf (temp, "delete from %s where time < %lf;",
-	       p->artist_exclude_table_name, cur_time-p->artist_exclude);
+      sprintf (temp, "delete from %s where %s.time < %ld;",
+	       p->artist_exclude_table_name,
+	       p->artist_exclude_table_name,
+	       (long) (cur_time-p->artist_exclude));
       res = PQexec (connection, temp);
       PQclear (res);
       
@@ -820,10 +913,11 @@ recording_picker_select (RecordingPicker *p,
   if (PQntuples (res) <= 0)
     {
       PQclear (res);
+      PQfinish (connection);
       return NULL;
     }
   n = rand ()%PQntuples (res);
-  r = get_recording_from_result (res, n);
+  r = get_recording_from_result (connection, res, n);
   PQclear (res);
 
   /* Add info to the exclude tables */
@@ -839,6 +933,7 @@ recording_picker_select (RecordingPicker *p,
       PQclear (res);
       free (artist_name);
     }  
+  PQfinish (connection);
   return r;
 }
 
@@ -847,9 +942,20 @@ recording_picker_select (RecordingPicker *p,
 int
 check_config_status_tables (void)
 {
-  return (does_table_exist ("config") && does_table_exist ("status"));
-}
+  int rv;
+  PGconn *connection;
 
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    rv = 0;
+  else
+    {
+      rv = (does_table_exist (connection, "config") && does_table_exist (connection, "status"));
+      PQfinish (connection);
+    }
+  return rv;
+}
+  
 
 
 void
@@ -864,16 +970,24 @@ create_config_status_tables (list *read_only_users,
       status_key varchar (256),
       status_value varchar (256));";
 
-  create_table ("config",
-	      config_create_query,
-	      read_only_users,
-	      total_access_users,
-	      1);
-  create_table ("status",
-	      status_create_query,
-	      read_only_users,
-	      total_access_users,
-	      1);
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return;
+  create_table (connection,
+		"config",
+		config_create_query,
+		read_only_users,
+		total_access_users,
+		1);
+  create_table (connection,
+		"status",
+		status_create_query,
+		read_only_users,
+		total_access_users,
+		1);
+  PQfinish (connection);
 }
 
 
@@ -885,6 +999,11 @@ get_config_value (const char *key)
   char buffer[1024];
   char *rv;
   char *processed_key;
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return NULL;
   
   processed_key = process_for_sql (key);
   sprintf (buffer, "select config_value from config where config_key = '%s';", processed_key);
@@ -892,11 +1011,13 @@ get_config_value (const char *key)
   if (PQntuples (res) != 1)
     {
       PQclear (res);
+      PQfinish (connection);
       return NULL;
     }
   rv = strdup (PQgetvalue (res, 0, 0));
   PQclear (res);
   free (processed_key);
+  PQfinish (connection);
   return rv;
 }
 
@@ -909,6 +1030,11 @@ set_config_value (const char *key,
   PGresult *res;
   char buffer[1024];
   char *processed_key, *processed_value;
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return;
   
   processed_key = process_for_sql (key);
   processed_value = process_for_sql (value);
@@ -921,6 +1047,7 @@ set_config_value (const char *key,
   PQclear (res);
   free (processed_key);
   free (processed_value);
+  PQfinish (connection);
 }
 
 
@@ -933,7 +1060,12 @@ get_status_value (const char *key)
   char buffer[1024];
   char *rv;
   char *processed_key;
-  
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return NULL;
+    
   processed_key = process_for_sql (key);
 
   sprintf (buffer, "select status_value from status where status_key = '%s';", processed_key);
@@ -941,11 +1073,13 @@ get_status_value (const char *key)
   if (PQntuples (res) != 1)
     {
       PQclear (res);
+      PQfinish (connection);
       return NULL;
     }
   rv = strdup (PQgetvalue (res, 0, 0));
   PQclear (res);
   free (processed_key);
+  PQfinish (connection);
   return rv;
 }
 
@@ -958,6 +1092,11 @@ set_status_value (const char *key,
   PGresult *res;
   char buffer[1024];
   char *processed_key, *processed_value;
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return;  
   
   processed_key = process_for_sql (key);
   processed_value = process_for_sql (value);
@@ -970,6 +1109,7 @@ set_status_value (const char *key,
   PQclear (res);
   free (processed_key);
   free (processed_value);
+  PQfinish (connection);
 }
 
 
@@ -977,7 +1117,18 @@ set_status_value (const char *key,
 int
 check_log_table (void)
 {
-  return (does_table_exist ("log"));
+  int rv;
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    rv = 0;
+  else
+    {
+      rv = (does_table_exist (connection, "log"));
+      PQfinish (connection);
+    }
+  return rv;
 }
 
 
@@ -991,12 +1142,19 @@ create_log_table (list *read_only_users,
       recording_id int,
       start_time int,
       length int)";
+  PGconn *connection;
 
-  create_table ("log",
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return;
+
+  create_table (connection,
+		"log",
 		log_create_query,
 		read_only_users,
 		total_access_users,
 		1);  
+  PQfinish (connection);
 }
 
 
@@ -1008,8 +1166,14 @@ add_log_entry (int recording_id,
 {
   PGresult *res;
   char buffer[1024];
+  PGconn *connection;
+
+  connection = PQconnectdb (db_connection_string);
+  if (!connection || PQstatus (connection) != CONNECTION_OK)
+    return;
 
   sprintf (buffer, "insert into log values (%d, %d, %d);", recording_id, start_time, length);
   res = PQexec (connection, buffer);
   PQclear (res);
+  PQfinish (connection);
 }

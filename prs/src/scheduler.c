@@ -58,7 +58,9 @@ scheduler_new (MixerAutomation *a,
   scheduler *s = (scheduler *) malloc (sizeof (scheduler));
   s->a = a;
   s->template_stack = NULL;
-  s->cur_time = s->last_event_start_time = s->last_event_end_time = cur_time;
+  s->last_event_end_time =
+    s->prev_event_start_time =
+    s->prev_event_end_time = cur_time;
   mixer_automation_set_start_time (a, cur_time);
   s->scheduler_thread = 0;
   s->running = 0;
@@ -103,16 +105,15 @@ scheduler_schedule_next_event (scheduler *s)
   pthread_mutex_lock (&(s->mut));
   if (!s->template_stack)
     {
-      time_t ct = (time_t) s->cur_time;
-      
+
       /* Get the current template */
 
-      t = get_playlist_template (s->cur_time);
+      t = get_playlist_template (s->last_event_end_time);
       if (!t)
 	{
 	  pthread_mutex_unlock (&(s->mut));
-	  return s->last_event_end_time;
-	  }
+	  return s->prev_event_end_time;
+	}
       scheduler_push_template (s, t, 1);
     }
 
@@ -122,22 +123,25 @@ scheduler_schedule_next_event (scheduler *s)
   
   /* compute start time */
 
-  if (anchor)
+  if (anchor && anchor->start_time != -1.0)
     e->start_time = (e->anchor_position) 
       ? anchor->end_time
       : anchor->start_time;
+  else if (anchor)
+    e->start_time = e->end_time = s->last_event_end_time;
   else
     e->start_time = (e->anchor_position)
-      ? s->last_event_end_time
-      : s->last_event_start_time;
+      ? s->prev_event_end_time
+      : s->prev_event_start_time;
 
   e->start_time += e->offset;
+  e->end_time = s->last_event_end_time;
   
   /* Create an automation event */
 
   ae = automation_event_new ();
   ae->channel_name = strdup (e->channel_name);
-  ae->delta_time = e->start_time-s->last_event_start_time;
+  ae->delta_time = e->start_time-s->prev_event_start_time;
   
   switch (e->type)
     {
@@ -160,7 +164,7 @@ scheduler_schedule_next_event (scheduler *s)
       if (e->type == EVENT_TYPE_SIMPLE_RANDOM)
 	r = recording_picker_select (stack_entry->p, categories, -1);
       else
-	r = recording_picker_select (stack_entry->p, categories, s->cur_time);
+	r = recording_picker_select (stack_entry->p, categories, e->start_time);
 
       /* Free the list of categories */
 
@@ -172,6 +176,8 @@ scheduler_schedule_next_event (scheduler *s)
 
       if (!r)
 	{
+	  automation_event_destroy (ae);
+	  ae = NULL;
 	  break;
 	}
       
@@ -182,6 +188,14 @@ scheduler_schedule_next_event (scheduler *s)
       ae->delta_time -= r->audio_in;
       ae->length = r->audio_out;
       e->end_time = e->start_time+r->audio_out;
+      {
+	time_t st = (time_t) e->start_time;
+	time_t et = (time_t) e->end_time;
+	fprintf (stderr, "%s", ctime (&st));
+	fprintf (stderr, "%s", ctime (&et));
+	fprintf (stderr, "Playing %s - %s\n", r->name, r->artist);
+	fprintf (stderr, "Delta %lf, length %lf\n", ae->delta_time, ae->length);
+      }
       recording_free (r);
       break;
     case EVENT_TYPE_FADE:
@@ -191,6 +205,14 @@ scheduler_schedule_next_event (scheduler *s)
       ae->length = atof (e->detail1);
       e->end_time = e->start_time + ae->length;
       ae->detail1 = strdup (e->detail1);
+      {
+	time_t st = (time_t) e->start_time;
+	time_t et = (time_t) e->end_time;
+	fprintf (stderr, "%s", ctime (&st));
+	fprintf (stderr, "%s", ctime (&et));
+	fprintf (stderr, "Fading %s to %lf\n", e->channel_name, e->level);
+	fprintf (stderr, "Delta %lf, length %lf\n", ae->delta_time, ae->length);
+      }
       break;
 
     case EVENT_TYPE_PATH:
@@ -214,18 +236,24 @@ scheduler_schedule_next_event (scheduler *s)
       if (ae)
 	automation_event_destroy (ae);
       scheduler_pop_template (s);
-      s->last_event_end_time = s->cur_time = mixer_automation_get_last_event_end (s->a);
+      s->prev_event_start_time = s->prev_event_end_time = s->last_event_end_time;
       pthread_mutex_unlock (&(s->mut));
       return scheduler_schedule_next_event (s);
     }
   if (ae)
-    mixer_automation_add_event (s->a, ae);
+    {
+      mixer_automation_add_event (s->a, ae);
+      s->prev_event_start_time = e->start_time;
+      s->prev_event_end_time = e->end_time;
+      if (e->end_time > s->last_event_end_time)
+	s->last_event_end_time = e->end_time;
+    }  
+  else
+    e->start_time = e->end_time = -1;
   stack_entry->event_number++;
   if (stack_entry->event_number > stack_entry->length)
     stack_entry->event_number = 1;
-  s->last_event_start_time = e->start_time;
-  s->last_event_end_time = e->end_time;
-  rv = s->last_event_start_time;
+  rv = s->prev_event_start_time;
   pthread_mutex_unlock (&(s->mut));
   return rv;
 }
@@ -238,8 +266,9 @@ scheduler_main_thread (void *data)
   scheduler *s = (scheduler *) data;
   double target, current;
   
+  nice (20);
   pthread_mutex_lock (&(s->mut));
-  current = target = s->cur_time;
+  current = target = s->prev_event_end_time;
   pthread_mutex_unlock (&(s->mut));
   while (1)
     {
@@ -249,10 +278,12 @@ scheduler_main_thread (void *data)
 	  pthread_mutex_unlock (&(s->mut));
 	  break;
 	}
-      pthread_mutex_unlock (&(s->mut));
       target += s->preschedule;
+      pthread_mutex_unlock (&(s->mut));
       while (current < target)
-	current = scheduler_schedule_next_event (s);
+	{
+	  current = scheduler_schedule_next_event (s);
+	}
       usleep ((current-target)*900000);
       target = current;
     }

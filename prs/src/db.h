@@ -155,21 +155,6 @@ create_user_table (list *read_only_users,
 
 /*
  *
- * Database connection functions
- *
- */
-
-
-
-int
-connect_to_database (const char *dbname);
-void
-disconnect_from_database (void);
-
-
-
-/*
- *
  * Creating tables
  *
  */

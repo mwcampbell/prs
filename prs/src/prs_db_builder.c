@@ -19,12 +19,12 @@ int main (void)
   
   /* Create list of audio files */
 
+  nice (20);
   system ("find /shares/audio -name *.ogg > /tmp/audio.list");
   fp = fopen ("/tmp/audio.list", "rb");
   
   /* Connect  to prs database */
 
-  connect_to_database ("prs");
 
 
   /* Set up list of users who will receive access to tables */

@@ -8,8 +8,8 @@
 typedef struct {
   pthread_mutex_t mut;
   MixerAutomation *a;
-  double cur_time;
-  double last_event_start_time;
+  double prev_event_start_time;
+  double prev_event_end_time;
   double last_event_end_time;
   list *template_stack;
 

@@ -37,10 +37,8 @@ mixer_main_thread (void *data)
   int tmp_buffer_size, tmp_buffer_length;
   
   if (!m)
-    {
-      return NULL;
-    }
-
+    return NULL;
+  
   tmp_buffer_size = 48000*2*sizeof(short)*MIXER_LATENCY;
   tmp_buffer = malloc (tmp_buffer_size);
   
@@ -116,6 +114,10 @@ mixer_main_thread (void *data)
     m->cur_time += MIXER_LATENCY;
     mixer_unlock (m);
     }
+  mixer_lock (m);
+  m->thread = 0;
+  mixer_lock (m);
+
   free (tmp_buffer);
 }
 
@@ -137,7 +139,8 @@ mixer_new (void)
   /* Setup notification condition */
 
   pthread_cond_init (&(m->notify_condition), NULL);
-
+  m->notify_time = -1.0;
+  
   tzset ();
   m->cur_time = (double) time (NULL)+timezone+daylight*3600;
   m->channels = m->outputs = NULL;
@@ -199,9 +202,6 @@ mixer_stop (mixer *m)
   thread = m->thread;
   mixer_unlock (m);
   pthread_join (thread, NULL);
-  mixer_lock (m);
-  m->thread = 0;
-  mixer_unlock (m);
   return 0;
 }
 
@@ -358,7 +358,7 @@ mixer_get_output (mixer *m,
     {
       mixer_unlock (m);
       return NULL;
-      }
+    }
   for (tmp = m->outputs; tmp; tmp = tmp->next)
     {
       MixerOutput *o = (MixerOutput *) tmp->data;

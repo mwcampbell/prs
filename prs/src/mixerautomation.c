@@ -100,6 +100,8 @@ mixer_automation_add_event (MixerAutomation *a,
     return -1;
   if (!e)
     return -1;
+  if (e->delta_time < 0)
+    e->delta_time = 0;
   pthread_mutex_lock (&(a->mut));
   if (!a->events)
       if (a->running)
@@ -115,7 +117,8 @@ mixer_automation_next_event (MixerAutomation *a)
 {
   AutomationEvent *e;
   MixerChannel *ch;      
-  
+  double mixer_time;
+
   if (!a)
     return;
   pthread_mutex_lock (&(a->mut));
@@ -126,7 +129,7 @@ mixer_automation_next_event (MixerAutomation *a)
       pthread_mutex_unlock (&(a->mut));
       return;
     }
-  
+    
   /* Do event */
 
   switch (e->type)
@@ -148,7 +151,6 @@ mixer_automation_next_event (MixerAutomation *a)
       mixer_delete_all_channels (a->m);
       break;
     default:
-      abort ();
     }
   a->events = list_delete_item (a->events, a->events);
   a->last_event_time = mixer_get_time (a->m);
@@ -171,7 +173,7 @@ mixer_automation_main_thread (void *data)
        * we have no event in the queue
        */
 
-      double wait_time = (double) (0x7ffffff);
+      double wait_time = (double) (0x7fffffff);
       AutomationEvent *e;
 
       pthread_mutex_lock (&(a->mut));
@@ -202,7 +204,7 @@ mixer_automation_main_thread (void *data)
       pthread_mutex_unlock (&(a->mut));
       mixer_wait_for_notification (a->m, wait_time);
 
-	  /* If someone turned automation off while we were waiting, bail now */
+      /* If someone turned automation off while we were waiting, bail now */
 
       pthread_mutex_lock (&(a->mut));
       if (!a->running)
@@ -213,7 +215,9 @@ mixer_automation_main_thread (void *data)
       pthread_mutex_unlock (&(a->mut));
       mixer_automation_next_event (a);
     }
+  pthread_mutex_lock (&(a->mut));
   a->automation_thread = 0;
+  pthread_mutex_unlock (&(a->mut));
 }
 
 
@@ -289,19 +293,27 @@ mixer_automation_get_last_event_end (MixerAutomation *a)
 {
   double event_start_time, event_end_time, rv;
   list *tmp;
+  time_t lt;
   
   if (!a)
     return -1.0;
 
   pthread_mutex_lock (&(a->mut));
   rv = event_start_time = event_end_time = a->last_event_time;
+  lt = rv;
+  fprintf (stderr, "LastEvent: %s", ctime (&lt));
   for (tmp = a->events; tmp; tmp = tmp->next)
     {
       AutomationEvent *e = (AutomationEvent *) tmp->data;
+      time_t st, et;
+      
       event_start_time += e->delta_time;
       event_end_time = event_start_time + e->length;
+      st = event_start_time;
+      et = event_end_time;
       if (event_end_time > rv)
 	rv = event_end_time;
+      fprintf (stderr, "   %s   %s   %lf", ctime (&st), ctime (&et), e->delta_time);
     }
   pthread_mutex_unlock (&(a->mut));
   return rv;

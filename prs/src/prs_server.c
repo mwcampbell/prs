@@ -201,7 +201,6 @@ int main (void)
   scheduler *s;
   
   signal (SIGUSR1, prs_signal_handler);
-  connect_to_database ("prs");
   m = mixer_new ();
   mixer_sync_time (m);
   setup_streams (m);
@@ -246,6 +245,11 @@ int main (void)
 	  fprintf (stderr, "%s", ctime (&t));
 	}      
     }
+  fprintf (stderr, "Destroying scheduler...\r");
+  scheduler_destroy (s);
+  fprintf (stderr, "Destroying MixerAutomation...\r");
+  mixer_automation_destroy (a);
+  fprintf (stderr, "Destroying mixer...\r");
   mixer_destroy (m);
   return 0;
 }

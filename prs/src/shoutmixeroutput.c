@@ -99,8 +99,7 @@ start_encoder (MixerOutput *o)
 	      "-a",
 	      "-mm",
 	      bitrate_arg,
-	      "--resample",
-	      "22.050",
+	      "-q2",
 	      "-",
 	      "-",
 	    NULL);
@@ -187,8 +186,10 @@ shout_thread (void *data)
     {
       bytes_read = read (i->encoder_output_fd, buffer, 1024);
       if (bytes_read > 0)
-	shout_send_data (i->shout_connection, buffer, bytes_read);
-      shout_sleep (i->shout_connection);
+	{
+	  shout_send_data (i->shout_connection, buffer, bytes_read);
+	  shout_sleep (i->shout_connection);
+	}
     }
   fprintf (stderr, "Shout thread exiting...\n");
 }
@@ -225,7 +226,8 @@ shout_mixer_output_new (const char *name,
   o->rate = rate;
   o->channels = channels;
   o->data = (void *) i;
-
+  o->enabled = 1;
+  
   /* Overrideable methods */
 
   o->free_data = shout_mixer_output_free_data;
@@ -233,9 +235,9 @@ shout_mixer_output_new (const char *name,
 
   mixer_output_alloc_buffer (o);
 
-  start_encoder (o);
   i->stream_reset = 0;
   pthread_create (&i->shout_thread_id, NULL, shout_thread, (void *) o);
+  start_encoder (o);
   return o;
 }
 
