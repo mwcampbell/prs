@@ -826,6 +826,39 @@ find_recording_by_path (Database *db, const char *path)
 
 
 
+list *
+get_recordings (Database *db)
+{
+	MYSQL_RES *res = NULL;
+	MYSQL_ROW row;
+	Recording *r;
+	char buffer[1024];
+	int i = 0;
+	list *rv = NULL;
+	
+
+	if (!db)
+		return NULL;
+	db_lock (db);
+	sprintf (buffer, "select * from recording");
+	if (mysql_real_query (db->conn, buffer, strlen(buffer)) < 0 ||
+	    (res = mysql_store_result (db->conn)) == NULL) {
+		db_unlock (db);
+		return NULL;
+	}
+	i = mysql_num_rows (res);
+	while (i) {
+		row = mysql_fetch_row (res);
+		r = get_recording_from_result (db, row);
+		rv = list_prepend (rv, r);
+		i--;
+	}
+	mysql_free_result (res);
+	db_unlock (db);
+	return rv;
+}
+
+
 RecordingPicker *
 recording_picker_new (Database *db, double artist_exclude,
 		      double recording_exclude)

@@ -40,7 +40,7 @@ config (Database *db, const char *filename)
   xmlFreeDoc (doc);
 }
 
-void
+static void
 usage (const char *progname)
 {
   fprintf (stderr, "Usage:  %s [-c CATEGORY] [-C CONFIG-FILE] ROOT\n",
@@ -48,11 +48,36 @@ usage (const char *progname)
   exit (EXIT_FAILURE);
 }
 
+static void
+verify_database (Database *db)
+{
+	list *recordings, *tmp;
+	Recording *r;
+	
+	fprintf (stderr, "Verifying database...\n");
+	recordings = get_recordings (db);
+	tmp = recordings;
+	while (tmp) {
+		FILE *fp;
+		r = (Recording *) tmp->data;
+		fp = fopen (r->path, "rb");
+		if (!fp) {
+			fprintf (stderr, "Deleting %s\n", r->name);
+		}
+		else
+			fclose (fp);
+	tmp = tmp->next;
+	}
+	recording_list_free (recordings);
+	fprintf (stderr, "Done verifying database.\n");
+}
+
+
 int
 main (int argc, char *argv[])
 {
   char path[1024], find_cmd[1024], opt;
-  char *category = NULL, *config_file = "prs.conf";
+  char *category = "", *config_file = "prs.conf";
   FILE *fp;
   FileInfo *i;
   Database *db = db_new ();
@@ -80,12 +105,6 @@ main (int argc, char *argv[])
 
   config (db, config_file);
 
-  /* Create list of audio files */
-
-  nice (20);
-  sprintf (find_cmd, "find \"%s\" -type f -print", argv[optind]);
-  fp = popen (find_cmd, "r");
-  
   /* Create tables */
 
   if (!check_recording_tables (db))
@@ -107,6 +126,16 @@ main (int argc, char *argv[])
   if (!check_log_table (db))
     create_log_table (db);
   
+  /* Verify all file paths in the database */
+
+  verify_database (db);
+
+  /* Create list of audio files */
+
+  nice (20);
+  sprintf (find_cmd, "find \"%s\" -type f -print", argv[optind]);
+  fp = popen (find_cmd, "r");
+  
   /* Loop through all files found */
 
   while (!feof (fp))
@@ -122,8 +151,8 @@ main (int argc, char *argv[])
 	  i = file_info_new (path, 0, 0);
 	  r = find_recording_by_path (db, path);
 	  if (r && abs (i->length-r->length) <= .001 &&
-	      !strcmp (r->category, category == NULL ? i->genre : category) &&
-	      !strcmp (r->name, i->name))
+	      r->category && (category && !strcmp (r->category, category) || i->genre && !strcmp (r->category, i->genre)) &&
+	      (r->name && i->name) && !strcmp (r->name, i->name))
 	    {
 	      file_info_free (i);
 	      recording_free (r);

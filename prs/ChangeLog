@@ -1,3 +1,11 @@
+2002-12-21  Marc Mulcahy  <marc@plbb.net>
+
+	* src/db.c (get_recording_from_result): Gets the entire list of
+	recordings in the database.
+
+	* src/prs_db_builder.c: Addded database verification.  Fixed segfault
+	bug with recordings having no name or category.
+
 2002-12-20  Matt Campbell  <mattcampbell@pobox.com>
 
 	* src/debug.c: Now includes sys/time.h instead of time.h.

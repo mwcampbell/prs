@@ -62,6 +62,8 @@ void
 delete_recording (Recording *r);
 Recording *
 find_recording_by_path (Database *db, const char *path);
+list *
+get_recordings (Database *db);
 
 
 
