@@ -927,7 +927,7 @@ recording_picker_select (RecordingPicker *p,
 	      else
 		artists_strlen += 2;
 
-	      string_list_append (artists, row[0]);
+	      artists = string_list_append (artists, row[0]);
 	      artists_strlen += strlen (row[0]);
 	    }
 	}
@@ -954,7 +954,7 @@ recording_picker_select (RecordingPicker *p,
 	      else
 		recordings_strlen += 2;
 
-	      string_list_append (recordings, row[0]);
+	      recordings = string_list_append (recordings, row[0]);
 	      recordings_strlen += strlen (row[0]);
 	    }
 	}
@@ -989,17 +989,24 @@ recording_picker_select (RecordingPicker *p,
 
       for (tmp = artists; tmp; tmp = tmp->next)
 	{
+	  char *tmp_str = process_for_sql (tmp->data);
+
 	  if (first)
 	    first = 0;
 	  else
 	    strcat (buffer, ", ");
 
-	  strcat (buffer, tmp->data);
+	  strcat (buffer, "'");
+	  strcat (buffer, tmp_str);
+	  strcat (buffer, "'");
+	  free (tmp_str);
 	}
 
       if (first)
 	strcat (buffer, "null");
       strcat (buffer, ")");
+      string_list_free (artists);
+      string_list_free (recordings);
     }
   else
     {
