@@ -363,7 +363,7 @@ scheduler_schedule_next_event (scheduler *s)
 	 */
 
 	if (s->scheduled_delete_time > 0 &&
-	    s->last_event_end_time > s->scheduled_delete_time) {
+	    s->scheduled_delete_time > s->last_event_end_time) {
 		mixer_delete_channels (s->a->m, s->scheduled_delete_key);
 		s->scheduled_delete_time = 0;
 		s->scheduled_delete_key = 0;
