@@ -20,7 +20,7 @@ if ($new_template)
 		explode (":", $template_recording_exclude, 2);
 	$recording_exclude = $recording_exclude_hours*3600+$recording_exclude_minutes*60;
 
-	$query = "insert into playlist_template (template_name, repeat_events, artist_exclude, recording_exclude) values ('" . addslashes ($template_name) . "', $template_events_repeat, $artist_exclude, $recording_exclude)";
+	$query = "insert into playlist_template (template_name, repeat_events, handle_overlap, artist_exclude, recording_exclude) values ('" . addslashes ($template_name) . "', $template_events_repeat, $template_handle_overlap, $artist_exclude, $recording_exclude)";
 	db_query ($query);
 	$template_id = mysql_insert_id ();
 }

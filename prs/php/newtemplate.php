@@ -12,6 +12,14 @@ html_start ("Create Playlist Template");
 <input type="checkbox" name="template_events_repeat" value="1" id="template_events_repeat">
 <label for="template_events_repeat">Repeat events in this template until the template's end time has been reached.</label>
 <br>
+<label for="template_handle_overlap">What to do when a recording won't fit:</label>
+<select id="template_handle_overlap" name="template_handle_overlap" value="1">
+<option value="1">Discard</option>
+<option value="2">Switch to fallback template</option>
+<option value="3">Fade audio at end of template</option>
+<option value="4">Ignore</option>
+</select>
+<br>
 <label for="template_artist_exclude">Minimum time between recordings from the same artist (HH:MM):</label>
 <input type="text" name="template_artist_exclude" id="template_artist_exclude">
 <br>
