@@ -44,11 +44,6 @@ typedef struct {
 	pthread_t scheduler_thread;
 	double preschedule;
 	double running;
-
-	/* Scheduled channel deletes */
-
-	time_t scheduled_delete_time;
-	int scheduled_delete_key;
 } scheduler;
 
 

@@ -116,8 +116,6 @@ scheduler_new (MixerAutomation *a, Database *db, double cur_time)
 	s->running = 0;
 	s->preschedule = 0.0;
 	pthread_mutex_init (&(s->mut), NULL);
-	s->scheduled_delete_time = 0;
-	s->scheduled_delete_key = 0;
 	debug_printf (DEBUG_FLAGS_SCHEDULER, "Creating scheduler object");
 	return s;
 }
@@ -204,7 +202,7 @@ scheduler_switch_templates (scheduler *s)
 	if (start_time < s->prev_event_start_time)
 		start_time = s->prev_event_start_time;
 
-	start_delta = start_time-s->prev_event_start_time-(fade*.8);
+	start_delta = start_time-s->prev_event_start_time-fade;
 
 	/* If the new template starts before the end of the last event in the scheduler, schedule a fade event */
 
@@ -216,7 +214,7 @@ scheduler_switch_templates (scheduler *s)
 		ae->length = fade;
 		ae->level = 0;
 		mixer_automation_add_event (s->a, ae);
-		s->prev_event_start_time = start_time-(fade*.8);
+		s->prev_event_start_time = start_time-fade;
 	}
 
 	/*
@@ -228,6 +226,10 @@ scheduler_switch_templates (scheduler *s)
 
 	if (prev_template_id != -1 &&
 	    handle_overlap != HANDLE_OVERLAP_IGNORE) {
+		ae = automation_event_new ();
+		ae->type = AUTOMATION_EVENT_TYPE_DELETE_CHANNELS;
+		ae->data = prev_template_end_time;
+		ae->delta_time = fade;
 	}
 	s->last_event_end_time = s->prev_event_end_time = start_time;
 
