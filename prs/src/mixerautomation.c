@@ -122,11 +122,6 @@ mixer_automation_add_event (MixerAutomation *a,
 	pthread_mutex_lock (&(a->mut));
 	if (!a->events)
 		if (a->running) {
-			double cur_time = mixer_get_time (a->m);
-			if (cur_time > a->last_event_time+e->delta_time) {
-				e->delta_time = 0;
-				a->last_event_time = cur_time;
-				}
 			mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
 		}
 	a->events = list_append (a->events, e);

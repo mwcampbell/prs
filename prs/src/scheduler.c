@@ -196,7 +196,7 @@ scheduler_switch_templates (scheduler *s)
 	t = get_playlist_template (s->db, start_time);
 	
 	if (!t)
-	  return;
+		return;
 	t->start_time = start_time;
 
 	if (start_time < s->prev_event_start_time)
