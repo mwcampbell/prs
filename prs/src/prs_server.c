@@ -95,11 +95,13 @@ add_file (MixerAutomation *a,
 			e->channel_name = strdup ("untitled");
 		e->delta_time = delta-i->audio_in;
 		delta = e->length = i->audio_out;
+		file_info_free (i);
 	}
 	else {
 		e->channel_name = strdup (r->name);
 		e->delta_time = delta-r->audio_in;
 		delta = e->length = r->audio_out;
+		recording_free (r);
 	}
 	
 	/* Add channel to the mixer */
@@ -158,6 +160,7 @@ load_playlist (MixerAutomation *a, Database *db, FILE *in, FILE *out)
 
 		add_file (a, db, path);
 	}
+	fclose (fp);
 }
 
 

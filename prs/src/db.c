@@ -141,9 +141,16 @@ db_config (Database *db, xmlNodePtr cur)
 	user = xmlGetProp (cur, "user");
 	password = xmlGetProp (cur, "password");
 	name = xmlGetProp (cur, "name");
-	if (name == NULL)
-		name = "prs";
-	db_connect (db, host, user, password, name);
+	db_connect (db, host, user, password,
+		    (name ? name : "prs"));
+	if (name)
+		xmlFree (name);
+	if (host)
+		xmlFree (host);
+	if (password)
+		xmlFree (password);
+	if (user)
+		xmlFree (user);
 }
 
 
@@ -877,6 +884,7 @@ find_recording_by_path (Database *db, const char *path)
 	recording_path = process_for_sql (path);
 	sprintf (buffer, "%s and recording.recording_path = '%s'", select_query,
 		 recording_path);
+	free (recording_path);
 	res = db_query (db, buffer);
 	if (mysql_num_rows (res) != 1 ||
 	    (row = mysql_fetch_row (res)) == NULL) {

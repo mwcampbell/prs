@@ -64,38 +64,60 @@ stream_config (mixer *m, xmlNodePtr cur)
 
 			s = shout_new ();
 			tmp = xmlGetProp (cur, "host");
-			if (tmp)
+			if (tmp) {
 				shout_set_host (s, tmp);
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "port");
-			if (tmp)
+			if (tmp) {
 				shout_set_port (s, atoi(tmp));
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "password");
-			if (tmp)
+			if (tmp) {
 				shout_set_password (s, tmp);
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "mount");
-			if (tmp)
+			if (tmp) {
 				shout_set_mount (s, tmp);
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "title");
-			if (tmp)
+			if (tmp) {
 				shout_set_name (s, tmp);
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "url");
-			if (tmp)
+			if (tmp) {
 				shout_set_url (s, tmp);
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "genre");
-			if (tmp)
+			if (tmp) {
 				shout_set_genre (s, tmp);
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "user");
-			if (tmp)
+			if (tmp) {
 				shout_set_user (s, tmp);
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "agent");
-			if (tmp)
+			if (tmp) {
 				shout_set_agent (s, tmp);
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "description");
-			if (tmp)
+			if (tmp) {
 				shout_set_description (s, tmp);
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "bitrate");
-			if (tmp)
+			if (tmp) {
 				shout_set_audio_info (s, SHOUT_AI_BITRATE, tmp);
+				xmlFree (tmp);
+			}
 			tmp = xmlGetProp (cur, "protocol");
 			shout_set_protocol (s, SHOUT_PROTOCOL_XAUDIOCAST);
 			if (tmp) {
@@ -105,30 +127,41 @@ stream_config (mixer *m, xmlNodePtr cur)
 					shout_set_protocol (s, SHOUT_PROTOCOL_HTTP);
 				if (!xmlStrcmp (tmp, "icy"))
 					shout_set_protocol (s, SHOUT_PROTOCOL_ICY);
+				xmlFree (tmp);
 			}
 			tmp = xmlGetProp (cur, "format");
 			if (!xmlStrcmp (tmp, "mp3"))
 				shout_set_format (s, SHOUT_FORMAT_MP3);
 			if (!xmlStrcmp (tmp, "vorbis"))
 				shout_set_format (s, SHOUT_FORMAT_VORBIS);
+			else if (tmp)
+				xmlFree (tmp);
 			tmp = xmlGetProp (cur, "stereo");
-			if (tmp)
+			if (tmp) {
 				stereo = atoi (tmp);
+				xmlFree (tmp);
+			}
 			else
 				stereo = 1;
 			tmp = xmlGetProp (cur, "rate");
-			if (tmp)
+			if (tmp) {
 				rate = atoi (tmp);
+				xmlFree (tmp);
+			}
 			else
 				rate = 44100;
 			tmp = xmlGetProp (cur, "channels");
-			if (tmp)
+			if (tmp) {
 				channels = atoi (tmp);
+				xmlFree (tmp);
+			}
 			else
 				channels = 2;
 			tmp = xmlGetProp (cur, "retry_delay");
-			if (tmp)
+			if (tmp) {
 				retry_delay = atof (tmp);
+				xmlFree (tmp);
+			}
 			else
 				retry_delay = 10.0;
 			archive_file_name = xmlGetProp (cur, "archive_file_name");
@@ -149,6 +182,10 @@ stream_config (mixer *m, xmlNodePtr cur)
 			o = shout_mixer_output_new (name, rate, channels,
 						    m->latency, s, stereo, args, archive_file_name, retry_delay);
 			mixer_add_output (m, o);
+		if (name)
+			xmlFree (name);
+		if (archive_file_name)
+			xmlFree (archive_file_name);
 		}
 		cur = cur->next;
 		args = NULL;
@@ -231,21 +268,36 @@ static void
 mixer_output_config (mixer *m, xmlNodePtr cur)
 {
 	MixerOutput *o = NULL;
-	int rate, channels;
 	xmlChar *name;
 	xmlChar *type;
-
+	xmlChar *rate;
+	xmlChar *channels;
+	
 	name = xmlGetProp (cur, "name");
 	type = xmlGetProp (cur, "type");
-	rate = atoi (xmlGetProp (cur, "rate"));
-	channels = atoi (xmlGetProp (cur, "channels"));
+	rate = xmlGetProp (cur, "rate");
+	channels = xmlGetProp (cur, "channels");
 	if (!xmlStrcmp (type, "oss"))
-		o = oss_mixer_output_new (name, rate, channels, m->latency);
+		o = oss_mixer_output_new (name,
+					  atoi(rate),
+					  atoi(channels),
+					  m->latency);
 	else if (!xmlStrcmp (type, "wave"))
-		o = file_mixer_output_new (name, rate, channels, m->latency);
+		o = file_mixer_output_new (name,
+					   atoi(rate),
+					   atoi(channels),
+					   m->latency);
 	if (o) {
 		mixer_add_output (m, o);   
 	}
+	if (name)
+		xmlFree (name);
+	if (type)
+		xmlFree (type);
+	if (rate)
+		xmlFree (rate);
+	if (channels)
+		xmlFree (channels);
 }
 
 
@@ -254,21 +306,31 @@ static void
 mixer_channel_config (mixer *m, xmlNodePtr cur)
 {
 	MixerChannel *ch = NULL;
-	int rate, channels;
+	xmlChar *rate;
+	xmlChar *channels;
 	xmlChar *name;
 	xmlChar *location;
 	xmlChar *type;
 
 	name = xmlGetProp (cur, "name");
 	type = xmlGetProp (cur, "type");
-	rate = atoi (xmlGetProp (cur, "rate"));
-	channels = atoi (xmlGetProp (cur, "channels"));
+	rate = xmlGetProp (cur, "rate");
+	channels = xmlGetProp (cur, "channels");
 	if (!xmlStrcmp (type, "oss"))
-		ch = oss_mixer_channel_new (name, rate, channels, m->latency);
+		ch = oss_mixer_channel_new (name,atoi( rate), atoi(channels),
+					    m->latency);
 	if (ch) {
 		ch->enabled = 0;
 		mixer_add_channel (m, ch);   
 	}
+	if (name)
+		xmlFree (name);
+	if (location)
+		xmlFree (location);
+	if (rate)
+		xmlFree (rate);
+	if (channels)
+		xmlFree (channels);
 }
 
 
@@ -283,6 +345,12 @@ mixer_patch_config (mixer *m, xmlNodePtr cur)
 		mixer_patch_channel (m, channel_name, bus_name);
 	else if (bus_name && output_name)
 		mixer_patch_bus (m, bus_name, output_name);
+	if (channel_name)
+		xmlFree (channel_name);
+	if (bus_name)
+		xmlFree (bus_name);
+	if (output_name)
+		xmlFree (output_name);
 }
 
 
@@ -291,14 +359,21 @@ static void
 mixer_bus_config (mixer *m, xmlNodePtr cur)
 {
 	MixerBus *b;
-	int rate, channels;
+	xmlChar *rate;
+	xmlChar *channels;
 	xmlChar *bus_name;
 
 	bus_name = xmlGetProp (cur, "name");
-	rate = atoi (xmlGetProp (cur, "rate"));
-	channels = atoi (xmlGetProp (cur, "channels"));
-	b = mixer_bus_new (bus_name, rate, channels, m->latency);
-
+	rate = xmlGetProp (cur, "rate");
+	channels = xmlGetProp (cur, "channels");
+	b = mixer_bus_new (bus_name, atoi(rate), atoi(channels), m->latency);
+	if (bus_name)
+		xmlFree (bus_name);
+	if (rate)
+		xmlFree (rate);
+	if (channels)
+		xmlFree (channels);
+		
 
 	/* Process filters and output patches */
 
@@ -339,12 +414,16 @@ telnet_config (PRS *prs, xmlNodePtr cur)
 {
 	xmlChar *password = xmlGetProp (cur, "password");
 	xmlChar *port = xmlGetProp (cur, "port");
-	if (password != NULL)
+	if (password != NULL) {
 		prs->password = strdup (password);
+		xmlFree (password);
+	}
 	if (port == NULL)
 		prs->telnet_port = 4777;
-	else
+	else {
 		prs->telnet_port = atoi (port);
+		xmlFree (port);
+	}
 	prs->telnet_interface = 1;
 }
 
@@ -353,15 +432,23 @@ telnet_config (PRS *prs, xmlNodePtr cur)
 static logger *
 logger_config (xmlNodePtr cur)
 {
+	logger *l = NULL;
 	LOGGER_TYPE type;
 	xmlChar *username = xmlGetProp (cur, "username");
 	xmlChar *password = xmlGetProp (cur, "password");
 	xmlChar *type_string = xmlGetProp (cur, "type");
 
 	if (!xmlStrcmp (type_string, "live365")) {
-		return logger_new (LOGGER_TYPE_LIVE365, NULL,
+		l = logger_new (LOGGER_TYPE_LIVE365, NULL,
 				   username, password);
 	}
+	if (username)
+		xmlFree (username);
+	if (password)
+		xmlFree (password);
+	if (type_string)
+		xmlFree (type_string);
+	return l;
 }
 
 

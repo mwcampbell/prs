@@ -29,6 +29,7 @@
 #include <malloc.h>
 #include "debug.h"
 #include "mixerchannel.h"
+#include "mixerpatchpoint.h"
 
 
 
@@ -59,7 +60,7 @@ data_reader (void *data)
 			if (rv < chunk_size)
 				done = 1;
 		}
-		else if (reaeer_thread_running)
+		else if (reader_thread_running)
 			usleep ((double)(ch->chunk_size/ch->rate)*1000000);
 		else
 			done = 1;
@@ -124,6 +125,8 @@ mixer_channel_new (const int rate,
 void
 mixer_channel_destroy (MixerChannel *ch)
 {
+	list *tmp;
+
 	assert (ch != NULL);
 	debug_printf (DEBUG_FLAGS_MIXER, "mixer_channel_destroy called\n");
 
@@ -151,8 +154,8 @@ mixer_channel_destroy (MixerChannel *ch)
 	if (ch->buffer)
 		free (ch->buffer);
 
-        /* We don't own the patch points, so just free the list */
-
+	for (tmp = ch->patchpoints; tmp; tmp = tmp->next)
+		mixer_patch_point_destroy ((MixerPatchPoint *) tmp->data);
 	if (ch->patchpoints)
 		list_free (ch->patchpoints);
 	free (ch);
@@ -231,7 +234,5 @@ mixer_channel_advance_pointers (MixerChannel *ch)
 	if (ch->output >= ch->buffer_end)
 		ch->output = ch->buffer;
 	ch->space_left += ch->this_chunk_size;
-	if (ch->space_left >= ch->buffer_size && !ch->reader_thread_running)
-		ch->data_end_reached = 1;
 	pthread_mutex_unlock (&(ch->mutex));
 }

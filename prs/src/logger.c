@@ -181,7 +181,6 @@ live365_log_file (void *data)
 			  "http://asong.live365.com/cgi-bin/add_song.cgi");
 	
 	curl_easy_setopt (url, CURLOPT_NOSIGNAL, 1);
-	curl_easy_setopt (url, CURLOPT_TIMEOUT, 30);
 
         /* Setup post data */
 
@@ -211,8 +210,8 @@ live365_log_file (void *data)
 		      CURLFORM_END);
 	curl_easy_setopt (url, CURLOPT_HTTPPOST, post);
 	curl_easy_perform (url);
-	curl_formfree (post);
 	curl_easy_cleanup (url);
+	curl_formfree (post);
 	logger_data_destroy (d);
 	pthread_exit (NULL);
 }

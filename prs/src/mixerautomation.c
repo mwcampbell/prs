@@ -101,6 +101,8 @@ mixer_automation_destroy (MixerAutomation *a)
 	{
 		automation_event_destroy ((AutomationEvent *) tmp->data);
 	}
+	if (a->l)
+		logger_destroy (a->l);
 	free (a);
 	debug_printf (DEBUG_FLAGS_AUTOMATION, "Automation object destroyed.\n");
 }
