@@ -52,30 +52,29 @@ audio_compressor_process_data (AudioFilter *f,
     {
       double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;      
       double delta = d->threshhold-peak_gain;
-      d->fade_destination = delta-delta/d->ratio;
+      d->fade_destination = pow (10.0, (delta-delta/d->ratio)/20);
       d->fade = d->attack_time;
     }
   else if (d->fade_destination != 0)
     {
-      d->fade_destination = 0;
+      d->fade_destination = 1;
       d->fade = d->release_time;
     }
   iptr = input;
   optr = output;
   while (iptr < buffer_end)
     {
-      double fl = pow (10.0, d->level/20);
-      *optr++ = *iptr++*fl*d->output_gain;
+      *optr++ = *iptr++*d->level*d->output_gain;
       if (d->fade != 0)
 	{
-	  if ((d->fade > 0 && d->level >= d->fade_destination)
-	      || (d->fade < 0 && d->level <= d->fade_destination))
+	  if ((d->fade > 1 && d->level >= d->fade_destination)
+	      || (d->fade < 1 && d->level <= d->fade_destination))
 	    d->fade = 0.0;
 	  else
-	    d->level += d->fade;
+	    d->level *= d->fade;
 	}
       if (f->channels == 2)
-	*optr++ = *iptr++*fl*d->output_gain;
+	*optr++ = *iptr++*d->level*d->output_gain;
     }
   return input_length;
 }
@@ -94,11 +93,13 @@ audio_compressor_new (int rate,
 {
   AudioFilter *f = audio_filter_new (rate, channels, buffer_size);
   CompressorData *d = malloc (sizeof (CompressorData));
+  double compression_amount;
+
   d->attack_time = attack_time;
   d->release_time = release_time;
   d->fade = 0.0;
-  d->level = 0;
-  d->fade_destination = 0;
+  d->level = 1;
+  d->fade_destination = 1;
   d->ratio = ratio;
   d->threshhold = threshhold;
   d->ithreshhold = pow (10.0, threshhold/20)*32767;
@@ -106,8 +107,11 @@ audio_compressor_new (int rate,
   
   /* Convert attack/release times to sample-based values */
 
-  d->attack_time = (threshhold-(threshhold/ratio))/(f->rate*attack_time);
-  d->release_time = -(threshhold-(threshhold/ratio))/(f->rate*release_time);
+  compression_amount = (threshhold-(threshhold/ratio));
+  compression_amount = pow (10.0, compression_amount/20);
+  d->attack_time = pow (compression_amount, 1/(rate*attack_time));
+  d->release_time = 1/pow (compression_amount, 1/(rate*release_time));
+  
   f->data = d;
   f->process_data = audio_compressor_process_data;
   return f;
