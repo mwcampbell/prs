@@ -43,15 +43,15 @@
 #define TEXT_FIELD_LEN 30
 #define INT_FIELD_LEN 4
 
-int layer_tab[4]= {0, 3, 2, 1};
+static int layer_tab[4]= {0, 3, 2, 1};
 
-int frequencies[3][4] = {
+static int frequencies[3][4] = {
    {22050,24000,16000,50000},  /* MPEG 2.0 */
    {44100,48000,32000,50000},  /* MPEG 1.0 */
    {11025,12000,8000,50000}    /* MPEG 2.5 */
 };
 
-int bitrate[2][3][14] = { 
+static int bitrate[2][3][14] = { 
   { /* MPEG 2.0 */
     {32,48,56,64,80,96,112,128,144,160,176,192,224,256},  /* layer 1 */
     {8,16,24,32,40,48,56,64,80,96,112,128,144,160},       /* layer 2 */
@@ -65,14 +65,14 @@ int bitrate[2][3][14] = {
   }
 };
 
-int frame_size_index[] = {24000, 72000, 72000};
+static int frame_size_index[] = {24000, 72000, 72000};
 
 
-char *mode_text[] = {
+static char *mode_text[] = {
    "stereo", "joint stereo", "dual channel", "mono"
 };
 
-char *emphasis_text[] = {
+static char *emphasis_text[] = {
   "none", "50/15 microsecs", "reserved", "CCITT J 17"
 };
 

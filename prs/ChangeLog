@@ -1,3 +1,7 @@
+2002-11-04  Matt Campbell  <mattcampbell@pobox.com>
+
+	* src/mp3tech.c: Made variables static to avoid naming conflict.
+
 2002-11-02  Matt Campbell  <mattcampbell@pobox.com>
 
 	* src/db.c: The username is now quoted when a grant operation is
