@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <pthread.h>
 #include <sys/soundcard.h>
 #include <shout/shout.h>
 #include "shoutmixeroutput.h"
@@ -16,6 +18,7 @@ typedef struct {
   pid_t encoder_pid;
   int encoder_output_fd;
   int encoder_input_fd;
+  int stream_reset;
   pthread_t shout_thread_id;
 } shout_info;
 
@@ -88,6 +91,7 @@ start_encoder (MixerOutput *o)
       close (1);
       dup (encoder_output[1]);
       close (encoder_output[0]);
+      close (2);
       execlp ("lame",
 	      "-r",
 	      sample_rate_arg,
@@ -95,6 +99,8 @@ start_encoder (MixerOutput *o)
 	      "-a",
 	      "-mm",
 	      bitrate_arg,
+	      "--resample",
+	      "22.050",
 	      "-",
 	      "-",
 	    NULL);
@@ -124,7 +130,6 @@ stop_encoder (MixerOutput *o)
   close (i->encoder_input_fd);
   close (i->encoder_output_fd);
   waitpid (i->encoder_pid, NULL, 0);
-  kill (i->encoder_pid);
 }
 
 
@@ -176,12 +181,14 @@ shout_thread (void *data)
       return;
     }
   fprintf (stderr, "Connected OK.\n");
-  while (1)
+  while (!i->stream_reset)
     {
       bytes_read = read (i->encoder_output_fd, buffer, 1024);
-      shout_send_data (i->shout_connection, buffer, bytes_read);
+      if (bytes_read > 0)
+	shout_send_data (i->shout_connection, buffer, bytes_read);
       shout_sleep (i->shout_connection);
     }
+  fprintf (stderr, "Shout thread exiting...\n");
 }
 
 
@@ -224,6 +231,7 @@ shout_mixer_output_new (const char *name,
   mixer_output_alloc_buffer (o);
 
   start_encoder (o);
+  i->stream_reset = 0;
   pthread_create (&i->shout_thread_id, NULL, shout_thread, (void *) i);
   return o;
 }
@@ -250,26 +258,52 @@ shout_mixer_output_set_connection (MixerOutput *o,
 				   const shout_conn_t *connection)
 {
   shout_info *i;
-  shout_conn_t *old;
   
   if (!o)
     return;
   if (!o->data)
     return;
   i = (shout_info *) o->data;
-  old = i->shout_connection;
+
+  /* Stop the encoder */
+
+  stop_encoder (o);
+
+  /* Signal the shoutcast thread that the stream has been reset, and wait
+   * for it to exist
+   */
+
+  i->stream_reset = 1;
+  pthread_join (i->shout_thread_id, NULL);
+
+  /* Disconnect from shoutcast server */
+
+  shout_disconnect (i->shout_connection);
+
+  /* Free the shout_connection data structure */
+
+  shout_conn_t_free (i->shout_connection);
+
+  /* Wait a couple seconds before trying to re-connect */
+
+  usleep (2000000);
+  
+  /* Set the shout_connection pointer to point to the new shout_conn_t structure */
+
   i->shout_connection = connection;
-  if (old->bitrate != connection->bitrate)
-    {
-      stop_encoder (o);
-      start_encoder (o);
-    }
-  if (old->port != connection->port ||
-      strcmp (old->ip, connection->ip))
-    {
-      shout_disconnect (old);
-      shout_connect (connection);
-    }
-  shout_conn_t_free (old);
+
+
+  /* The stream has been reset, so clear the reset flag */
+
+  i->stream_reset = 0;
+
+  /* Restart the encoder */
+
+  start_encoder (o);
+
+
+  /* Restart the shoutcast thread */
+
+  pthread_create (&i->shout_thread_id, NULL, shout_thread, (void *) i);
 }
 

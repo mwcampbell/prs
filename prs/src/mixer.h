@@ -39,6 +39,8 @@ mixer_add_channel (mixer *m,
 void
 mixer_delete_channel (mixer *m,
 		      const char *channel_name);
+void
+mixer_delete_all_channels (mixer *m);
 MixerChannel *
 mixer_get_channel (mixer *m,
 		   const char *channel_name);
@@ -70,6 +72,10 @@ mixer_fade_channel (mixer *m,
 		    const char *channel_name,
 		    double fade_destination,
 		    double fade_time);
+void
+mixer_fade_all (mixer *m,
+		double level,
+		double fade_time);
 
 
 #endif

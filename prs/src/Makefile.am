@@ -7,6 +7,7 @@ prs_db_builder_SOURCES = \
 	prs_db_builder.c
 
 prs_server_SOURCES = \
+	global_data.c \
 	db.c \
 	list.c \
 	mixer.c \

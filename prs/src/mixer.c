@@ -69,6 +69,19 @@ mixer_do_events (mixer *m)
 	  mixer_fade_channel (m, e->channel_name, e->level, atof (e->detail1));
 	  mixer_lock (m);
 	  break;
+	case MIXER_EVENT_TYPE_FADE_ALL:
+	mixer_unlock (m);
+	mixer_fade_all (m, e->level, e->end_time-e->start_time);
+	mixer_lock (m);
+	break;
+	case MIXER_EVENT_TYPE_DELETE_ALL:
+	  mixer_unlock (m);
+	  mixer_delete_all_channels (m);
+	  mixer_lock (m);
+	  break;
+	default:
+	  fprintf (stderr, "Bad mixer event.\n");
+	  abort ();
 	}
       mixer_event_free (e);
       m->events = list_delete_item (m->events, m->events);
@@ -88,16 +101,20 @@ mixer_main_thread (void *data)
   
   if (!m)
     {
-      fprintf (stderr, "Main mixer thread died!\n");
       return NULL;
     }
 
   tmp_buffer_size = 48000*2*sizeof(short)*MIXER_LATENCY;
   tmp_buffer = malloc (tmp_buffer_size);
   
-  while (m->running)
+  while (1)
     {
       mixer_lock (m);
+      if (!m->running)
+	{
+	  mixer_unlock (m);
+	  break;
+	}
       if (m->cur_time > 86400)
 	m->cur_time -= 86400;
       mixer_do_events (m);
@@ -158,6 +175,7 @@ mixer_main_thread (void *data)
     m->cur_time += MIXER_LATENCY;
     mixer_unlock (m);
     }
+  free (tmp_buffer);
 }
 
 
@@ -190,11 +208,13 @@ mixer_start (mixer *m)
 {
   if (!m)
     return -1;
-  if (m->running || m->thread)
-    return -1;
-  
   mixer_lock (m);
-
+  if (m->running || m->thread)
+    {
+      mixer_unlock (m);
+      return -1;
+    }
+  
   /* Create mixer main thread */
 
   m->running = 1;
@@ -216,18 +236,26 @@ mixer_start (mixer *m)
 int
 mixer_stop (mixer *m)
 {
+  pthread_t thread;
+
   if (!m)
     return -1;
+  mixer_lock (m);
   if (!m->running)
-    return -1;
+    {
+      mixer_unlock (m);
+      return -1;
+    }
 
   /* This could be incredibly broken */
 
-  mixer_lock (m);
   m->running = 0;
+  thread = m->thread;
   mixer_unlock (m);
-  pthread_join (m->thread, NULL);
+  pthread_join (thread, NULL);
+  mixer_lock (m);
   m->thread = 0;
+  mixer_unlock (m);
   return 0;
 }
 
@@ -296,7 +324,7 @@ mixer_delete_channel (mixer *m,
 	break;
     }
   if (tmp)
-    list_delete_item (m->channels, tmp);
+    m->channels = list_delete_item (m->channels, tmp);
   mixer_unlock (m);
 }
 
@@ -310,6 +338,12 @@ mixer_get_channel (mixer *m,
 
   if (!m)
     return NULL;
+  mixer_lock (m);
+  if (!m->channels)
+    {
+      mixer_unlock (m);
+      return;
+    }
   for (tmp = m->channels; tmp; tmp = tmp->next)
     {
       MixerChannel *ch = (MixerChannel *) tmp->data;
@@ -317,6 +351,7 @@ mixer_get_channel (mixer *m,
       if (!strcmp (channel_name, ch->name))
 	break;
     }
+  mixer_unlock (m);
   if (tmp)
     return (MixerChannel *) tmp->data;
   else
@@ -357,7 +392,7 @@ mixer_delete_output (mixer *m,
 	break;
     }
   if (tmp)
-    list_delete_item (m->outputs, tmp);
+    m->outputs = list_delete_item (m->outputs, tmp);
   mixer_unlock (m);
 }
 
@@ -370,6 +405,14 @@ mixer_get_output (mixer *m,
 {
   list *tmp;
 
+  if (!m)
+    return NULL;
+  mixer_lock (m);
+  if (!m->outputs)
+    {
+      mixer_unlock (m);
+      return NULL;
+      }
   for (tmp = m->outputs; tmp; tmp = tmp->next)
     {
       MixerOutput *o = (MixerOutput *) tmp->data;
@@ -377,6 +420,7 @@ mixer_get_output (mixer *m,
       if (!strcmp (output_name, o->name))
 	break;
     }
+  mixer_unlock (m);
   if (tmp)
     return (MixerOutput *) tmp->data;
   else
@@ -395,13 +439,13 @@ mixer_patch_channel (mixer *m,
 
   if (!m)
     return;
-  mixer_lock (m);
   ch = mixer_get_channel (m, channel_name);
   o = mixer_get_output (m, output_name);
 
   if (!ch || !o)
     return;
 
+  mixer_lock (m);
   ch->outputs = list_prepend (ch->outputs, o);
   mixer_unlock (m);
 }
@@ -416,21 +460,40 @@ mixer_patch_channel_all (mixer *m,
 
   if (!m)
     return;
-  mixer_lock (m);
   ch = mixer_get_channel (m, channel_name);
 
   if (!ch)
-    {
-      mixer_unlock (m);
-      return;
-    }
+    return;
   
+  mixer_lock (m);
   if (ch->outputs)
     list_free (ch->outputs);
   ch->outputs = list_copy (m->outputs);
   mixer_unlock (m);
 }
 
+
+
+void
+mixer_delete_all_channels (mixer *m)
+{
+  list *tmp;
+
+  if (!m)
+    return;
+
+  mixer_lock (m);
+  tmp = m->channels;
+  while (tmp)
+    {
+      list *next = tmp->next;
+      MixerChannel *ch = (MixerChannel *) tmp->data;
+      m->channels = list_delete_item (m->channels, tmp);
+      mixer_channel_destroy (ch);
+      tmp = next;
+    }
+  mixer_unlock (m);
+}
 
 
 double
@@ -524,5 +587,32 @@ mixer_fade_channel (mixer *m,
   fade_distance = fade_destination-(ch->level);
   ch->fade = (fade_distance/fade_time)/ch->rate;
   ch->fade_destination = fade_destination;
+  mixer_unlock (m);
+}
+
+
+
+void
+mixer_fade_all (mixer *m,
+		double level,
+		double fade_time)
+{
+    MixerChannel *ch;
+    double fade_distance;
+    list *tmp;
+    
+  if (!m)
+    return;
+
+  mixer_lock (m);
+  for (tmp = m->channels; tmp; tmp = tmp->next)
+    {
+      ch = (MixerChannel *) tmp->data;
+      if (!ch)
+	continue;
+      fade_distance = level-(ch->level);
+      ch->fade = (fade_distance/fade_time)/ch->rate;
+      ch->fade_destination = level;
+    }
   mixer_unlock (m);
 }
