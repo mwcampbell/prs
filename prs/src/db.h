@@ -22,10 +22,6 @@ void
 db_close (Database *db);
 void
 db_config (Database *db, xmlNodePtr cur);
-void
-db_thread_init (Database *db);
-void
-db_thread_end (Database *db);
 
 /*
  *

@@ -173,7 +173,6 @@ static void *
 mixer_automation_main_thread (void *data)
 {
   MixerAutomation *a = (MixerAutomation *) data;
-  db_thread_init (a->db);
 
   while (1)
     {
@@ -227,7 +226,6 @@ mixer_automation_main_thread (void *data)
   pthread_mutex_lock (&(a->mut));
   a->automation_thread = 0;
   pthread_mutex_unlock (&(a->mut));
-  db_thread_end (a->db);
 }
 
 

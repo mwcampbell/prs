@@ -89,16 +89,6 @@ db_config (Database *db, xmlNodePtr cur)
   db_connect (db, host, user, password, name);
 }
 
-void
-db_thread_init (Database *db)
-{
-}
-
-void
-db_thread_end (Database *db)
-{
-}
-
 
 
 /*

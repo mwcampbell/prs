@@ -255,7 +255,6 @@ scheduler_main_thread (void *data)
   pthread_mutex_lock (&(s->mut));
   current = target = s->prev_event_end_time;
   pthread_mutex_unlock (&(s->mut));
-  db_thread_init (s->db);
   while (1)
     {
       pthread_mutex_lock (&(s->mut));
@@ -273,8 +272,6 @@ scheduler_main_thread (void *data)
       usleep ((current-target)*900000);
       target = current;
     }
-
-  db_thread_end (s->db);
 }
 
 
