@@ -575,12 +575,9 @@ scheduler_schedule_next_event (scheduler *s)
 				if (stack_entry->t->repeat_events)
 					stack_entry->event_number = 1;
 				else {
-					if (stack_entry->t->fallback_id == -1) {
+					if (stack_entry->t->fallback_id == -1)
 					s->prev_event_end_time = s->last_event_end_time = stack_entry->t->end_time;
-					}
-					else {
-						scheduler_switch_templates (s);
-					}
+					scheduler_switch_templates (s);
 				}
 			}
 		}
