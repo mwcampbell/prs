@@ -340,8 +340,6 @@ mixer_add_channel (mixer *m,
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "adding channel %s to mixer\n", ch->name);
 	mixer_lock (m);
-	if (m->default_level != 1.0) 
-		ch->level = ch->fade_destination = m->default_level;
 	m->channels = list_prepend (m->channels, ch);
 	mixer_unlock (m);
 }
@@ -392,6 +390,8 @@ mixer_enable_channel (mixer *m,
 	if (!ch)
 		return;
 	mixer_lock (m);
+	if (enabled && m->default_level != 1.0)
+		ch->level = m->default_level;
 	ch->enabled = enabled;
 	mixer_unlock (m);
 	debug_printf (DEBUG_FLAGS_MIXER,
