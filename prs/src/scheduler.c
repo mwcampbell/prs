@@ -215,6 +215,7 @@ scheduler_switch_templates (scheduler *s)
 		ae->level = 0;
 		mixer_automation_add_event (s->a, ae);
 		s->prev_event_start_time = start_time-fade;
+		start_delta = fade;
 	}
 
 	/*
@@ -229,8 +230,9 @@ scheduler_switch_templates (scheduler *s)
 		ae = automation_event_new ();
 		ae->type = AUTOMATION_EVENT_TYPE_DELETE_CHANNELS;
 		ae->data = prev_template_end_time;
-		ae->delta_time = fade;
+		ae->delta_time = start_delta;
 		mixer_automation_add_event (s->a, ae);
+		s->prev_event_start_time = start_time;
 	}
 	s->last_event_end_time = s->prev_event_end_time = start_time;
 
