@@ -9,12 +9,6 @@ html_start ("Create Playlist Template");
 <label for="template_name">Name:</label>
 <input type="text" name="template_name" id="template_name">
 <br>
-<label for="template_start_time">Start time:</label>
-<input type="text" name="template_start_time" id="template_start_time">
-<br>
-<label for="template_end_time">End time:</label>
-<input type="text" name="template_end_time" id="template_end_time">
-<br>
 <input type="checkbox" name="template_events_repeat" value="1" id="template_events_repeat">
 <label for="template_events_repeat">Repeat events in this template until the template's end time has been reached.</label>
 <br>
