@@ -1,5 +1,23 @@
 2002-11-20  Marc Mulcahy  <marc@plbb.net>
 
+	* src/prs.conf: I hope it's dead now.
+
+	* src/ossmixerchannel.c (oss_mixer_channel_new): Get rid of code
+	duplicated in mixer_channel_new.
+
+	* src/mp3mixerchannel.c (mp3_mixer_channel_new): Get rid of code
+	duplicated in mixer_channel_new.
+	
+	* src/vorbismixerchannel.c (vorbis_mixer_channel_new): Get rid of code
+	duplicated in  mixer_channel_new.
+	
+	* src/mixerchannel.ch (mixer_channel_new): Made parameters const.
+	Make mixer chanels disabled by default.  Added initialization for all
+	struct members.
+		
+	* src/mixerautomation.c (mixer_automation_next_event): Changed the
+	order of events in the channel creation process.
+	
 	* src/prs.conf.dist: Renamed configuration file and made it generic.
 	it now contains examples of all possible setup options.
 

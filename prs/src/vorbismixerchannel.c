@@ -100,22 +100,11 @@ vorbis_mixer_channel_new (const char *name,
 	ch->data = (void *) i;
 	ch->name = strdup (name);
 	ch->location = strdup (location);
-	ch->enabled = 1;
   
 	/* Set overrideable methods */
 
 	ch->get_data = vorbis_mixer_channel_get_data;
 	ch->free_data = vorbis_mixer_channel_free_data;
-
-	/* Set level and fading parameters */
-
-	ch->fade = 0.0;
-	ch->level = 1.0;
-	ch->fade_destination = 1.0;
-
-	/* Set the end of data flag to 0 */
-
-	ch->data_end_reached = 0;
 
 	return ch;
 }

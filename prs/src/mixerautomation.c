@@ -4,6 +4,8 @@
 #include <signal.h>
 #include "mixerautomation.h"
 #include "db.h"
+#include "vorbismixerchannel.h"
+#include "mp3mixerchannel.h"
 
 
 
@@ -149,6 +151,7 @@ mixer_automation_next_event (MixerAutomation *a)
 
       mixer_add_channel (a->m, ch);
       mixer_patch_channel_all (a->m, e->channel_name);
+      mixer_enable_channel (a->m, e->channel_name, 1);
       break;
     case AUTOMATION_EVENT_TYPE_FADE_CHANNEL:
       mixer_fade_channel (a->m, e->channel_name, e->level, atof (e->detail1));

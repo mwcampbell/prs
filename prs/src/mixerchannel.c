@@ -6,9 +6,9 @@
 
 
 MixerChannel *
-mixer_channel_new (int rate,
-		   int channels,
-		   int latency)
+mixer_channel_new (const int rate,
+		   const int channels,
+		   const int latency)
 {
 	MixerChannel *ch;
 
@@ -19,10 +19,20 @@ mixer_channel_new (int rate,
 	ch->buffer_size = (int) ((double)latency/2*(double)rate/44100)*channels;
 	ch->buffer = (short *) malloc (sizeof(short)*ch->buffer_size);
 
-
 	/* Defaults to patched to no busses */
 
 	ch->patchpoints = NULL;
+	
+	ch->enabled = 0;
+	ch->data_end_reached = 0;
+	ch->level = 1.0;
+	ch->fade = 0.0;
+	ch->fade_destination = 1.0;
+
+	/* Overrideable functions */
+
+	ch->free_data = NULL;
+	ch->get_data = NULL;
 	
 	return ch;
 }

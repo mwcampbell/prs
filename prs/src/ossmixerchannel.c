@@ -161,13 +161,5 @@ oss_mixer_channel_new (const char *name,
 	ch->get_data = oss_mixer_channel_get_data;
 	ch->free_data = oss_mixer_channel_free_data;
 
-	/* Level and fading parameters */
-
-	ch->level = 1.0;
-	ch->fade = 0.0000001;
-	ch->fade_destination = 1.0;
-
-	ch->enabled = 1;
-	ch->data_end_reached = 0;
 	return ch;
 }

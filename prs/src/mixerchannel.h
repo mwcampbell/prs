@@ -48,9 +48,9 @@ struct _MixerChannel {
 
 
 MixerChannel *
-mixer_channel_new (int rate,
-		   int channels,
-		   int latency);
+mixer_channel_new (const int rate,
+		   const int channels,
+		   const int latency);
 void
 mixer_channel_destroy (MixerChannel *ch);
 void
