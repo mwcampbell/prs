@@ -35,7 +35,7 @@ load_playlist (MixerAutomation *a, Database *db, FILE *in, FILE *out)
 	char path[1025];
 	AutomationEvent *e;
 	FILE *fp;
-	double delta = 0.0;
+	static double delta = 0.0;
 	
 	fprintf (out, "Enter playlist name: ");
 	fgets (pl_name, 1024, in);
@@ -87,6 +87,7 @@ mic_on (mixer *m)
 	mixer_fade_all (m, .2, .5);
 	mixer_fade_channel (m, "soundcard", 1.0, .2);
 	mixer_enable_channel (m, "soundcard", 1);
+	mixer_set_default_level (m, .2);
 }
 
 
@@ -96,6 +97,7 @@ mic_off (mixer *m)
 {
 	mixer_fade_all (m, 1, .5);
 	mixer_enable_channel (m, "soundcard", 0);
+	mixer_set_default_level (m, 1.0);
 }
 
 
@@ -198,7 +200,6 @@ main (int argc, char *argv[])
   debug_printf (DEBUG_FLAGS_GENERAL, "Loading config file %s\n", config_filename);
   prs_config (prs, config_filename);
 
-  debug_set_flags (DEBUG_FLAGS_ALL);
   if (prs->telnet_interface)
     {
       /* Set up the server socket. */

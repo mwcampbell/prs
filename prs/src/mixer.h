@@ -35,6 +35,8 @@ struct _mixer {
 	list *channels;
 	list *busses;
 	list *outputs;
+
+	double default_level;
 };
 
 
@@ -114,7 +116,9 @@ mixer_reset_notification_time (mixer *m,
 void
 mixer_wait_for_notification (mixer *m,
 			     double notify_time);
-
+void
+mixer_set_default_level (mixer *m,
+			 double level);
 
 
 #endif

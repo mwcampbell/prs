@@ -1,5 +1,12 @@
 2003-01-04  Marc Mulcahy  <marc@plbb.net>
 
+	* src/mixer.ch (mixer_set_default_level): Allows a default level to
+	be set so that channels added by the automation can have their
+	levels reduced when the mic is on.
+	
+	* src/prs_server.c (mic_on): Use mixer_set_default_level.
+		(mic_off): Use mixer_set_default_level.
+
 	* src/mixerpatchpoint.c (mixer_patch_point_post_data): Moved fading
 	and output pointer movement code to the mixer channel code so
 	multiple buses work.

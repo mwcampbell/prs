@@ -185,6 +185,7 @@ mixer_new (int latency)
 
 	m->running = 0;
 	m->thread = 0;
+	m->default_level = 1.0;
 	return m;
 }
 
@@ -295,6 +296,8 @@ mixer_add_channel (mixer *m,
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "adding channel %s to mixer\n", ch->name);
 	mixer_lock (m);
+	if (m->default_level != 1.0) 
+		ch->level = ch->fade_destination = m->default_level;
 	m->channels = list_prepend (m->channels, ch);
 	mixer_unlock (m);
 }
@@ -816,5 +819,15 @@ mixer_wait_for_notification (mixer *m,
 	}
 	m->notify_time = notify_time;
 	pthread_cond_wait (&(m->notify_condition), &(m->mutex));
+	mixer_unlock (m);
+}
+
+
+void
+mixer_set_default_level (mixer *m,
+			 double level)
+{
+	mixer_lock (m);
+	m->default_level = level;
 	mixer_unlock (m);
 }
