@@ -189,8 +189,8 @@ setup_streams (mixer *m)
 				    -20,
 				    5.0,
 				    .01,
-				    2,
 				    2);
+
 	  o = shout_mixer_output_new (stream_name, 44100, 2, new);
 	  mixer_output_add_filter (o, f);
 	  mixer_add_output (m, o);
