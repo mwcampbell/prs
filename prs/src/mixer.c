@@ -98,7 +98,6 @@ mixer_main_thread (void *data)
 	gettimeofday (&start, NULL);
 	
 	while (1) {
-		pthread_testcancel ();
 		mixer_lock (m);
 		if (!m->running) {
 			mixer_unlock (m);
@@ -298,8 +297,7 @@ mixer_stop (mixer *m)
 	m->running = 0;
 	thread = m->thread;
 	mixer_unlock (m);
-	pthread_cancel (thread);
-	return 0;
+	pthread_join (thread, NULL);
 }
 
 
