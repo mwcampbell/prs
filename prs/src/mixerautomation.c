@@ -46,6 +46,7 @@ automation_event_new (void)
 	e->level = 1.0;
 	e->channel_name = NULL;
 	e->detail1 = e->detail2 = NULL;
+	e->data = -1;
 	return e;
 }
 

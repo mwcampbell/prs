@@ -878,7 +878,8 @@ mixer_set_default_level (mixer *m,
 void
 mixer_add_file (mixer *m,
 		const char *channel_name,
-		const char *path)
+		const char *path,
+		const int key)
 {
 	MixerChannel *ch = NULL;
 	const char *file_extension;
@@ -890,6 +891,8 @@ mixer_add_file (mixer *m,
 		if (!strcmp (type_links[i].extension, file_extension))
 			ch = type_links[i].constructor (channel_name, path, m->latency);
 	}
-	if (ch)
+	if (ch) {
+		ch->key = key;
 		mixer_add_channel (m, ch);
+	}
 }

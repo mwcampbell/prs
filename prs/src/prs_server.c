@@ -92,7 +92,7 @@ add_file (MixerAutomation *a,
 	
 	/* Add channel to the mixer */
 
-	mixer_add_file (a->m, e->channel_name, path);
+	mixer_add_file (a->m, e->channel_name, path, -1);
 
 	mixer_automation_add_event (a, e);
 }

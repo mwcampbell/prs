@@ -1,5 +1,19 @@
 2003-01-16  Marc Mulcahy  <marc@plbb.net>
 
+	* src/prs_server.c (add_file): Add a key of -1 to channels added
+	interactively.
+
+	* src/scheduler.c (scheduler_switch_templates): Add support for
+	deleting mixer channels associated with a template that's been popped
+	off the stack.  This eliminates uselessly decoding files only to 
+	play them at a level of 0 since they've been faded out.
+
+	* src/mixerautomation.c (automation_event_new): Initialize the new
+	data member.
+
+	* src/mixer.ch (mixer_add_file): Allow specifying a key so the channel
+	can later be deleted.
+
 	* src/mixerchannel.ch:  Added a key member to the MixerChannel
 	structure, and added a function to delete channels based on this key.
 

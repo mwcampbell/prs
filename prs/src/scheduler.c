@@ -179,6 +179,11 @@ scheduler_switch_templates (scheduler *s)
 		ae->length = e->t->end_prefade;
 		ae->level = 0;
 		mixer_automation_add_event (s->a, ae);
+		ae = automation_event_new ();
+		ae->type = AUTOMATION_EVENT_TYPE_DELETE_CHANNELS;
+		ae->data = e->t->id;
+		ae->delta_time = e->t->end_prefade;
+		mixer_automation_add_event (s->a, ae);
 		if (start_time < e->t->end_time-e->t->end_prefade)
 			mixer_automation_set_start_time (s->a, start_time);
 		s->prev_event_start_time = start_time;
@@ -400,7 +405,7 @@ scheduler_schedule_next_event (scheduler *s)
       
 		/* Add the channel to the mixer */
 
-		mixer_add_file (s->a->m, ae->channel_name, r->path);
+		mixer_add_file (s->a->m, ae->channel_name, r->path, stack_entry->t->id);
 
 		ae->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
 		ae->level = e->level;
@@ -430,7 +435,7 @@ scheduler_schedule_next_event (scheduler *s)
 
 		/* Add channel to the mixer */
 
-		mixer_add_file (s->a->m, ae->channel_name, e->detail1);
+		mixer_add_file (s->a->m, ae->channel_name, e->detail1, stack_entry->t->id);
 
 		ae->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
 		ae->detail1 = strdup (e->detail1);

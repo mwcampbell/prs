@@ -147,7 +147,8 @@ mixer_set_default_level (mixer *m,
 void
 mixer_add_file (mixer *m,
 		const char *channel_name,
-		const char *file_name);
+		const char *file_name,
+		const int key);
 
 
 
