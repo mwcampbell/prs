@@ -61,6 +61,8 @@ mp3_decoder_new (const char *filename, int start_frame)
 
 	/* Fork the decoder process */
 
+	signal (SIGCHLD, SIG_IGN);
+
 	rv = fork ();
 	if (!rv) {
 		close (0);
