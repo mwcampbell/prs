@@ -82,54 +82,12 @@ oss_mixer_output_new (const char *name,
 	/* Open the sound device */
 
 	i->fd = soundcard_get_fd ();
+	if (i->fd < 0)
+		i->fd = soundcard_setup (rate, channels, latency);
 	if (i->fd < 0) {
-		i->fd = open ("/dev/dsp", O_RDWR);
-		if (i->fd < 0) {
-			soundcard_set_duplex (0);
-			i->fd = open ("/dev/dsp", O_WRONLY);
-		}
-		else
-			soundcard_set_duplex (1);
-		if (i->fd < 0) {
-			perror ("sound card open failed");
-			exit (EXIT_FAILURE);
-		}
-		soundcard_set_fd (i->fd);
-		soundcard_set_rate (rate);
-		soundcard_set_channels (channels);
-		
-		/* Set the soundcard to non-blocking */
-
-		fcntl (i->fd, F_SETFL, O_NONBLOCK);
-
-                /* Setup sound card */
-
-		fragment_size = log (2*(latency/44100.0)*rate * sizeof (short) )  / log (2);
-		tmp = 0x00010000|fragment_size;
-		if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0) {
-			perror ("ioctl on sound card failed");
-			exit (EXIT_FAILURE);
-		}
-		tmp = AFMT_S16_LE;
-		if (ioctl (i->fd, SNDCTL_DSP_SAMPLESIZE, &tmp) < 0) {
-			perror ("ioctl on sound card failed");
-			exit (EXIT_FAILURE);
-		}
-		if (channels == 1)
-			tmp = 0;
-		else
-			tmp = 1;
-		if (ioctl (i->fd, SNDCTL_DSP_STEREO, &tmp) < 0) {
-			perror ("ioctl on sound card failed");
-			exit (EXIT_FAILURE);
-		}
-		tmp = rate;
-		if (ioctl (i->fd, SNDCTL_DSP_SPEED, &tmp) < 0) {
-			perror ("ioctl on sound card failed");
-			exit (EXIT_FAILURE);
-		}
+		free (i);
+		return NULL;
 	}
-
 	o = malloc (sizeof (MixerOutput));
 	assert (o != NULL);
 	o->name = strdup (name);

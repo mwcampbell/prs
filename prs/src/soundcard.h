@@ -14,3 +14,7 @@ int
 soundcard_get_duplex (void);
 void
 soundcard_set_duplex (int duplex);
+int
+soundcard_setup (int rate,
+		 int channels,
+		 int latency);

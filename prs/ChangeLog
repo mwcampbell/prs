@@ -1,3 +1,17 @@
+2003-01-04  Marc Mulcahy  <marc@plbb.net>
+
+	* src/soundcard.c (soundcard_setup): Added this function to
+	consolodate the soundcard setup in one place. Now initializes
+	soundcard to run at four times the latency of the software mixer.
+
+	* src/prs.c (prs_new): Use new mixer latency to sync up with changes
+	to the soundcard stuff.
+
+	* src/ossmixerchannel.c (oss_mixer_channel_new): Use new soundcard_setup function.
+
+	* src/ossmixeroutput.c (oss_mixer_output_free_data): Use new
+	soundcard_setup function.
+
 2003-01-03  Marc Mulcahy  <marc@plbb.net>
 
 	* src/mixerpatchpoint.c (mixer_patch_point_post_data): Fix

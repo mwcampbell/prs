@@ -67,7 +67,7 @@ MixerChannel *
 oss_mixer_channel_new (const char *name,
 		       int rate,
 		       int channels,
-		       int mixer_latency)
+		       int latency)
 {
 	MixerChannel *ch;
 	oss_info *i;
@@ -81,62 +81,13 @@ oss_mixer_channel_new (const char *name,
 	/* Open the sound device */
 
 	i->fd = soundcard_get_fd ();
-	if (i->fd < 0) {
-		i->fd = open ("/dev/dsp", O_RDWR);
-		if (i->fd < 0) {
-			soundcard_set_duplex (0);
-			i->fd = open ("/dev/dsp", O_RDONLY);
-		}
-		else
-			soundcard_set_duplex (1);
-		soundcard_set_fd (i->fd);
-		soundcard_set_rate (rate);
-		soundcard_set_channels (channels);
-		
-		/* Setup sound card */
-
-		fragment_size = log(2*(mixer_latency/44100.0)*rate*channels*sizeof(short))/log(2);
-		tmp = 0x00010000|fragment_size;
-		if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0) {
-			close (i->fd);
-			free (i);
-			return NULL;
-		}
-		tmp = AFMT_S16_LE;
-		if (ioctl (i->fd, SNDCTL_DSP_SAMPLESIZE, &tmp) < 0) {
-			close (i->fd);
-			free (i);
-			return NULL;
-		}
-		if (channels == 1)
-			tmp = 0;
-		else
-			tmp = 1;
-		if (ioctl (i->fd, SNDCTL_DSP_STEREO, &tmp) < 0) {
-			close (i->fd);
-			free (i);
-			return NULL;
-		}
-		tmp = rate;
-		if (ioctl (i->fd, SNDCTL_DSP_SPEED, &tmp) < 0) {
-			close (i->fd);
-			free (i);
-			return NULL;
-		}
-  
-	}
-	else {
-		
-		/* Make channel parameters match open sound card parameters */
-
-		rate = soundcard_get_rate ();
-		channels = soundcard_get_channels ();
-	}
+	if (i->fd < 0)
+		i->fd = soundcard_setup (rate, channels, latency);
 	if (i->fd < 0) {
 		free (i);
 		return NULL;
 	}
-	ch = mixer_channel_new (rate, channels, mixer_latency);
+	ch = mixer_channel_new (rate, channels, latency);
 	if (!ch) {
 		close (i->fd);
 		free (i);
