@@ -29,9 +29,9 @@ struct _MixerChannel {
 
   void *data;
 
-  /* List of outputs to which this channel is patched */
+  /* List of busses to which this channel is patched */
 
-  list *outputs;
+  list *busses;
 
   /* overrideable methods */
 

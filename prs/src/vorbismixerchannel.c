@@ -94,7 +94,7 @@ vorbis_mixer_channel_new (const char *name,
   ch->name = strdup (name);
   ch->location = strdup (location);
   ch->enabled = 1;
-
+  
   /* Set overrideable methods */
 
   ch->get_data = vorbis_mixer_channel_get_data;
@@ -118,7 +118,7 @@ vorbis_mixer_channel_new (const char *name,
 
   /* Default is patched to no outputs */
 
-  ch->outputs = NULL;
+  ch->busses = NULL;
 
   return ch;
 }

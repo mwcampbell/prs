@@ -22,9 +22,9 @@ mixer_channel_destroy (MixerChannel *ch)
 	free (ch->data);
     }
 
-  /* We don't own the outputs, so just free the list */
+  /* We don't own the busses, so just free the list */
 
-  list_free (ch->outputs);
+  list_free (ch->busses);
   free (ch);
 }
 

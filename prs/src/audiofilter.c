@@ -1,3 +1,4 @@
+#include <malloc.h>
 #include "audiofilter.h"
 
 
@@ -7,7 +8,7 @@ audio_filter_new (int rate,
 		  int channels,
 		  int buffer_size)
 {
-  AudioFilter *f = malloc (sizeof (AudioFilter));
+  AudioFilter *f = (AudioFilter *) malloc (sizeof (AudioFilter));
 
   if (!f)
     return NULL;

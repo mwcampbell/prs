@@ -3,6 +3,7 @@
 #include <malloc.h>
 #include "list.h"
 #include "audiofilter.h"
+#include "multibandaudiocompressor.h"
 
 
 #define PI 3.1415926538979323846
@@ -15,6 +16,7 @@ typedef struct {
   double ratio;
   double attack_time;
   double release_time;
+  double volume;
   double output_gain;  
 
   /* Filter stuff */
@@ -40,7 +42,7 @@ typedef struct {
 } band;
 
 static int
-audio_compressor_process_data (AudioFilter *f,
+multiband_audio_compressor_process_data (AudioFilter *f,
 			       short *input,
 			       int input_length,
 			       short *output,
@@ -59,12 +61,7 @@ audio_compressor_process_data (AudioFilter *f,
 
       /* Apply filter */
 
-      /* Pre-process the buffer to give the filters some head room */
-
-      iptr = input;
-      buffer_end = input+input_length;
-      while (iptr < buffer_end)
-	*iptr++ *= .7;
+      buffer_end = input+input_length;      
       iptr = input;
       optr = f->buffer;
       while (iptr < buffer_end)
@@ -86,22 +83,8 @@ audio_compressor_process_data (AudioFilter *f,
 	  b->x1[0] = in;
 	  b->y1[1] = b->y1[0];
 	  b->y1[0] = out;
-	  *optr++ = out;
-	  out =
-	    b->a2[0]*in +
-	    b->a2[1]*b->x3[0] +
-	    b->a2[2]*b->x3[1] -
-	    b->b2[0]*b->y3[0] -
-	    b->b2[1]*b->y3[1];
-	  if (out < -32768)
-	    out = -32768;
-	  if (out > 32767)
-	    out = 32767;
-	  b->x3[1] = b->x3[0];
-	  b->x3[0] = in;
-	  b->y3[1] = b->y3[0];
-	  b->y3[0] = out;
-	  *iptr++ = out;
+	  (*iptr++) -= out;
+	  *optr++ = out*b->volume;
 	  if (f->channels == 2)
 	    {
 	      in = *iptr;
@@ -119,64 +102,36 @@ audio_compressor_process_data (AudioFilter *f,
 	      b->x2[0] = in;
 	      b->y2[1] = b->y2[0];
 	      b->y2[0] = out;
-	      *optr++ = out;
-	      out =
-		b->a2[0]*in +
-		b->a2[1]*b->x4[0] +
-		b->a2[2]*b->x4[1] -
-		b->b2[0]*b->y4[0] -
-		b->b2[1]*b->y4[1];
-	      if (out < -32768)
-		out = -32768;
-	      if (out > 32767)
-		out = 32767;
-	      b->x4[1] = b->x4[0];
-	      b->x4[0] = in;
-	      b->y4[1] = b->y4[0];
-	      b->y4[0] = out;
-	      *iptr++ = out;
+	      *optr++ = out*b->volume;
+	      (*iptr++) -= out;
 	    }
 	  }
-      peak1 = peak2 = 0;
-      iptr = f->buffer;
       buffer_end = f->buffer+f->buffer_size;
-      while (iptr < buffer_end)
-	{
-	  short val = abs (*iptr++);
-	  if (val > peak1)
-	    peak1 = val;
-	  if (f->channels == 2)
-	    {
-	      short val = abs (*iptr++);
-	      if (val > peak2)
-		peak2 = val;
-	    }
-	}
-      if ((double) (peak1+peak2)/2  > b->ithreshhold)
-	{
-	  double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;      
-	  double delta = b->threshhold-peak_gain;
-	  b->fade_destination = pow (10.0, (delta-delta/b->ratio)/20);
-	  b->fade = b->attack_time;
-	}
-      else if (b->fade_destination != 0)
-	{
-	  b->fade_destination = 1;
-	  b->fade = b->release_time;
-	}
       iptr = f->buffer;
       optr = output;
       while (iptr < buffer_end)
 	{
+	  long out;
+
 	  if (first_band)
-	    *optr++ = *iptr++*b->level*b->output_gain;
+	    out = *iptr++*b->level*b->output_gain;
 	  else
-	    *optr++ += *iptr++*b->level*b->output_gain;
+	    out = (long)*optr+(long)*iptr++*b->level*b->output_gain;
+	  if (out < -32768)
+	    out = -32768;
+	  if (out > 32767)
+	    out = 32767;
+	  *optr++ = out;
 	  if (f->channels == 2)
 	    if (first_band)
-	      *optr++ = *iptr++*b->level*b->output_gain;
+	      out = *iptr++*b->level*b->output_gain;
 	    else
-	      *optr++ += *iptr++*b->level*b->output_gain;
+	      out = (long)*optr+(long)*iptr++*b->level*b->output_gain;
+	  if (out < -32768)
+	    out = -32768;
+	  if (out > 32767)
+	    out = 32767;
+	  *optr++ = out;
 	  if (b->fade != 0)
 	    {
 	      if ((b->fade > 1 && b->level > b->fade_destination)
@@ -188,6 +143,38 @@ audio_compressor_process_data (AudioFilter *f,
 		b->level *= b->fade;
 	    }
 	}
+      peak1 = peak2 = 0;
+      iptr = output;
+      buffer_end = output+output_length;
+      while (iptr < buffer_end)
+	{
+	  short val = abs (*iptr++);
+	  if (val > peak1)
+	    peak1 = val;
+	  if (f->channels == 2)
+	    {
+	      short val = abs (*iptr++);
+	    if (val > peak2)
+	      peak2 = val;
+	    }
+	}
+      if (f->channels == 1)
+	peak2 = peak1;
+      if ((double) (peak1+peak2)/2  > b->ithreshhold)
+	{
+	  double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;      
+	  double delta = b->threshhold-peak_gain;
+	  b->fade_destination = pow (10.0, (delta-delta/b->ratio)/20);
+	  if (b->fade_destination < b->level)
+	    b->fade = b->attack_time;
+	  else
+	    b->fade = b->release_time;
+	}
+      else if (b->fade_destination != 0)
+	{
+	  b->fade_destination = 1;
+	  b->fade = b->release_time;
+	}
       first_band = 0;
     }
   return input_length;
@@ -196,27 +183,28 @@ audio_compressor_process_data (AudioFilter *f,
 
 
 AudioFilter *
-audio_compressor_new (int rate,
+multiband_audio_compressor_new (int rate,
 		      int channels,
 		      int buffer_size)
 {
   AudioFilter *f = audio_filter_new (rate, channels, buffer_size);
 
   f->data = NULL;
-  f->process_data = audio_compressor_process_data;
+  f->process_data = multiband_audio_compressor_process_data;
   return f;
 }
 
 
 
 void
-audio_compressor_add_band (AudioFilter *f,
+multiband_audio_compressor_add_band (AudioFilter *f,
 			   double freq,
 			   double threshhold,
 			   double ratio,
 			   double attack_time,
 			   double release_time,
-			   double output_gain)
+			   double volume,
+				     double output_gain)
 {
   double compression_amount;
   band *b ;
@@ -274,6 +262,7 @@ audio_compressor_add_band (AudioFilter *f,
   b->attack_time = pow (compression_amount, 1/(f->rate*attack_time));
   b->release_time = 1/pow (compression_amount, 1/(f->rate*release_time));
   b->ratio = ratio;
+  b->volume = volume;
   b->output_gain = output_gain;
 
 

@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include "list.h"
 #include "mixerchannel.h"
+#include "mixerbus.h"
 #include "mixeroutput.h"
 
 
@@ -23,7 +24,9 @@ struct _mixer {
   int running;
   
   double cur_time;
+
   list *channels;
+  list *busses;
   list *outputs;
 };
 
@@ -49,6 +52,15 @@ MixerChannel *
 mixer_get_channel (mixer *m,
 		   const char *channel_name);
 void
+mixer_add_bus (mixer *m,
+		  MixerBus *b);
+void
+mixer_delete_bus (mixer *m,
+		     const char *bus_name);
+MixerBus *
+mixer_get_bus (mixer *m,
+	       const char *bus_name);
+void
 mixer_add_output (mixer *m,
 		  MixerOutput *o);
 void
@@ -60,10 +72,14 @@ mixer_get_output (mixer *m,
 void
 mixer_patch_channel (mixer *m,
 		     const char *channel_name,
-		     const char *output_name);
+		     const char *bus_name);
 void
 mixer_patch_channel_all (mixer *m,
 			 const char *channel_name);
+void
+mixer_patch_bus (mixer *m,
+		 const char *bus_name,
+		 const char *output_name);
 double
 mixer_get_time (mixer *m);
 void

@@ -28,12 +28,6 @@ struct _MixerOutput {
 
   short *buffer;
   int buffer_size;
-  short *process_buffer;
-  int process_buffer_size;
-  
-  /* Audio filters */
-
-  list *filters;
 
   /* user data */
 
@@ -42,7 +36,7 @@ struct _MixerOutput {
   /* Overrideable methods */
 
   void (*free_data) (MixerOutput *o);
-  void (*post_output) (MixerOutput *o);
+  void (*post_data) (MixerOutput *o);
 };
 
 
@@ -52,14 +46,11 @@ mixer_output_destroy (MixerOutput *o);
 void
 mixer_output_alloc_buffer (MixerOutput *o);
 int
-mixer_output_add_output (MixerOutput *o,
+mixer_output_add_data (MixerOutput *o,
 			 short *buffer,
 			 int length);
 void
-mixer_output_post_output (MixerOutput *o);
+mixer_output_post_data (MixerOutput *o);
 void
-mixer_output_reset_output (MixerOutput *o);
-void
-mixer_output_add_filter (MixerOutput *o,
-AudioFilter *f);
+mixer_output_reset_data (MixerOutput *o);
 #endif

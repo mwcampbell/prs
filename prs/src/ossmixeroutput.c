@@ -36,7 +36,7 @@ oss_mixer_output_free_data (MixerOutput *o)
 
 
 static void
-oss_mixer_output_post_output (MixerOutput *o)
+oss_mixer_output_post_data (MixerOutput *o)
 {
   oss_info *i;
   
@@ -79,7 +79,7 @@ oss_mixer_output_new (const char *name,
 
       /* Setup sound card */
 
-      tmp = 0x00080009;
+      tmp = 0x0008000a;
       if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0)
 	{
 	  close (i->fd);
@@ -130,14 +130,14 @@ oss_mixer_output_new (const char *name,
   o->rate = rate;
   o->channels = channels;
   o->data = (void *) i;
-
+  o->enabled = 1;
+  
   /* Overrideable methods */
 
   o->free_data = oss_mixer_output_free_data;
-  o->post_output = oss_mixer_output_post_output;
+  o->post_data = oss_mixer_output_post_data;
 
   mixer_output_alloc_buffer (o);  
-  o->enabled = 1;
   return o;
 }
 

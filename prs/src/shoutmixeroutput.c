@@ -89,17 +89,18 @@ start_encoder (MixerOutput *o)
       close (encoder_input[1]);
       
       close (1);
+      close (2);
       dup (encoder_output[1]);
       close (encoder_output[0]);
-      close (2);
       execlp ("lame",
+	      "lame",
 	      "-r",
 	      sample_rate_arg,
 	      "-x",
 	      "-a",
 	      "-mm",
 	      bitrate_arg,
-	      "-q2",
+	      "-q0",
 	      "-",
 	      "-",
 	    NULL);
@@ -153,7 +154,7 @@ shout_mixer_output_free_data (MixerOutput *o)
 
 
 static void
-shout_mixer_output_post_output (MixerOutput *o)
+shout_mixer_output_post_data (MixerOutput *o)
 {
   shout_info *i;
   
@@ -231,7 +232,7 @@ shout_mixer_output_new (const char *name,
   /* Overrideable methods */
 
   o->free_data = shout_mixer_output_free_data;
-  o->post_output = shout_mixer_output_post_output;
+  o->post_data = shout_mixer_output_post_data;
 
   mixer_output_alloc_buffer (o);
 

@@ -6,7 +6,7 @@
 #include <malloc.h>
 #include "mixer.h"
 #include "mixerchannel.h"
-#include "vorbismixerchannel.h"
+#include "mixerbus.h"
 #include "mixeroutput.h"
 
 
@@ -35,13 +35,13 @@ mixer_main_thread (void *data)
   list *tmp, *tmp2;
   short *tmp_buffer;
   int tmp_buffer_size, tmp_buffer_length;
-  
+
   if (!m)
     return NULL;
-  
+
   tmp_buffer_size = 48000*2*sizeof(short)*MIXER_LATENCY;
   tmp_buffer = malloc (tmp_buffer_size);
-  
+
   while (1)
     {
       mixer_lock (m);
@@ -62,19 +62,25 @@ mixer_main_thread (void *data)
 	  usleep (MIXER_LATENCY*1000000);
 	  continue;
 	}
+      for (tmp = m->busses; tmp; tmp = tmp->next)
+	{
+	  MixerBus *b = (MixerBus *) tmp->data;
+
+	  if (b->enabled)
+	    mixer_bus_reset_data (b);
+	}
       for (tmp = m->outputs; tmp; tmp = tmp->next)
 	{
 	  MixerOutput *o = (MixerOutput *) tmp->data;
-
 	  if (o->enabled)
-	    mixer_output_reset_output (o);
+	    mixer_output_reset_data (o);
 	}
       tmp = m->channels;
       while (tmp)
 	{
 	  MixerChannel *ch = (MixerChannel *) tmp->data;
 	  list *next = tmp->next;
-	  
+
 	  /* If this channel is disabled, skip it */
 
 	  if (!ch->enabled)
@@ -82,12 +88,12 @@ mixer_main_thread (void *data)
 	      tmp = next;
 	      continue;
 	    }
-	  
+
 	  /* If this channel has no more data, kill it */
 
 	  if (ch->data_end_reached)
 	    {
-	    
+
 	      /* Get rid of this channel */
 
 	      m->channels = list_delete_item (m->channels, tmp);
@@ -98,21 +104,27 @@ mixer_main_thread (void *data)
 	  tmp_buffer_length = mixer_channel_get_data (ch,
 						      tmp_buffer,
 						      ch->rate*ch->channels*MIXER_LATENCY);
-	for (tmp2 = ch->outputs; tmp2; tmp2 = tmp2->next)
-	  {
-	    MixerOutput *o = (MixerOutput *) tmp2->data;
-	    mixer_output_add_output (o, tmp_buffer, tmp_buffer_length);
-	  }
-	tmp = next;
+	  for (tmp2 = ch->busses; tmp2; tmp2 = tmp2->next)
+	    {
+	      MixerBus *b = (MixerBus *) tmp2->data;
+	      mixer_bus_add_data (b, tmp_buffer, tmp_buffer_length);
+	    }
+	  tmp = next;
 	}
-    for (tmp = m->outputs; tmp; tmp = tmp->next)
-      {
-	MixerOutput *o = (MixerOutput *) tmp->data;
-	if (o->enabled)
-	  mixer_output_post_output (o);
-      }
-    m->cur_time += MIXER_LATENCY;
-    mixer_unlock (m);
+      for (tmp = m->busses; tmp; tmp = tmp->next)
+	{
+	  MixerBus *b = (MixerBus *) tmp->data;
+	  if (b->enabled)
+	    mixer_bus_post_data (b);
+	}
+      for (tmp = m->outputs; tmp; tmp = tmp->next)
+	{
+	  MixerOutput *o = (MixerOutput *) tmp->data;
+	  if (o->enabled)
+	    mixer_output_post_data (o);
+	}
+      m->cur_time += MIXER_LATENCY;
+      mixer_unlock (m);
     }
   mixer_lock (m);
   m->thread = 0;
@@ -128,7 +140,7 @@ mixer_new (void)
 {
   mixer *m;
 
-  m = malloc (sizeof(mixer));
+  m = (mixer *) malloc (sizeof(mixer));
   if (!m)
     return NULL;
 
@@ -140,10 +152,10 @@ mixer_new (void)
 
   pthread_cond_init (&(m->notify_condition), NULL);
   m->notify_time = -1.0;
-  
+
   tzset ();
   m->cur_time = (double) time (NULL)+timezone+daylight*3600;
-  m->channels = m->outputs = NULL;
+  m->channels = m->busses = m->outputs = NULL;
 
   m->running = 0;
   m->thread = 0;
@@ -163,7 +175,7 @@ mixer_start (mixer *m)
       mixer_unlock (m);
       return -1;
     }
-  
+
   /* Create mixer main thread */
 
   m->running = 1;
@@ -214,18 +226,24 @@ mixer_destroy (mixer *m)
 
   if (!m)
     return;
-  
+
   /* Stop the mixer to destroy it */
 
   mixer_stop (m);
 
   mixer_lock (m);
-  
+
   /* Free channel list */
 
   for (tmp = m->channels; tmp; tmp = tmp->next)
     mixer_channel_destroy ((MixerChannel *) tmp->data);
   list_free (m->channels);
+
+  /* Free Busses list */
+
+  for (tmp = m->busses; tmp; tmp = tmp->next)
+    mixer_bus_destroy ((MixerBus *) tmp->data);
+  list_free (m->busses);
 
   /* Free output list */
 
@@ -278,7 +296,7 @@ mixer_delete_channel (mixer *m,
 
 MixerChannel *
 mixer_get_channel (mixer *m,
-		    const char *channel_name)
+		   const char *channel_name)
 {
   list *tmp;
 
@@ -300,6 +318,74 @@ mixer_get_channel (mixer *m,
   mixer_unlock (m);
   if (tmp)
     return (MixerChannel *) tmp->data;
+  else
+    return NULL;
+}
+
+
+
+void
+mixer_add_bus (mixer *m,
+	       MixerBus *b)
+{
+  if (!m)
+    return;
+  mixer_lock (m);
+  m->busses = list_prepend (m->busses, b);
+  mixer_unlock (m);
+}
+
+
+
+
+void
+mixer_delete_bus (mixer *m,
+		  const char *bus_name)
+{
+  list *tmp;
+
+  if (!m)
+    return;
+  if (!bus_name)
+    return;
+  mixer_lock (m);
+  for (tmp = m->busses; tmp; tmp = tmp->next)
+    {
+      MixerBus *b = (MixerBus *) tmp->data;
+      if (!strcmp (b->name, bus_name))
+	break;
+    }
+  if (tmp)
+    m->busses = list_delete_item (m->busses, tmp);
+  mixer_unlock (m);
+}
+
+
+
+
+MixerBus *
+mixer_get_bus (mixer *m,
+	       const char *bus_name)
+{
+  list *tmp;
+
+  if (!m)
+    return NULL;
+  mixer_lock (m);
+  if (!m->busses)
+    {
+      mixer_unlock (m);
+      return NULL;
+    }
+  for (tmp = m->busses; tmp; tmp = tmp->next)
+    {
+      MixerBus *b = (MixerBus *) tmp->data;
+      if (!strcmp (bus_name, b->name))
+	break;
+    }
+  mixer_unlock (m);
+  if (tmp)
+    return (MixerBus *) tmp->data;
   else
     return NULL;
 }
@@ -378,21 +464,21 @@ mixer_get_output (mixer *m,
 void
 mixer_patch_channel (mixer *m,
 		     const char *channel_name,
-		     const char *output_name)
+		     const char *bus_name)
 {
   MixerChannel *ch;
-  MixerOutput *o;
+  MixerBus *b;
 
   if (!m)
     return;
   ch = mixer_get_channel (m, channel_name);
-  o = mixer_get_output (m, output_name);
+  b = mixer_get_bus (m, bus_name);
 
-  if (!ch || !o)
+  if (!ch || !b)
     return;
 
   mixer_lock (m);
-  ch->outputs = list_prepend (ch->outputs, o);
+  ch->busses = list_prepend (ch->busses, b);
   mixer_unlock (m);
 }
 
@@ -410,11 +496,11 @@ mixer_patch_channel_all (mixer *m,
 
   if (!ch)
     return;
-  
+
   mixer_lock (m);
-  if (ch->outputs)
-    list_free (ch->outputs);
-  ch->outputs = list_copy (m->outputs);
+  if (ch->busses)
+    list_free (ch->busses);
+  ch->busses = list_copy (m->busses);
   mixer_unlock (m);
 }
 
@@ -442,11 +528,34 @@ mixer_delete_all_channels (mixer *m)
 }
 
 
+void
+mixer_patch_bus (mixer *m,
+		 const char *bus_name,
+		 const char *output_name)
+{
+  MixerBus *b;
+  MixerOutput *o;
+  
+  if (!m)
+    return;
+  b = mixer_get_bus (m, bus_name);
+  o = mixer_get_output (m, output_name);
+  
+  if (!b || !o)
+    return;
+
+  mixer_lock (m);
+  b->outputs = list_prepend (b->outputs, o);
+  mixer_unlock (m);
+}
+
+
+
 double
 mixer_get_time (mixer *m)
 {
   double rv;
-  
+
   if (!m)
     return 0.0;
   mixer_lock (m);
@@ -485,12 +594,12 @@ mixer_fade_channel (mixer *m,
 {
   MixerChannel *ch;
   double fade_distance;
- 
+
   if (!m)
     return;
 
   ch = mixer_get_channel (m, channel_name);
-  
+
   if (!ch)
     return;
 
@@ -513,10 +622,10 @@ mixer_fade_all (mixer *m,
 		double level,
 		double fade_time)
 {
-    MixerChannel *ch;
-    double fade_distance;
-    list *tmp;
-    
+  MixerChannel *ch;
+  double fade_distance;
+  list *tmp;
+
   if (!m)
     return;
 
@@ -537,7 +646,7 @@ mixer_fade_all (mixer *m,
 
 void
 mixer_reset_notification_time (mixer *m,
-		       double notify_time)
+			       double notify_time)
 {
   mixer_lock (m);
   m->notify_time = notify_time;

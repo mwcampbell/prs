@@ -53,7 +53,10 @@ audio_compressor_process_data (AudioFilter *f,
       double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;      
       double delta = d->threshhold-peak_gain;
       d->fade_destination = pow (10.0, (delta-delta/d->ratio)/20);
-      d->fade = d->attack_time;
+      if (d->fade_destination < d->level)
+	d->fade = d->attack_time;
+      else
+	d->fade = d->release_time;
     }
   else if (d->fade_destination != 0)
     {
@@ -69,7 +72,10 @@ audio_compressor_process_data (AudioFilter *f,
 	{
 	  if ((d->fade > 1 && d->level >= d->fade_destination)
 	      || (d->fade < 1 && d->level <= d->fade_destination))
-	    d->fade = 0.0;
+	    {
+	      d->level = d->fade_destination;
+	      d->fade = 0.0;
+	    }
 	  else
 	    d->level *= d->fade;
 	}
@@ -88,7 +94,8 @@ audio_compressor_new (int rate,
 		      double threshhold,
 		      double ratio,
 		      double attack_time,
-		      double release_time)
+		      double release_time,
+		      double output_gain)
 {
   AudioFilter *f = audio_filter_new (rate, channels, buffer_size);
   CompressorData *d = malloc (sizeof (CompressorData));
@@ -109,7 +116,7 @@ audio_compressor_new (int rate,
   compression_amount = pow (10.0, compression_amount/20);
   d->attack_time = pow (compression_amount, 1/(rate*attack_time));
   d->release_time = 1/pow (compression_amount, 1/(rate*release_time));
-  d->output_gain = 1/compression_amount*.66;
+  d->output_gain = output_gain;
   
   f->data = d;
   f->process_data = audio_compressor_process_data;

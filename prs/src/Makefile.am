@@ -11,14 +11,18 @@ prs_server_SOURCES = \
 	db.c \
 	list.c \
 	mixer.c \
+	mixerbus.c \
+	mixerbus.h \
 	mixeroutput.c \
 	ossmixeroutput.c \
 	shoutmixeroutput.c \
+	filemixeroutput.c \
 	mixerchannel.c \
 	vorbismixerchannel.c \
 	ossmixerchannel.c \
 	audiofilter.c \
 	audiocompressor.c \
+	multibandaudiocompressor.c \
 	mixerautomation.c \
 	scheduler.c \
 	prs_server.c

@@ -14,6 +14,7 @@
 #include "scheduler.h"
 #include "audiofilter.h"
 #include "audiocompressor.h"
+#include "multibandaudiocompressor.h"
 
 
 
@@ -53,9 +54,10 @@ mic_on (mixer *m)
       fprintf (stderr, "Couldn't turn mic on\n");
       return;
     }
-  mixer_fade_all (m, .3, 1.0);
+  mixer_fade_all  (m, .3, 1.0);
   if (!global_data_get_soundcard_duplex ())
     mixer_delete_output (m, "soundcard");
+  ch->level = .7;
   mixer_add_channel (m, ch);
   mixer_patch_channel_all (m, "mic");
 }
@@ -185,6 +187,7 @@ setup_streams (mixer *m)
 	{
 	  o = shout_mixer_output_new (stream_name, 44100, 2, new);
 	  mixer_add_output (m, o);
+	  mixer_patch_bus (m, "air", stream_name);
 	}
     }
 }
@@ -196,61 +199,87 @@ int main (void)
   mixer *m;
   MixerOutput *o;
   MixerChannel *ch;
+  MixerBus *b;
+  AudioFilter *f;
   pthread_t playlist_thread;
   char input[81];
   int done = 0;
   MixerAutomation *a;
   scheduler *s;
-  AudioFilter *f;
   
   signal (SIGUSR1, prs_signal_handler);
   m = mixer_new ();
   mixer_sync_time (m);
+  b = mixer_bus_new ("air", 44100, 2);
+  mixer_add_bus (m, b);
   setup_streams (m);
   o = oss_mixer_output_new ("soundcard",
 			    44100,
 			    2);
-  f = audio_compressor_new (44100, 2, 44100*2*MIXER_LATENCY);
-  audio_compressor_add_band (f,
-			     50,
-			     -30,
-			     3,
-			     .01,
-			     5,
-			     4);
-  audio_compressor_add_band (f,
-			     100,
-			     -30,
-			     3,
-			     .01,
-			     5,
-			     4);
-  audio_compressor_add_band (f,
-			     4000,
-			     -30,
-			     3,
-			     .01,
-			     5,
-			     5);
-  audio_compressor_add_band (f,
-			     9000,
-			     -25,
-			     3,
-			     .01,
-			     5,
-			     5);
-  audio_compressor_add_band (f,
-			     15000,
-			     -5,
-			     10,
-			     .01,
-			     5,
-			     4);
-  mixer_output_add_filter (o, f);
+  f = audio_compressor_new (44100, 2, 44100*2*MIXER_LATENCY,
+			    -15,
+			    2,
+			    .01,
+			    5,
+			    1);
+  mixer_bus_add_filter (b, f);
+#define OUTPUT_GAIN 1 
+#define ATTACK_TIME .01
+#define RELEASE_TIME 2
+  f = multiband_audio_compressor_new (44100, 2, 44100*2*MIXER_LATENCY);
+  multiband_audio_compressor_add_band
+    (f,
+     100,
+     -40,
+     4,
+     ATTACK_TIME,
+     RELEASE_TIME,
+     1,
+     OUTPUT_GAIN*10); 
+  multiband_audio_compressor_add_band
+    (f,
+     400,
+     -40,
+     4,
+     ATTACK_TIME,
+     RELEASE_TIME,
+     1,
+     OUTPUT_GAIN*31); 
+  multiband_audio_compressor_add_band
+    (f,
+     2500,
+     -40,
+     2,
+     ATTACK_TIME,
+     RELEASE_TIME,
+     1,
+     OUTPUT_GAIN*10); 
+  multiband_audio_compressor_add_band
+    (f,
+     6000,
+     -40,
+     2,
+     ATTACK_TIME,
+     RELEASE_TIME,
+     1,
+     OUTPUT_GAIN*10); 
+  multiband_audio_compressor_add_band
+    (f,
+     15000,
+     -20,
+     2,
+     ATTACK_TIME,
+     RELEASE_TIME,
+     1,
+     OUTPUT_GAIN*10); 
+  mixer_bus_add_filter (b, f);
   mixer_add_output (m, o);
+  mixer_patch_bus (m, "air", "soundcard");
   
+  o = file_mixer_output_new ("test.pcm", 44100, 2);
+  mixer_add_output (m, o);
+  mixer_patch_bus (m, "air", "test.pcm");
   
-			   
 #if 0
   ch = vorbis_mixer_channel_new ("test", "test.ogg");
   mixer_add_channel (m, ch);
