@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <math.h>
 #include <string.h>
+#include <libxml/xmlmemory.h>
+#include <libxml/parser.h>
 #include "fileinfo.h"
 #include "mp3fileinfo.h"
 #include "vorbisfileinfo.h"
@@ -11,54 +14,101 @@
 
 
 
+static int
+config (Database *db, const char *filename)
+{
+  xmlDocPtr doc;
+  xmlNodePtr cur;
+
+  doc = xmlParseFile (filename);
+  if (doc == NULL)
+    {
+      fprintf (stderr, "Can't process configuration file.\n");
+      return -1;
+    }
+  cur = xmlDocGetRootElement (doc);
+  if (cur == NULL)
+    {
+      fprintf (stderr, "Invalid configuration file.\n");
+      xmlFreeDoc (doc);
+    }
+  cur = cur->xmlChildrenNode;
+  while (cur)
+    {
+      if (!xmlStrcmp (cur->name, "db"))
+	db_config (db, cur);
+      cur = cur->next;
+    }  
+  xmlFreeDoc (doc);
+}
+
+void
+usage (const char *progname)
+{
+  fprintf (stderr, "Usage:  %s [-c CATEGORY] [-C CONFIG-FILE] ROOT\n",
+	   progname);
+  exit (EXIT_FAILURE);
+}
+
 int
 main (int argc, char *argv[])
 {
-  char path[1024], find_cmd[1024];
+  char path[1024], find_cmd[1024], opt;
+  char *category = NULL, *config_file = "prs.conf";
   FILE *fp;
   FileInfoConstructor get_file_info;
   FileInfo *i;
-  list *users;
+  Database *db = db_new ();
   int recording_table_created, user_table_created;
 
-  if (argc < 3)
+  while ((opt = getopt (argc, argv, "c:C:")) != -1)
     {
-      fprintf (stderr, "Usage:  %s PATH WWW-USER [GENRE]\n", argv[0]);
-      return 1;
+      switch (opt)
+	{
+	case 'c':
+	  category = optarg;
+	  break;
+	case 'C':
+	  config_file = optarg;
+	  break;
+	case '?':
+	default:
+	  usage (argv[0]);
+	  break;
+	}
     }
-  
+
+  if (argc - optind != 1)
+    usage (argv[0]);
+
+  config (db, config_file);
+
   /* Create list of audio files */
 
   nice (20);
-  sprintf (find_cmd, "find \"%s\" -type f", argv[1]);
+  sprintf (find_cmd, "find \"%s\" -type f -print", argv[optind]);
   fp = popen (find_cmd, "r");
   
-  /* Set up list of users who will receive access to tables */
-
-  users = string_list_prepend (NULL, argv[2]);
-
   /* Create tables */
 
-  if (!check_recording_tables ())
+  if (!check_recording_tables (db))
     {
       recording_table_created = 1;
-      create_recording_tables (NULL, users);
+      create_recording_tables (db);
     }
   else
     recording_table_created = 0;
-  if (!check_user_table ())
+  if (!check_user_table (db))
     {
       user_table_created = 1;
-      create_user_table (NULL, users);
+      create_user_table (db);
     }
   else
     user_table_created = 0;
-  if (!check_playlist_tables ())
-    create_playlist_tables (NULL, users);
-  if (!check_config_status_tables ())
-    create_config_status_tables (NULL, users);
-  if (!check_log_table ())
-    create_log_table (NULL, users);
+  if (!check_playlist_tables (db))
+    create_playlist_tables (db);
+  if (!check_log_table (db))
+    create_log_table (db);
   
   /* Loop through all files found */
 
@@ -70,7 +120,7 @@ main (int argc, char *argv[])
       fgets (path, 1024, fp);
       if (feof (fp))
 	break;
-      path[strlen(path)-1] = 0;
+      path[strlen (path) - 1] = 0;
       ext = path + strlen (path) - 4;
       if (strcmp (ext, ".mp3") == 0)
 	get_file_info = get_mp3_file_info;
@@ -82,9 +132,9 @@ main (int argc, char *argv[])
       if (!recording_table_created)
 	{
 	  i = get_file_info (path, 0, 0);
-	  r = find_recording_by_path (path);
+	  r = find_recording_by_path (db, path);
 	  if (r && abs (i->length-r->length) <= .001 &&
-	      !strcmp (r->category, argc > 3 ? argv[3] : i->genre) &&
+	      !strcmp (r->category, category == NULL ? i->genre : category) &&
 	      !strcmp (r->name, i->name))
 	    {
 	      file_info_free (i);
@@ -114,8 +164,8 @@ main (int argc, char *argv[])
 	r->artist = strdup (i->artist);
       else
 	r->artist = strdup ("");
-      if (argc > 3)
-	r->category = strdup (argv[3]);
+      if (category != NULL)
+	r->category = strdup (category);
       else if (i->genre)
 	r->category = strdup (i->genre);
       else
@@ -130,11 +180,12 @@ main (int argc, char *argv[])
       r->audio_in = i->audio_in;
       r->audio_out = i->audio_out;
       printf ("Adding %s.\n", r->name);
-      add_recording (r);
+      add_recording (r, db);
       recording_free (r);
       file_info_free (i);
     }
 
   pclose (fp);
+  db_close (db);
   return 0;
 }

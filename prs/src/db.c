@@ -4,21 +4,100 @@
 #include <time.h>
 #include <string.h>
 #include <malloc.h>
-#include <libpq-fe.h>
+#include <mysql.h>
+#include <libxml/xmlmemory.h>
+#include <libxml/parser.h>
 #include "db.h"
 
 
 
-/*
- *
- * Global data
- *
- */
+Database *
+db_new (void)
+{
+  Database *db = (Database *) malloc (sizeof (Database));
 
+  if (db == NULL)
+    return NULL;
 
+  db->conn = mysql_init (NULL);
 
-static char *db_connection_string = "dbname = prs";
+  if (db->conn == NULL)
+    {
+      free (db);
+      return NULL;
+    }
 
+  pthread_mutex_init (&(db->mutex), NULL);
+  return db;
+}
+
+static void
+db_lock (Database *db)
+{
+  pthread_mutex_lock (&(db->mutex));
+}
+
+static void
+db_unlock (Database *db)
+{
+  pthread_mutex_unlock (&(db->mutex));
+}
+
+int
+db_connect (Database *db, const char *host, const char *user,
+	    const char *password, const char *name)
+{
+  MYSQL *result;
+  db_lock (db);
+  result = mysql_real_connect (db->conn, host, user, password, name, 0, NULL,
+			       0);
+  db_unlock (db);
+
+  if (result)
+    return 0;
+  else
+    {
+      fprintf (stderr, "Unable to connect to database: %s\n",
+	       mysql_error (db->conn));
+      db_close (db);
+      return -1;
+    }
+}
+
+void
+db_close (Database *db)
+{
+  db_lock (db);
+  if (db->conn)
+    mysql_close (db->conn);
+  db_unlock (db);
+  free (db);
+}
+
+void
+db_config (Database *db, xmlNodePtr cur)
+{
+  xmlChar *host = NULL, *user = NULL, *password = NULL, *name = NULL;
+  host = xmlGetProp (cur, "host");
+  if (host == NULL)
+    host = "localhost";
+  user = xmlGetProp (cur, "user");
+  password = xmlGetProp (cur, "password");
+  name = xmlGetProp (cur, "name");
+  if (name == NULL)
+    name = "prs";
+  db_connect (db, host, user, password, name);
+}
+
+void
+db_thread_init (Database *db)
+{
+}
+
+void
+db_thread_end (Database *db)
+{
+}
 
 
 
@@ -44,7 +123,7 @@ process_for_sql (const char *s)
   while (s && *s)
     {
       if (*s == '\'')
-	*ptr++ = '\'';
+	*ptr++ = '\\';
       *ptr++ = *s++;
     }
   *ptr = 0;
@@ -54,140 +133,99 @@ process_for_sql (const char *s)
 
 
 static int
-create_table (PGconn *connection,
+create_table (Database *db,
 	      const char *table_name,
 	      const char *create_query,
-	      list *read_only_access_list,
-	      list *total_access_list,
 	      int erase_existing)
 {
-  PGresult *res;
+  MYSQL_RES *res;
   char query[2048];
-  list *tmp;
   
-  if (!connection)
+  if (!db)
     return -1;
 
   /* Does table already exist */
 
-  sprintf (query, "select * from %s;", table_name);
-  res = PQexec (connection, query);
-  if (PQresultStatus (res) == PGRES_TUPLES_OK)
+  sprintf (query, "describe %s", table_name);
+  if (mysql_real_query (db->conn, query, strlen (query)) == 0)
     {
-      PQclear (res);
+      res = mysql_store_result (db->conn);
+      mysql_free_result (res);
       if (!erase_existing)
 	return -1;
-      sprintf (query, "drop table %s;", table_name);
-      res = PQexec (connection, query);
-      if (PQresultStatus (res) != PGRES_COMMAND_OK)
-	{
-	  PQclear (res);
-	  return -1;
-	}
+      sprintf (query, "drop table %s", table_name);
+      if (mysql_real_query (db->conn, query, strlen (query)) != 0)
+	return -1;
     }
+
+  if (mysql_real_query (db->conn, create_query, strlen (create_query)) == 0)
+    return 0;
   else
-    PQclear (res);
-  res = PQexec (connection, create_query);
-  if (PQresultStatus (res) != PGRES_COMMAND_OK)
-    {
-      PQclear (res);
-      return -1;
-    }
-  PQclear (res);
-
-
-  /* Grant read-only access */
-
-  if (read_only_access_list)
-    {
-      for (tmp = read_only_access_list; tmp; tmp = tmp->next)
-	{
-	  char *user = (char *) tmp->data;
-	  if (!user)
-	    continue;
-	  sprintf (query, "grant select on %s to \"%s\";", table_name, user);
-	  res = PQexec (connection, query);
-	}
-    }
-
-  /* Grant total access */
-
-  if (total_access_list)
-    {
-      for (tmp = total_access_list; tmp; tmp = tmp->next)
-	{
-	  char *user = (char *) tmp->data;
-	  if (!user)
-	    continue;
-	  sprintf (query, "grant all on %s to \"%s\";\n", table_name, user);
-	  res = PQexec (connection, query);
-	}
-    }
-
-  return 0;
+    return -1;
 }
 
 
 
 static int
-does_table_exist (PGconn *connection,
+does_table_exist (Database *db,
 		  const char *table_name)
 {
-  PGresult *res;
+  MYSQL_RES *res;
   char query[1024];
   int rv;
   
-  sprintf (query, "select * from %s;", table_name); 
-  res = PQexec (connection, query);  
-  if (PQntuples (res) > 0)
-    rv = 1;
+  sprintf (query, "describe %s", table_name);
+
+  if (mysql_real_query (db->conn, query, strlen (query)) == 0)
+    {
+      res = mysql_store_result (db->conn);
+      mysql_free_result (res);
+      rv = 1;
+    }
   else
     rv = 0;
-  PQclear (res);
   return rv;
 }
 
 
 
 static Recording *
-get_recording_from_result (PGconn *connection,
-			   PGresult *res,
-			   int row)
+get_recording_from_result (Database *db,
+			   MYSQL_ROW row)
 {
   Recording *r = (Recording *) malloc (sizeof(Recording));
   
   if (!r)
     return NULL;
+  r->db = db;
 
   /* Get recording information from database result */
 
-  r->id = atoi (PQgetvalue (res, row, 0));
-  r->name = strdup (PQgetvalue (res, row, 1));
-  r->path = strdup (PQgetvalue (res, row, 2));
-  r->artist = strdup (PQgetvalue (res, row, 3));
-  r->category = strdup (PQgetvalue (res, row, 4));
-  r->date = strdup (PQgetvalue (res, row, 5));
-  r->rate = atoi (PQgetvalue (res, row, 6));
-  r->channels = atoi (PQgetvalue (res, row, 7));
-  r->length = atof (PQgetvalue (res, row, 8));
-  r->audio_in = atof (PQgetvalue (res, row, 9));
-  r->audio_out = atof (PQgetvalue (res, row, 10));
+  r->id = atoi (row[0]);
+  r->name = strdup (row[1]);
+  r->path = strdup (row[2]);
+  r->artist = strdup (row[3]);
+  r->category = strdup (row[4]);
+  r->date = strdup (row[5]);
+  r->rate = atoi (row[6]);
+  r->channels = atoi (row[7]);
+  r->length = atof (row[8]);
+  r->audio_in = atof (row[9]);
+  r->audio_out = atof (row[10]);
   return r;
 }
 
 
 
 static PlaylistEvent *
-get_playlist_event_from_result (PGconn *connection,
-				PGresult *res,
-			       int row)
+get_playlist_event_from_result (MYSQL_ROW row)
 {
   PlaylistEvent *e = (PlaylistEvent *) malloc (sizeof(PlaylistEvent));
   char *type;
  
-  e->template_id = atoi (PQgetvalue (res, row, 0));
-  e->number = atoi (PQgetvalue (res, row, 1));
-  type = PQgetvalue (res, row, 3);
+  e->template_id = atoi (row[0]);
+  e->number = atoi (row[1]);
+  type = row[3];
   if (!strcmp (type, "simple_random"))
     e->type = EVENT_TYPE_SIMPLE_RANDOM;
   else if (!strcmp (type, "random"))
@@ -195,16 +233,16 @@ get_playlist_event_from_result (PGconn *connection,
   else if (!strcmp (type, "fade"))
     e->type = EVENT_TYPE_FADE;
 
-  e->channel_name = strdup (PQgetvalue (res, row, 4));
-  e->level = atof (PQgetvalue (res, row, 5));
-  e->anchor_event_number = atoi (PQgetvalue (res, row, 6));
-  e->anchor_position = atoi (PQgetvalue (res, row, 7));
-  e->offset = atof (PQgetvalue (res, row, 8));
-  e->detail1 = strdup (PQgetvalue (res, row, 9));
-  e->detail2 = strdup (PQgetvalue (res, row, 10));
-  e->detail3 = strdup (PQgetvalue (res, row, 11));
-  e->detail4 = strdup (PQgetvalue (res, row, 12));
-  e->detail5 = strdup (PQgetvalue (res, row, 13));
+  e->channel_name = strdup (row[4]);
+  e->level = atof (row[5]);
+  e->anchor_event_number = atoi (row[6]);
+  e->anchor_position = atoi (row[7]);
+  e->offset = atof (row[8]);
+  e->detail1 = strdup (row[9]);
+  e->detail2 = strdup (row[10]);
+  e->detail3 = strdup (row[11]);
+  e->detail4 = strdup (row[12]);
+  e->detail5 = strdup (row[13]);
   e->start_time = e->end_time = -1.0;
   return e;
 }
@@ -229,51 +267,49 @@ playlist_event_list_free (list *l)
 
 
 static list *
-get_playlist_events_from_template (PGconn *connection,
+get_playlist_events_from_template (Database *db,
 				   int template_id)
 {
-  PGresult *res;
-  int i;
+  MYSQL_RES *res = NULL;
+  MYSQL_ROW row;
   char buffer[1024];
   list *events = NULL;
   
   if (template_id < 0)
     return NULL;
-  sprintf (buffer, "select * from playlist_event where template_id = %d order by event_number;", template_id);
-  res = PQexec (connection, buffer);
-  if (PQntuples (res) <= 0)
+  sprintf (buffer, "select * from playlist_event where template_id = %d order by event_number", template_id);
+  if (mysql_real_query (db->conn, buffer, strlen (buffer)) == 0 &&
+      (res = mysql_store_result (db->conn)) != NULL &&
+      mysql_num_rows (res) > 0)
     {
-      PQclear (res);
-      return NULL;
+      while (row = mysql_fetch_row (res))
+	{
+	  PlaylistEvent *e = get_playlist_event_from_result (row);
+	  events = list_prepend (events, (void *) e);
+	}
     }
-  i = PQntuples (res)-1;
-  while (i >= 0)
-    {
-      PlaylistEvent *e = get_playlist_event_from_result (connection, res, i);
-      events = list_prepend (events, (void *) e);
-      i--;
-    }
-  PQclear (res);
+
+  if (res != NULL)
+    mysql_free_result (res);
   return events;
 }
 
 
 
 int
-check_recording_tables (void)
+check_recording_tables (Database *db)
 {
   int rv;
-  PGconn *connection;
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     rv = 0;
   else
     {
-      rv = (does_table_exist (connection, "artist") &&
-	    does_table_exist (connection, "category") &&
-	    does_table_exist (connection, "recording"));
-      PQfinish (connection);
+      db_lock (db);
+      rv = (does_table_exist (db, "artist") &&
+	    does_table_exist (db, "category") &&
+	    does_table_exist (db, "recording"));
+      db_unlock (db);
     }
   return rv;
 }
@@ -281,55 +317,47 @@ check_recording_tables (void)
 
 
 void
-create_recording_tables (list *read_only_users,
-			list *total_access_users)
+create_recording_tables (Database *db)
 {
   char *artist_create_query = 
     "create table artist (
-      artist_id int primary key,
-      artist_name varchar (200));";
+      artist_id int primary key auto_increment,
+      artist_name varchar (200))";
   char *category_create_query = 
     "create table category (
-      category_id int primary key,
-      category_name varchar (128));";
+      category_id int primary key auto_increment,
+      category_name varchar (128))";
   char *recording_create_query =
     "create table recording (
-      recording_id int primary key,
-      recording_name varchar (256),
-      recording_path varchar (1024),
-      artist_id int references artist,
-      category_id int references category,
+      recording_id int primary key auto_increment,
+      recording_name varchar (255),
+      recording_path varchar (255),
+      artist_id int,
+      category_id int,
       date varchar (20),
       rate int,
       channels int,
-      length float,
-      audio_in float,
-      audio_out float);";
-  PGconn *connection;
+      length double,
+      audio_in double,
+      audio_out double)";
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     return;
+  db_lock (db);
   
-  create_table (connection,
+  create_table (db,
 		"artist",
 		artist_create_query,
-		read_only_users,
-		total_access_users,
 		1);
-  create_table (connection,
+  create_table (db,
 		"category",
 		category_create_query,
-		read_only_users,
-		total_access_users,
 		1);
-  create_table (connection,
+  create_table (db,
 		"recording",
 		recording_create_query,
-		read_only_users,
-		total_access_users,
 		1);
-  PQfinish (connection);
+  db_unlock (db);
 }
 
 
@@ -371,18 +399,18 @@ recording_list_free (list *l)
 
 
 int
-check_playlist_tables (void)
+check_playlist_tables (Database *db)
 {
   int rv;
-  PGconn *connection;
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     rv = 0;
   else
     {
-      rv =  (does_table_exist (connection, "playlist_template") && does_table_exist (connection, "playlist_event"));
-      PQfinish (connection);
+      db_lock (db);
+      rv = (does_table_exist (db, "playlist_template") &&
+	    does_table_exist (db, "playlist_event"));
+      db_unlock (db);
     }
   return rv;
 }
@@ -391,53 +419,47 @@ check_playlist_tables (void)
 
 
 void
-create_playlist_tables (list *read_only_users,
-				list *total_access_users)
+create_playlist_tables (Database *db)
 {
   char *playlist_template_create_query =
     "create table playlist_template (
-      template_id int primary key,
+      template_id int primary key auto_increment,
       template_name varchar (100),
-      start_time float,
-      end_time float,
+      start_time double,
+      end_time double,
       repeat_events int,
-      artist_exclude float,
-      recording_exclude float);";
+      artist_exclude double,
+      recording_exclude double)";
   char *create_playlist_event_query =
     "create table playlist_event (
-      template_id int references playlist_template,
+      template_id int,
       event_number int,
       event_name varchar (100),
       event_type varchar (20),
       event_channel_name varchar (100),
-      event_level float,
-      event_anchor_event_number  int,
+      event_level double,
+      event_anchor_event_number int,
       event_anchor_position int,
-      event_offset float,
+      event_offset double,
       detail1 varchar (64),
       detail2 varchar (64),
       detail3 varchar (64),
       detail4 varchar (64),
-      detail5 varchar (64));";
-  PGconn *connection;
+      detail5 varchar (64))";
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     return;
 
-  create_table (connection,
+  db_lock (db);
+  create_table (db,
 		"playlist_template",
 		playlist_template_create_query,
-		read_only_users,
-		total_access_users,
 		1);
-  create_table (connection,
+  create_table (db,
 		"playlist_event",
 		create_playlist_event_query,
-		read_only_users,
-		total_access_users,
 		1);
-  PQfinish (connection);
+  db_unlock (db);
 }
 
 
@@ -457,59 +479,60 @@ playlist_template_destroy (PlaylistTemplate *t)
 
 
 static PlaylistTemplate *
-get_playlist_template_from_result (PGconn *connection,
-				   PGresult *res,
-				   int row)
+get_playlist_template_from_result (Database *db,
+				   MYSQL_ROW row)
 {
   PlaylistTemplate *t = (PlaylistTemplate *) malloc (sizeof(PlaylistTemplate));
 
   if (!t)
-    {
-      return NULL;
-    }
-  t->id = atoi (PQgetvalue (res, row, 0));
-  t->name = strdup (PQgetvalue (res, row, 1));
-  t->start_time = atof (PQgetvalue (res, row, 2));
-  t->end_time = atof (PQgetvalue (res, row, 3));
-  t->repeat_events = atoi (PQgetvalue (res, row, 4));
-  t->artist_exclude = atof (PQgetvalue (res, row, 5));
-  t->recording_exclude = atof (PQgetvalue (res, row, 6));
-  t->events = get_playlist_events_from_template (connection, t->id);
+    return NULL;
+  t->id = atoi (row[0]);
+  t->name = strdup (row[1]);
+  t->start_time = atof (row[2]);
+  t->end_time = atof (row[3]);
+  t->repeat_events = atoi (row[4]);
+  t->artist_exclude = atof (row[5]);
+  t->recording_exclude = atof (row[6]);
+  t->events = get_playlist_events_from_template (db, t->id);
+  t->db = db;
   return t;
 }
 
 
 
 PlaylistTemplate *
-get_playlist_template (double cur_time)
+get_playlist_template (Database *db, double cur_time)
 {
   PlaylistTemplate *t;
-  PGresult *res;
+  MYSQL_RES *res = NULL;
+  MYSQL_ROW row;
   char buffer[1024];
   time_t day_start;
   double time_of_day;
-  PGconn *connection;
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     return NULL;
-  
+
+  db_lock (db);
   tzset ();
   time_of_day = (time_t) (cur_time-timezone+daylight*3600)%86400;
   day_start = (time_t) cur_time-time_of_day;
   time_of_day = cur_time-day_start;
   
-  sprintf (buffer, "select * from playlist_template where start_time <= %lf and end_time > %lf;", time_of_day, time_of_day);
-  res = PQexec (connection, buffer);
-  if (PQntuples (res) != 1)
+  sprintf (buffer, "select * from playlist_template where start_time <= %lf and end_time > %lf", time_of_day, time_of_day);
+  if (mysql_real_query (db->conn, buffer, strlen (buffer)) != 0 ||
+      (res = mysql_store_result (db->conn)) == NULL ||
+      mysql_num_rows (res) != 1 ||
+      (row = mysql_fetch_row (res)) == NULL)
     {
-      PQclear (res);
-      PQfinish (connection);
+      if (res != NULL)
+	mysql_free_result (res);
+      db_unlock (db);
       return NULL;
     }
-  t = get_playlist_template_from_result (connection, res, 0);
-  PQclear (res);
-  PQfinish (connection);
+  t = get_playlist_template_from_result (db, row);
+  mysql_free_result (res);
+  db_unlock (db);
   
   /* Find the start and end times for this instance of the template */
   
@@ -560,18 +583,17 @@ playlist_template_get_event (PlaylistTemplate *t,
 
 
 int
-check_user_table (void)
+check_user_table (Database *db)
 {
   int rv;
-  PGconn *connection;
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     rv = 0;
   else
     {
-      rv = does_table_exist (connection, "prs_user");
-      PQfinish (connection);
+      db_lock (db);
+      rv = does_table_exist (db, "prs_user");
+      db_unlock (db);
     }
   return rv;
 }
@@ -579,38 +601,34 @@ check_user_table (void)
 
 
 void
-create_user_table (list *read_only_users,
-		   list *total_access_users)
+create_user_table (Database *db)
 {
   char *prs_users_create_query =
     "create table prs_user (
-      user_id int primary key,
+      user_id int primary key auto_increment,
       user_name varchar (20),
       password varchar (20),
-      email varchar (1024),
-      type varchar (20));";
-  PGconn *connection;
+      email varchar (255),
+      type varchar (20))";
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     return;
 
-  create_table (connection,
+  db_lock (db);
+  create_table (db,
 		"prs_user",
 		prs_users_create_query,
-		read_only_users,
-		total_access_users,
 		1);
-  PQfinish (connection);
+  db_unlock (db);
 }
 
 
 
 void
-add_recording (Recording *r)
+add_recording (Recording *r, Database *db)
 {
-  PGresult *res;
-  int recording_id;
+  MYSQL_RES *res = NULL;
+  MYSQL_ROW row;
   int artist_id;
   int category_id;
   char buffer[2048];
@@ -621,86 +639,90 @@ add_recording (Recording *r)
   char *recording_date;
   char *recording_insert_query =
     "insert into recording
-      (recording_id, recording_name,
+      (recording_name,
       recording_path, artist_id,
       category_id, date,
       rate, channels,
       length, audio_in,
        audio_out) values (
-      %d, '%s', '%s', %d, %d, '%s',
-      %d, %d, %lf, %lf, %lf);";
-  PGconn *connection;
+      '%s', '%s', %d, %d, '%s',
+      %d, %d, %lf, %lf, %lf)";
       
   if (!r)
     return;
-
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     return;
+
+  db_lock (db);
   recording_name = process_for_sql (r->name);
   recording_path = process_for_sql (r->path);
   artist_name = process_for_sql (r->artist);
   category_name = process_for_sql (r->category);
   recording_date = process_for_sql (r->date);
 
-  sprintf (buffer, "select artist_id from artist where artist_name = '%s';", artist_name);
-  res = PQexec (connection, buffer);
-  if (PQntuples (res) == 1)
+  sprintf (buffer, "select artist_id from artist where artist_name = '%s'",
+	   artist_name);
+  if (mysql_real_query (db->conn, buffer, strlen (buffer)) == 0 &&
+      (res = mysql_store_result (db->conn)) != NULL &&
+      mysql_num_rows (res) == 1 &&
+      (row = mysql_fetch_row (res)) != NULL)
     {
-      artist_id = atoi (PQgetvalue (res, 0, 0));
-      PQclear (res);
+      artist_id = atoi (row[0]);
+      mysql_free_result (res);
     }
   else
     {
-      PQclear (res);
-      res = PQexec (connection, "select max(artist_id) from artist;");
-      artist_id = atoi (PQgetvalue (res, 0, 0))+1;
-      PQclear (res);
-      sprintf (buffer, "insert into artist values (%d, '%s');", artist_id, artist_name);
-      res = PQexec (connection, buffer);
-      PQclear (res);
+      if (res != NULL)
+	mysql_free_result (res);
+      sprintf (buffer, "insert into artist (artist_name) values ('%s')", 
+	       artist_name);
+      if (mysql_real_query (db->conn, buffer, strlen (buffer)) == 0)
+	artist_id = mysql_insert_id (db->conn);
+      else
+	artist_id = -1;
     }
-  sprintf (buffer, "select category_id from category where category_name = '%s';", category_name);
-  res = PQexec (connection, buffer);
-  if (PQntuples (res) == 1)
+  sprintf (buffer,
+	   "select category_id from category where category_name = '%s'",
+	   category_name);
+  if (mysql_real_query (db->conn, buffer, strlen (buffer)) == 0 &&
+      (res = mysql_store_result (db->conn)) != NULL &&
+      mysql_num_rows (res) == 1 &&
+      (row = mysql_fetch_row (res)) != NULL)
     {
-      category_id = atoi (PQgetvalue (res, 0, 0));
-      PQclear (res);
+      category_id = atoi (row[0]);
+      mysql_free_result (res);
     }
   else
     {
-      PQclear (res);
-      res = PQexec (connection, "select max(category_id) from category;");
-      category_id = atoi (PQgetvalue (res, 0, 0))+1;
-      PQclear (res);
-      sprintf (buffer, "insert into category values (%d, '%s');", category_id, category_name);
-      res = PQexec (connection, buffer);
-      PQclear (res);
+      if (res != NULL)
+	mysql_free_result (res);
+      sprintf (buffer, "insert into category (category_name) values ('%s')",
+	       category_name);
+      if (mysql_real_query (db->conn, buffer, strlen (buffer)) == 0)
+	category_id = mysql_insert_id (db->conn);
+      else
+	category_id = -1;
     }
 
-  res = PQexec (connection, "select max(recording_id) from recording;");
-  recording_id = atoi (PQgetvalue (res, 0, 0))+1;
-  PQclear (res);
-  sprintf (buffer, recording_insert_query,
-	 recording_id,
-	 recording_name,
-	 recording_path,
-	 artist_id,
-	 category_id,
-	 recording_date,
-	 r->rate,
-	 r->channels,
-	 r->length,
-	 r->audio_in,
-	 r->audio_out);
-  res = PQexec (connection, buffer);
-  PQclear (res);
+  sprintf (buffer, recording_insert_query, recording_name, recording_path,
+	   artist_id, category_id, recording_date, r->rate, r->channels,
+	   r->length, r->audio_in, r->audio_out);
+  if (mysql_real_query (db->conn, buffer, strlen (buffer)) == 0)
+    {
+      r->db = db;
+      r->id = mysql_insert_id (db->conn);
+    }
+  else
+    {
+      r->db = NULL;
+      r->id = -1;
+    }
   free (recording_name);
   free (recording_path);
   free (artist_name);
   free (category_name);
   free (recording_date);
-  PQfinish (connection); 
+  db_unlock (db);
 }
 
 
@@ -708,26 +730,26 @@ add_recording (Recording *r)
 void
 delete_recording (Recording *r)
 {
-  PGresult *res;
   char buffer[1024];
-  PGconn *connection;
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!r)
     return;
-
-  sprintf (buffer, "delete from recording where recording_id = %d;", r->id);
-  res = PQexec (connection, buffer);
-  PQclear (res);
-  PQfinish (connection);
+  if (!r->db)
+    return;
+  db_lock (r->db);
+  sprintf (buffer, "delete from recording where recording_id = %d", r->id);
+  mysql_real_query (r->db->conn, buffer, strlen (buffer));
+  db_unlock (r->db);
+  r->db = NULL;
 }
 
 
 
 Recording *
-find_recording_by_path (const char *path)
+find_recording_by_path (Database *db, const char *path)
 {
-  PGresult *res;
+  MYSQL_RES *res = NULL;
+  MYSQL_ROW row;
   Recording *r;
   char buffer[1024];
   char *recording_path;
@@ -739,40 +761,44 @@ find_recording_by_path (const char *path)
       from recording, artist, category
       where recording.artist_id = artist.artist_id and
       recording.category_id = category.category_id";
-  PGconn *connection;
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     return NULL;
 
+  db_lock (db);
   recording_path = process_for_sql (path);
-  sprintf (buffer, "%s and recording.recording_path = '%s';", select_query, recording_path);
-  res = PQexec (connection, buffer);
-  if (PQntuples (res) <= 0)
+  sprintf (buffer, "%s and recording.recording_path = '%s'", select_query,
+	   recording_path);
+  if (mysql_real_query (db->conn, buffer, strlen (buffer)) != 0 ||
+      (res = mysql_store_result (db->conn)) == NULL ||
+      mysql_num_rows (res) != 1 ||
+      (row = mysql_fetch_row (res)) == NULL)
     r = NULL;
   else
-    r = get_recording_from_result (connection, res, 0);
-  PQclear (res);
-  PQfinish (connection);
+    r = get_recording_from_result (db, row);
+  if (res != NULL)
+    mysql_free_result (res);
+  db_unlock (db);
   return r;
 }
 
 
 
 RecordingPicker *
-recording_picker_new (double artist_exclude,
+recording_picker_new (Database *db, double artist_exclude,
 		      double recording_exclude)
 {
   static int randomized = 0;
   char buffer[1024];
   int i;
   RecordingPicker *p = (RecordingPicker *) malloc (sizeof (RecordingPicker));
-  PGresult *res;
-  PGconn *connection;
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
-    return NULL;
+  if (!db)
+    {
+      free (p);
+      return NULL;
+    }
+  db_lock (db);
   
   if (!randomized)
     {
@@ -784,23 +810,22 @@ recording_picker_new (double artist_exclude,
 
   /* Create the tables */
 
-  sprintf (buffer, "create table %s (recording_id int, time float);", p->recording_exclude_table_name);
-  create_table (connection,
+  sprintf (buffer, "create table %s (recording_id int, time double)",
+	   p->recording_exclude_table_name);
+  create_table (db,
 		p->recording_exclude_table_name,
 		buffer,
-		NULL,
-		NULL,
 		0);
-  sprintf (buffer, "create table %s (artist_name varchar(200), time float);", p->artist_exclude_table_name);
-  create_table (connection,
+  sprintf (buffer, "create table %s (artist_name varchar(200), time double)",
+	   p->artist_exclude_table_name);
+  create_table (db,
 		p->artist_exclude_table_name,
 		buffer,
-		NULL,
-		NULL,
 		0);
   p->recording_exclude = recording_exclude;
   p->artist_exclude = artist_exclude;
-  PQfinish (connection);
+  p->db = db;
+  db_unlock (db);
   return p;
 }
 
@@ -809,32 +834,28 @@ recording_picker_new (double artist_exclude,
 void
 recording_picker_destroy (RecordingPicker *p)
 {
-  PGresult *res;
   char buffer[1024];
-  PGconn *connection;
   
   if (!p)
     return;
-
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!p->db)
     return;
+
+  db_lock (p->db);
   if (p->recording_exclude_table_name)
     {
-      sprintf (buffer, "drop table %s;", p->recording_exclude_table_name);
-      res = PQexec (connection, buffer);
-      PQclear (res);
+      sprintf (buffer, "drop table %s", p->recording_exclude_table_name);
+      mysql_real_query (p->db->conn, buffer, strlen (buffer));
       free (p->recording_exclude_table_name);
     }
   if (p->artist_exclude_table_name)
     {
-      sprintf (buffer, "drop table %s;", p->artist_exclude_table_name);
-      res = PQexec (connection, buffer);
-      PQclear (res);
+      sprintf (buffer, "drop table %s", p->artist_exclude_table_name);
+      mysql_real_query (p->db->conn, buffer, strlen (buffer));
       free (p->artist_exclude_table_name);
     }
+  db_unlock (p->db);
   free (p);
-  PQfinish (connection);
 }
 
 
@@ -845,8 +866,9 @@ recording_picker_select (RecordingPicker *p,
 			 double cur_time)
 {
   list *tmp;
-  PGresult *res;
-  char buffer[2048];
+  MYSQL_RES *res = NULL;
+  MYSQL_ROW row;
+  char *buffer;
   char category_part[1024];
   int n;
   Recording *r;
@@ -859,16 +881,14 @@ recording_picker_select (RecordingPicker *p,
       where recording.artist_id = artist.artist_id and
       recording.category_id = category.category_id";
   time_t ct;
-  PGconn *connection;
     
   if (!p)
     return NULL;
-
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!p->db)
     return NULL;
+
+  db_lock (p->db);
   ct = cur_time;
-  strcpy (buffer, select_query);  
   *category_part = 0;
   for (tmp = category_list; tmp; tmp = tmp->next)
     {
@@ -881,252 +901,182 @@ recording_picker_select (RecordingPicker *p,
       strcat (category_part, temp);
     }
   if (category_list)
-    {
-      strcat (category_part, ")");
-      strcat (buffer, category_part);
-    }
+    strcat (category_part, ")");
   if (cur_time >= 0)
     {
-      char exclude_part[1024];
+      list *artists = NULL, *recordings = NULL;
+      int artists_strlen = 0, recordings_strlen = 0, first;
       char temp[1024];
 
       /* Delete old items from exclude tables */
 
-      sprintf (temp, "delete from %s where %s.time < %ld;",
+      sprintf (temp, "delete from %s where %s.time < %ld",
 	       p->recording_exclude_table_name,
 	       p->recording_exclude_table_name,
 	       (long) (cur_time-p->recording_exclude));
-      res = PQexec (connection, temp);
-      PQclear (res);
-      sprintf (temp, "delete from %s where %s.time < %ld;",
+      mysql_real_query (p->db->conn, temp, strlen (temp));
+      sprintf (temp, "delete from %s where %s.time < %ld",
 	       p->artist_exclude_table_name,
 	       p->artist_exclude_table_name,
 	       (long) (cur_time-p->artist_exclude));
-      res = PQexec (connection, temp);
-      PQclear (res);
-      
-      sprintf (exclude_part, " and recording.recording_id not in (select recording_id from %s) and artist_name not in (select artist_name from %s)", p->recording_exclude_table_name, p->artist_exclude_table_name);
-      strcat (buffer, exclude_part);
+      mysql_real_query (p->db->conn, temp, strlen (temp));
+
+      sprintf (temp, "select artist_name from %s",
+	       p->artist_exclude_table_name);
+
+      if (mysql_real_query (p->db->conn, temp, strlen (temp)) == 0 &&
+	  (res = mysql_store_result (p->db->conn)) != NULL &&
+	  mysql_num_rows (res) > 0)
+	{
+	  first = 1;
+
+	  while (row = mysql_fetch_row (res))
+	    {
+	      if (first)
+		first = 0;
+	      else
+		artists_strlen += 2;
+
+	      string_list_append (artists, row[0]);
+	      artists_strlen += strlen (row[0]);
+	    }
+	}
+
+      if (res != NULL)
+	{
+	  mysql_free_result (res);
+	  res = NULL;
+	}
+
+      sprintf (temp, "select recording_id from %s",
+	       p->recording_exclude_table_name);
+
+      if (mysql_real_query (p->db->conn, temp, strlen (temp)) == 0 &&
+	  (res = mysql_store_result (p->db->conn)) != NULL &&
+	  mysql_num_rows (res) > 0)
+	{
+	  first = 1;
+
+	  while (row = mysql_fetch_row (res))
+	    {
+	      if (first)
+		first = 0;
+	      else
+		recordings_strlen += 2;
+
+	      string_list_append (recordings, row[0]);
+	      recordings_strlen += strlen (row[0]);
+	    }
+	}
+
+      if (res != NULL)
+	{
+	  mysql_free_result (res);
+	  res = NULL;
+	}
+
+      buffer = malloc (artists_strlen + recordings_strlen + 2048);
+      strcpy (buffer, select_query);
+      if (category_list)
+	strcat (buffer, category_part);
+      strcat (buffer, " and recording.recording_id not in (");
+      first = 1;
+
+      for (tmp = recordings; tmp; tmp = tmp->next)
+	{
+	  if (first)
+	    first = 0;
+	  else
+	    strcat (buffer, ", ");
+
+	  strcat (buffer, tmp->data);
+	}
+
+      if (first)
+	strcat (buffer, "null");
+      strcat (buffer, ") and artist_name not in (");
+      first = 1;
+
+      for (tmp = artists; tmp; tmp = tmp->next)
+	{
+	  if (first)
+	    first = 0;
+	  else
+	    strcat (buffer, ", ");
+
+	  strcat (buffer, tmp->data);
+	}
+
+      if (first)
+	strcat (buffer, "null");
+      strcat (buffer, ")");
     }
-  strcat (buffer, ";");
-  res = PQexec (connection, buffer);
-  if (PQntuples (res) <= 0)
+  else
     {
-      PQclear (res);
-      PQfinish (connection);
+      buffer = malloc (2048);
+      strcpy (buffer, select_query);
+      if (category_list)
+	strcat (buffer, category_part);
+    }
+  if (mysql_real_query (p->db->conn, buffer, strlen (buffer)) != 0 ||
+      (res = mysql_store_result (p->db->conn)) == NULL ||
+      mysql_num_rows (res) <= 0)
+    {
+      if (res != NULL)
+	mysql_free_result (res);
+      free (buffer);
+      db_unlock (p->db);
       return NULL;
     }
-  n = rand ()%PQntuples (res);
-  r = get_recording_from_result (connection, res, n);
-  PQclear (res);
+
+  n = rand () % mysql_num_rows (res);
+  mysql_data_seek (res, n);
+  row = mysql_fetch_row (res);
+
+  if (row == NULL)
+    {
+      mysql_free_result (res);
+      free (buffer);
+      db_unlock (p->db);
+      return NULL;
+    }
+
+  r = get_recording_from_result (p->db, row);
+  mysql_free_result (res);
 
   /* Add info to the exclude tables */
 
   if (cur_time >= 0)
     {
       char *artist_name = process_for_sql (r->artist);
-      sprintf (buffer, "insert into %s values (%d, %lf);", p->recording_exclude_table_name, r->id, cur_time);
-      res = PQexec (connection, buffer);
-      PQclear (res);
-      sprintf (buffer, "insert into %s values ('%s', %lf);", p->artist_exclude_table_name, artist_name, cur_time);
-      res = PQexec (connection, buffer);
-      PQclear (res);
+      sprintf (buffer, "insert into %s values (%d, %lf)",
+	       p->recording_exclude_table_name, r->id, cur_time);
+      mysql_real_query (p->db->conn, buffer, strlen (buffer));
+      sprintf (buffer, "insert into %s values ('%s', %lf)",
+	       p->artist_exclude_table_name, artist_name, cur_time);
+      mysql_real_query (p->db->conn, buffer, strlen (buffer));
       free (artist_name);
     }  
-  PQfinish (connection);
+
+  free (buffer);
+  db_unlock (p->db);
   return r;
 }
 
 
 
 int
-check_config_status_tables (void)
+check_log_table (Database *db)
 {
   int rv;
-  PGconn *connection;
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     rv = 0;
   else
     {
-      rv = (does_table_exist (connection, "config") && does_table_exist (connection, "status"));
-      PQfinish (connection);
-    }
-  return rv;
-}
-  
-
-
-void
-create_config_status_tables (list *read_only_users,
-			     list *total_access_users)
-{
-  char *config_create_query = 
-  "create table config (
-      config_key varchar (256),
-      config_value varchar (256));";
-  char *status_create_query = "create table status (
-      status_key varchar (256),
-      status_value varchar (256));";
-
-  PGconn *connection;
-
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
-    return;
-  create_table (connection,
-		"config",
-		config_create_query,
-		read_only_users,
-		total_access_users,
-		1);
-  create_table (connection,
-		"status",
-		status_create_query,
-		read_only_users,
-		total_access_users,
-		1);
-  PQfinish (connection);
-}
-
-
-
-char *
-get_config_value (const char *key)
-{
-  PGresult *res;
-  char buffer[1024];
-  char *rv;
-  char *processed_key;
-  PGconn *connection;
-
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
-    return NULL;
-  
-  processed_key = process_for_sql (key);
-  sprintf (buffer, "select config_value from config where config_key = '%s';", processed_key);
-  res = PQexec (connection, buffer);
-  if (PQntuples (res) != 1)
-    {
-      PQclear (res);
-      PQfinish (connection);
-      return NULL;
-    }
-  rv = strdup (PQgetvalue (res, 0, 0));
-  PQclear (res);
-  free (processed_key);
-  PQfinish (connection);
-  return rv;
-}
-
-
-
-void
-set_config_value (const char *key,
-		  const char *value)
-{
-  PGresult *res;
-  char buffer[1024];
-  char *processed_key, *processed_value;
-  PGconn *connection;
-
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
-    return;
-  
-  processed_key = process_for_sql (key);
-  processed_value = process_for_sql (value);
-
-  sprintf (buffer, "delete from config where config_key = '%s';", processed_key);
-  res = PQexec (connection, buffer);
-  PQclear (res);
-  sprintf (buffer, "insert into config values ('%s', '%s');", processed_key, processed_value);
-  res = PQexec (connection, buffer);
-  PQclear (res);
-  free (processed_key);
-  free (processed_value);
-  PQfinish (connection);
-}
-
-
-
-
-char *
-get_status_value (const char *key)
-{
-  PGresult *res;
-  char buffer[1024];
-  char *rv;
-  char *processed_key;
-  PGconn *connection;
-
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
-    return NULL;
-    
-  processed_key = process_for_sql (key);
-
-  sprintf (buffer, "select status_value from status where status_key = '%s';", processed_key);
-  res = PQexec (connection, buffer);
-  if (PQntuples (res) != 1)
-    {
-      PQclear (res);
-      PQfinish (connection);
-      return NULL;
-    }
-  rv = strdup (PQgetvalue (res, 0, 0));
-  PQclear (res);
-  free (processed_key);
-  PQfinish (connection);
-  return rv;
-}
-
-
-
-void
-set_status_value (const char *key,
-		  const char *value)
-{
-  PGresult *res;
-  char buffer[1024];
-  char *processed_key, *processed_value;
-  PGconn *connection;
-
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
-    return;  
-  
-  processed_key = process_for_sql (key);
-  processed_value = process_for_sql (value);
-
-  sprintf (buffer, "delete from status where status_key = '%s';", processed_key);
-  res = PQexec (connection, buffer);
-  PQclear (res);
-  sprintf (buffer, "insert into status values ('%s', '%s');", processed_key, processed_value);
-  res = PQexec (connection, buffer);
-  PQclear (res);
-  free (processed_key);
-  free (processed_value);
-  PQfinish (connection);
-}
-
-
-
-int
-check_log_table (void)
-{
-  int rv;
-  PGconn *connection;
-
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
-    rv = 0;
-  else
-    {
-      rv = (does_table_exist (connection, "log"));
-      PQfinish (connection);
+      db_lock (db);
+      rv = does_table_exist (db, "log");
+      db_unlock (db);
     }
   return rv;
 }
@@ -1134,46 +1084,40 @@ check_log_table (void)
 
 
 void
-create_log_table (list *read_only_users,
-		  list *total_access_users)
+create_log_table (Database *db)
 {
   char *log_create_query =
     "create table log (
       recording_id int,
       start_time int,
       length int)";
-  PGconn *connection;
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     return;
 
-  create_table (connection,
+  db_lock (db);
+  create_table (db,
 		"log",
 		log_create_query,
-		read_only_users,
-		total_access_users,
 		1);  
-  PQfinish (connection);
+  db_unlock (db);
 }
 
 
 
 void
-add_log_entry (int recording_id,
+add_log_entry (Database *db, int recording_id,
 	       int start_time,
 	       int length)
 {
-  PGresult *res;
   char buffer[1024];
-  PGconn *connection;
 
-  connection = PQconnectdb (db_connection_string);
-  if (!connection || PQstatus (connection) != CONNECTION_OK)
+  if (!db)
     return;
 
-  sprintf (buffer, "insert into log values (%d, %d, %d);", recording_id, start_time, length);
-  res = PQexec (connection, buffer);
-  PQclear (res);
-  PQfinish (connection);
+  db_lock (db);
+  sprintf (buffer, "insert into log values (%d, %d, %d)", recording_id,
+	   start_time, length);
+  mysql_real_query (db->conn, buffer, strlen (buffer));
+  db_unlock (db);
 }

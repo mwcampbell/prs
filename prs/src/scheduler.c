@@ -28,7 +28,7 @@ scheduler_push_template (scheduler *s,
   e->t = t;
   e->event_number = event_number;
   e->length = list_length (t->events);
-  e->p = recording_picker_new (t->artist_exclude, t->recording_exclude);
+  e->p = recording_picker_new (s->db, t->artist_exclude, t->recording_exclude);
   s->template_stack = list_prepend (s->template_stack, e);
 }
 
@@ -53,11 +53,11 @@ scheduler_pop_template (scheduler *s)
 
 
 scheduler *
-scheduler_new (MixerAutomation *a,
-	       double cur_time)
+scheduler_new (MixerAutomation *a, Database *db, double cur_time)
 {
   scheduler *s = (scheduler *) malloc (sizeof (scheduler));
   s->a = a;
+  s->db = db;
   s->template_stack = NULL;
   s->last_event_end_time =
     s->prev_event_start_time =
@@ -109,7 +109,7 @@ scheduler_schedule_next_event (scheduler *s)
 
       /* Get the current template */
 
-      t = get_playlist_template (s->last_event_end_time);
+      t = get_playlist_template (s->db, s->last_event_end_time);
       if (!t)
 	{
 	  pthread_mutex_unlock (&(s->mut));
@@ -202,7 +202,7 @@ scheduler_schedule_next_event (scheduler *s)
 
     case EVENT_TYPE_PATH:
 
-      r = find_recording_by_path (e->detail1);
+      r = find_recording_by_path (s->db, e->detail1);
       ae->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
       ae->detail1 = strdup (r->path);
       ae->level = e->level;
@@ -255,6 +255,7 @@ scheduler_main_thread (void *data)
   pthread_mutex_lock (&(s->mut));
   current = target = s->prev_event_end_time;
   pthread_mutex_unlock (&(s->mut));
+  db_thread_init (s->db);
   while (1)
     {
       pthread_mutex_lock (&(s->mut));
@@ -272,6 +273,8 @@ scheduler_main_thread (void *data)
       usleep ((current-target)*900000);
       target = current;
     }
+
+  db_thread_end (s->db);
 }
 
 

@@ -28,7 +28,7 @@
 
 
 static void
-load_playlist (MixerAutomation *a, FILE *in, FILE *out)
+load_playlist (MixerAutomation *a, Database *db, FILE *in, FILE *out)
 {
 	char pl_name[1025];
 	char path[1025];
@@ -56,7 +56,7 @@ load_playlist (MixerAutomation *a, FILE *in, FILE *out)
 		e->detail1 = strdup (path);
 		e->level = 1.0;
 		e->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
-		r = find_recording_by_path (path);
+		r = find_recording_by_path (db, path);
 		if (!r) {
 			FileInfo *i;
 			char *ext;
@@ -174,7 +174,7 @@ prs_session (PRS *prs, FILE *in, FILE *out)
 	  fprintf (out, "%s", ctime (&t));
 	}      
       if (!strcmp (input, "load"))
-	load_playlist (prs->automation, in, out);
+	load_playlist (prs->automation, prs->db, in, out);
     }
 
   return 0;

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include "db.h"
 #include "mixer.h"
 #include "mixerautomation.h"
 #include "prs.h"
@@ -29,7 +30,15 @@ prs_new (void)
     }
 
   mixer_sync_time (prs->mixer);
-  prs->automation = mixer_automation_new (prs->mixer);
+  prs->db = db_new ();
+
+  if (prs->db == NULL)
+    {
+      prs_destroy (prs);
+      return NULL;
+    }
+
+  prs->automation = mixer_automation_new (prs->mixer, prs->db);
 
   if (prs->automation == NULL)
     {
@@ -37,7 +46,7 @@ prs_new (void)
       return NULL;
     }
 
-  prs->scheduler = scheduler_new (prs->automation,
+  prs->scheduler = scheduler_new (prs->automation, prs->db,
 				  mixer_get_time (prs->mixer));
 
   if (prs->scheduler == NULL)
@@ -72,6 +81,8 @@ prs_destroy (PRS *prs)
     scheduler_destroy (prs->scheduler);
   if (prs->automation != NULL)
     mixer_automation_destroy (prs->automation);
+  if (prs->db != NULL)
+    db_close (prs->db);
   if (prs->mixer != NULL)
     mixer_destroy (prs->mixer);
   if (prs->password != NULL)

@@ -49,21 +49,23 @@ mixer_automation_log_event (MixerAutomation *a,
   switch (e->type)
     {
       case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
-	r = find_recording_by_path (e->detail1);
+	r = find_recording_by_path (a->db, e->detail1);
 	if (r)
-		add_log_entry (r->id, (int) a->last_event_time, (int) e->length);
+	  add_log_entry (a->db, r->id, (int) a->last_event_time,
+			 (int) e->length);
 	recording_free (r);
-      break;
+	break;
     }
 }
 
 
 
 MixerAutomation *
-mixer_automation_new (mixer *m)
+mixer_automation_new (mixer *m, Database *db)
 {
   MixerAutomation *a = (MixerAutomation *) malloc (sizeof (MixerAutomation));
   a->m = m;
+  a->db = db;
   a->events = NULL;
   a->last_event_time = mixer_get_time (m);
   a->automation_thread = 0;
@@ -171,6 +173,7 @@ static void *
 mixer_automation_main_thread (void *data)
 {
   MixerAutomation *a = (MixerAutomation *) data;
+  db_thread_init (a->db);
 
   while (1)
     {
@@ -224,6 +227,7 @@ mixer_automation_main_thread (void *data)
   pthread_mutex_lock (&(a->mut));
   a->automation_thread = 0;
   pthread_mutex_unlock (&(a->mut));
+  db_thread_end (a->db);
 }
 
 

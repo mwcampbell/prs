@@ -1,6 +1,7 @@
 #ifndef _PRS_H
 #define _PRS_H
 #include "mixer.h"
+#include "db.h"
 #include "mixerautomation.h"
 #include "scheduler.h"
 
@@ -9,6 +10,7 @@
 typedef struct
 {
   mixer *mixer;
+  Database *db;
   MixerAutomation *automation;
   scheduler *scheduler;
   int telnet_interface;

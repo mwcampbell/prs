@@ -5,6 +5,7 @@
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include "prs_config.h"
+#include "db.h"
 #include "audiocompressor.h"
 #include "multibandaudiocompressor.h"
 #include "ossmixeroutput.h"
@@ -14,7 +15,7 @@
 
 
 
-void
+static void
 stream_config (mixer *m, xmlNodePtr cur)
 {
 	MixerOutput *o;
@@ -281,6 +282,22 @@ mixer_config (mixer *m, xmlNodePtr cur)
 
 
 
+static void
+telnet_config (PRS *prs, xmlNodePtr cur)
+{
+	xmlChar *password = xmlGetProp (cur, "password");
+	xmlChar *port = xmlGetProp (cur, "port");
+	if (password != NULL)
+		prs->password = strdup (password);
+	if (port == NULL)
+		prs->telnet_port = 4777;
+	else
+		prs->telnet_port = atoi (port);
+	prs->telnet_interface = 1;
+}
+
+
+
 int
 prs_config (PRS *prs, const char *filename)
 {
@@ -303,17 +320,10 @@ prs_config (PRS *prs, const char *filename)
 			stream_config (prs->mixer, cur);
 		else if (!xmlStrcmp (cur->name, "mixer_config")) 
 			mixer_config (prs->mixer, cur);
-		else if (!xmlStrcmp (cur->name, "telnet")) {
-			xmlChar *password = xmlGetProp (cur, "password");
-			xmlChar *port = xmlGetProp (cur, "port");
-			if (password != NULL)
-				prs->password = strdup (password);
-			if (port == NULL)
-				prs->telnet_port = 4777;
-			else
-				prs->telnet_port = atoi (port);
-			prs->telnet_interface = 1;
-		}
+		else if (!xmlStrcmp (cur->name, "telnet"))
+			telnet_config (prs, cur);
+		else if (!xmlStrcmp (cur->name, "db"))
+			db_config (prs->db, cur);
 		cur = cur->next;
 	}  
 	xmlFreeDoc (doc);

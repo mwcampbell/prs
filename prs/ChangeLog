@@ -1,5 +1,7 @@
 2002-11-16  Matt Campbell  <mattcampbell@pobox.com>
 
+	* Switched to MySQL (version 3.23.x).
+
 	* src/mp3decoder.c (mp3_decoder_destroy): This function now kills
 	the decoder process in addition to closing the pipe.
 

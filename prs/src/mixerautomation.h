@@ -5,6 +5,7 @@
 #include "mixer.h"
 #include "mp3mixerchannel.h"
 #include "vorbismixerchannel.h"
+#include "db.h"
 
 
 
@@ -39,6 +40,7 @@ automation_event_destroy (AutomationEvent *e);
 
 typedef struct {
   mixer *m;
+  Database *db;
 
   pthread_mutex_t mut;
   int running;
@@ -50,7 +52,7 @@ typedef struct {
 
 
 MixerAutomation *
-mixer_automation_new (mixer *m);
+mixer_automation_new (mixer *m, Database *db);
 void
 mixer_automation_destroy (MixerAutomation *a);
 int

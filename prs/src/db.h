@@ -1,6 +1,31 @@
 #ifndef _DB_H
 #define _DB_H
+#include <mysql.h>
+#include <pthread.h>
+#include <libxml/parser.h>
 #include "list.h"
+
+typedef struct _Database Database;
+
+struct _Database
+{
+  MYSQL *conn;
+  pthread_mutex_t mutex;
+};
+
+Database *
+db_new (void);
+int
+db_connect (Database *db, const char *host, const char *user,
+	    const char *password, const char *name);
+void
+db_close (Database *db);
+void
+db_config (Database *db, xmlNodePtr cur);
+void
+db_thread_init (Database *db);
+void
+db_thread_end (Database *db);
 
 /*
  *
@@ -24,23 +49,23 @@ struct _Recording {
   double length;
   double audio_in;
   double audio_out;
+  Database *db;
 };
 
 
 
 int
-check_recording_tables (void);
+check_recording_tables (Database *db);
 void
-create_recording_tables (list *read_only_users,
-			list *total_access_users);
+create_recording_tables (Database *db);
 void
 recording_free (Recording *r);
 void
-add_recording (Recording *r);
+add_recording (Recording *r, Database *db);
 void
 delete_recording (Recording *r);
 Recording *
-find_recording_by_path (const char *path);
+find_recording_by_path (Database *db, const char *path);
 
 
 
@@ -75,20 +100,19 @@ struct _PlaylistTemplate {
   double artist_exclude;
   double recording_exclude;
   list *events;
+  Database *db;
 };
 
 
 
 int
-check_playlist_tables (void);
+check_playlist_tables (Database *db);
 void
-create_playlist_tables (list *read_only_users,
-				list *total_access_users);
+create_playlist_tables (Database *db);
 void
 playlist_template_destroy (PlaylistTemplate *t);
-
 PlaylistTemplate *
-get_playlist_template (double cur_time);
+get_playlist_template (Database *db, double cur_time);
 
 
 
@@ -146,10 +170,9 @@ playlist_template_get_event (PlaylistTemplate *t,
 
 
 int
-check_user_table (void);
+check_user_table (Database *db);
 void
-create_user_table (list *read_only_users,
-		   list *total_access_users);
+create_user_table (Database *db);
 
 
 
@@ -178,12 +201,13 @@ struct _RecordingPicker {
   char *recording_exclude_table_name;
   double artist_exclude;
   double recording_exclude;
+  Database *db;
 };
 
 
 
 RecordingPicker *
-recording_picker_new (double artist_exclude,
+recording_picker_new (Database *db, double artist_exclude,
 		      double recording_exclude);
 void
 recording_picker_destroy (RecordingPicker *p);
@@ -196,42 +220,16 @@ recording_picker_select (RecordingPicker *p,
 
 /*
  *
- * Configuration and status tables
- *
- */
-
-int
-check_config_status_tables (void);
-void
-create_config_status_tables (list *read_only_users,
-			     list *total_access_users);
-char *
-get_config_value (const char *key);
-void
-set_config_value (const char *key, const char *value);
-char *
-get_status_value (const char *key);
-void
-set_status_value (const char *key, const char *value);
-
-
-
-
-/*
- *
  * Log table
  *
  */
 
 int
-check_log_table (void);
+check_log_table (Database *db);
 void
-create_log_table (list *read_only_users,
-		  list *total_access_users);
+create_log_table (Database *db);
 void
-add_log_entry (int recording_id,
-	       int start_time,
-	       int length);
+add_log_entry (Database *db, int recording_id, int start_time, int length);
 
 
 
