@@ -24,10 +24,11 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include "debug.h"
 #include "mp3decoder.h"
@@ -60,7 +61,6 @@ mp3_decoder_new (const char *filename, int start_frame)
 
 	/* Fork the decoder process */
 
-	signal (SIGCHLD, SIG_IGN);
 	rv = fork ();
 	if (!rv) {
 		close (0);
@@ -128,5 +128,6 @@ mp3_decoder_destroy (MP3Decoder *d)
 		      "mp3_decoder_destroy called\n");
 	close (d->fd);
 	kill (d->pid, SIGTERM);
+	waitpid (d->pid, NULL, 0);
 	free (d);
 }

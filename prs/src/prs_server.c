@@ -275,6 +275,7 @@ main (int argc, char *argv[])
 
   completion_init ();
   
+  debug_set_flags (DEBUG_FLAGS_ALL);
   if (argc > 1)
     config_filename = argv[1];
   debug_printf (DEBUG_FLAGS_GENERAL, "Loading config file %s\n", config_filename);

@@ -315,7 +315,7 @@ mp3_process_first_block (channel_info *i,
 			mp3_header_parse (ulong_header, &mh);
 			if (mh.syncword == 0X0FFF &&
 			    mh.version > 0 && mh.layer > 0 &&
-			    mh.samplerate > 0) {
+			    mh.bitrate > 0 && mh.samplerate > 0) {
 				rv = buf;
 				break;
 			}

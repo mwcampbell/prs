@@ -32,8 +32,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <signal.h>
 #include <pthread.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/soundcard.h>
 #include <shout/shout.h>
 #include "debug.h"
@@ -155,6 +157,7 @@ stop_encoder (MixerOutput *o)
 
 	i = (shout_info *) o->data;
 	close (i->encoder_input_fd);
+	kill (i->encoder_pid, SIGTERM);
 	waitpid (i->encoder_pid, NULL, 0);
 }
 

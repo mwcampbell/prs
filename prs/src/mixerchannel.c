@@ -228,5 +228,7 @@ mixer_channel_advance_pointers (MixerChannel *ch)
 	if (ch->output >= ch->buffer_end)
 		ch->output = ch->buffer;
 	ch->space_left += ch->this_chunk_size;
+	if (ch->space_left >= ch->buffer_size && ch->data_reader_thread == -1)
+		ch->data_end_reached = 1;
 	pthread_mutex_unlock (&(ch->mutex));
 }
