@@ -264,6 +264,11 @@ url_manager (void *data)
 	cur_time = mixer_get_time (i->m);
 	mixer_automation_stop (i->a);
 	
+	/* If we're archiving, delete the file */
+
+	if (i->archive_file_name)
+	  remove (i->archive_file_name);
+
 	/* Try an initial attempt */
 
 	ch = url_mixer_channel_new (i->url, i->url,

@@ -70,7 +70,7 @@ mp3_decoder_new (const char *filename, int start_frame)
 		close (2);
 		dup2 (decoder_output[1], 1);
 		close (decoder_output[0]);
-		execlp ("mpg123", "mpg123", "-q", "-s", "-k", start_frame_str,
+		execlp ("mpg321", "mpg321", "-q", "-s", "-k", start_frame_str,
 			filename, NULL);
 		debug_printf (DEBUG_FLAGS_CODEC,
 			      "mp3_decoder_new: exec failed: %s\n",

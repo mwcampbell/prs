@@ -418,7 +418,7 @@ curl_write_func (void *ptr,
 	if (i->bytes_sent <= 4096 && bytes_sent > 4096 && i->connected) {
 		pthread_cond_broadcast (&(i->cond));
 		if (i->archive_file_name) {
-			i->archive_file_fd = open (i->archive_file_name, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
+			i->archive_file_fd = open (i->archive_file_name, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
 			if (i->archive_file_fd <= 0)
 				i->archive_file_fd = -1;
 		}
