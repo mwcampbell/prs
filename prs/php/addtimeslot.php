@@ -3,19 +3,20 @@ require_once ("common.php");
 check_user ();
 db_connect ();
 
-if ($start_date && $length) {
+if ($start_date && $end_date) {
 	$start_date = strtotime ($start_date);
 	if ($start_date == -1) {
-		html_error ("Start or end date out of range.\n");
+		html_error ("Start date out of range.\n");
 		exit ();
 	}
-	
-	/* Convert length of seconds */
-
-	list ($length_hours, $length_minutes, $length_seconds) = explode (":", $length, 3);
-	$length = $length_hours*3600+$length_minutes*60+$length_seconds;
-
+	$end_date = strtotime ($end_date);
+	if ($end_date == -1) {
+		html_error ("End date out of range.\n");
+		exit ();
+	}
+	$length = $end_date-$start_date;
 	$daylight = date ("I", $start_date);
+
 	$query = "insert into schedule (start_time, length, repetition,
         daylight, template_id, fallback_id, end_prefade) values
         ($start_date, $length, $repetition,
@@ -37,8 +38,8 @@ else {
 <input type="text" name="start_date" id="start_date">
 </div>
 <div>
-<label for="length">Enter length (hh:mm:ss):</label>
-<input type="text" name="length" id="length">
+<label for="end_date">Enter end date:</label>
+<input type="text" name="end_date" id="end_date">
 </div>
 <div>
 <label for="repetition">Repetition:</label>
