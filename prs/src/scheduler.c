@@ -159,8 +159,9 @@ scheduler_switch_templates (scheduler *s)
 	if (s->template_stack) {
 		PlaylistTemplate *t;
 		e = (template_stack_entry *) s->template_stack->data;
-		if (s->last_event_end_time > e->t->end_time &&
-		    e->t->fallback_id != -1) {
+		if (e->t->fallback_id != -1 &&
+			(e->t->handle_overlap == HANDLE_OVERLAP_FALLBACK ||
+			 s->last_event_end_time < t->end_time)) {
 			t = get_playlist_template_by_id (s->db, e->t->fallback_id);
 			t->type = TEMPLATE_TYPE_FALLBACK;
 			t->start_time = s->last_event_end_time;
@@ -287,6 +288,8 @@ url_manager (void *data)
 
 			if (!i->a->running) {
 				mixer_fade_all (i->m, 1.0, 1);
+				mixer_automation_set_start_time (i->a,
+								 mixer_get_time (i->a->m));
 				mixer_automation_start (i->a);
 			}
 
