@@ -7,7 +7,7 @@ html_start ("Update Database");
 if (!$audio_root) {
 ?>
 <form name = "update_db" action="updatedb.php" method="post">
-<label for="audio_root">Enter the rot directory containing the audio files you wish to add/update:</label>
+<label for="audio_root">Enter the root directory containing the audio files you wish to add/update:</label>
 <input type = "text" name="audio_root" id="audio_root">
 <label for="existing_category">Select a category in which to place all files under this directory:</label>
 <select name = "existing_category" id="existing_category">
@@ -34,7 +34,7 @@ else {
 		$commandline .= "-c \"".$existing_category."\" ";
 	else
 		$commandline .= "-c \"".$new_category."\" ";;
-	$commandline .= " \"".$audio_root."\" >& /dev/null";
+	$commandline .= " \"".$audio_root."\" >& /dev/null &";
 	exec ($commandline);
 echo "Returned $return\n";
 ?>

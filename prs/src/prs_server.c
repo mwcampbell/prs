@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
+#include "debug.h"
 #include "db.h"
 #include "prs.h"
 #include "fileinfo.h"
@@ -189,8 +190,10 @@ main (int argc, char *argv[])
   const char *config_filename = "prs.conf";
   PRS *prs = prs_new ();
 
+  debug_set_flags (DEBUG_FLAGS_ALL);
   if (argc > 1)
     config_filename = argv[1];
+  debug_printf (DEBUG_FLAGS_GENERAL, "Loading config file %s\n", config_filename);
   prs_config (prs, config_filename);
 
   if (prs->telnet_interface)
@@ -236,23 +239,28 @@ main (int argc, char *argv[])
 	  open ("/dev/null", O_RDONLY);
 	  open ("prs.log", O_WRONLY | O_CREAT, 0644);
 	  open ("prs.err", O_WRONLY | O_CREAT, 0644);
+	  debug_printf (DEBUG_FLAGS_TELNET, "Forked child process and set up logging.\n");
 	  break;
 	case -1:
 	  perror ("unable to fork");
 	  return 1;
 	default:
-	  return 0;
+		debug_printf (DEBUG_FLAGS_TELNET, "Parent server process returning.\n");
+		return 0;
 	}
     }
   
+  debug_printf (DEBUG_FLAGS_GENERAL, "Starting prs instance.\n");
   prs_start (prs);
 
   if (prs->telnet_interface)
     {
-      while ((new_sock = accept (sock, (struct sockaddr *) &sa,
+	    debug_printf (DEBUG_FLAGS_TELNET, "Waiting for telnet connection.\n");
+	    while ((new_sock = accept (sock, (struct sockaddr *) &sa,
 				 &sa_length)) >= 0)
 	{
 	  FILE *sock_fp = fdopen (new_sock, "r+");
+	  debug_printf (DEBUG_FLAGS_TELNET, "Starting prs session.\n");
 	  if (prs_session (prs, sock_fp, sock_fp))
 	    break;
 	  else
@@ -262,6 +270,7 @@ main (int argc, char *argv[])
   else
     prs_session (prs, stdin, stdout);
 
+  debug_printf (DEBUG_FLAGS_GENERAL, "Destroying prs instance.\n");
   prs_destroy (prs);
   return 0;
 }

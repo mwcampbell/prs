@@ -41,5 +41,6 @@ prs_server_SOURCES = \
 	multibandaudiocompressor.c \
 	mixerautomation.c \
 	scheduler.c \
+	debug.c \
 	prs_server.c
 
