@@ -1,0 +1,33 @@
+Mixer:
+
+Implement mixer channels and outputs that run in their own threads, to
+reduce glitches in the output, especially the sound card output.
+
+Fix the mixer so that when the mic is on, all other channels are
+turned down, even if another channel is created and started while the
+mic is turned on.  This way a DJ doing a live airbreak can start the
+music with the mic still on, talk over the music, and then turn the
+mic off.
+
+Database:
+
+Switch to MySQL for increased efficiency and the possibility of a
+Windows port with an embedded database.
+
+Scheduler:
+
+Rename playlist templates to programs and make it possible to create a
+schedule of programs, so that the same program can occur more than
+once in the schedule.
+
+Make it possible for the user to manually alter the playlist.
+
+Make pre-scheduling configurable.
+
+User interface:
+
+Make it possible for outside processes, possibly on remote hosts, to
+control and query PRS.  The easiest way to accomplish this may be
+through XML-RPC, using the xmlrpc-c library
+(http://xmlrpc-c.sourceforge.net/).  however, this approach wouldn't
+allow PRS to send notifications back toa  client.
