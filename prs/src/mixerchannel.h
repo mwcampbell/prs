@@ -45,7 +45,12 @@ struct  _MixerChannel {
 	/* buffer */
 	
 	pthread_mutex_t mutex;
+
+	/* Reader thread stuff */
+
+	int reader_thread_running;
 	pthread_t data_reader_thread;
+
 	short *buffer;
 	short *input;
 	short *output;

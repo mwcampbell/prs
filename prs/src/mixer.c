@@ -151,7 +151,7 @@ mixer_main_thread (void *data)
 				tmp = next;
 				continue;
 			}
-			if (ch->data_reader_thread == 0) {
+			if (!ch->reader_thread_running) {
 				int rv = mixer_channel_get_data (ch);
 			}
 			mixer_channel_process_levels (ch);

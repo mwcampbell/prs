@@ -64,7 +64,8 @@ data_reader (void *data)
 		else
 			done = 1;
 	}
-	ch->data_reader_thread = -1;
+	ch->reader_thread_running = 0;
+	pthread_exit (NULL);
 }
 
 
@@ -87,7 +88,7 @@ mixer_channel_new (const int rate,
 	ch->channels = channels;
 	ch->chunk_size = (latency/44100.0)*rate;
 	ch->this_chunk_size = 0;
-	ch->space_left = ch->buffer_size = ch->chunk_size*50;
+	ch->space_left = ch->buffer_size = ch->chunk_size*1000;
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "mixer_channel_new: buffer_size = %d\n",
 		      ch->buffer_size);
@@ -115,6 +116,7 @@ mixer_channel_new (const int rate,
 
 	pthread_mutex_init (&(ch->mutex), NULL);
 	ch->data_reader_thread = 0;
+	ch->reader_thread_running = 0;
 	return ch;
 }
 	
@@ -128,10 +130,8 @@ mixer_channel_destroy (MixerChannel *ch)
 
 	/* Ensure the data reader quits */
 
-	if (ch->data_reader_thread > 0) {
-		ch->data_end_reached = 1;
+	if (ch->data_reader_thread > 0)
 		pthread_join (ch->data_reader_thread, NULL);
-	}
 
 	if (ch->free_data)
 		ch->free_data (ch);
@@ -152,7 +152,8 @@ mixer_channel_destroy (MixerChannel *ch)
 
         /* We don't own the patch points, so just free the list */
 
-	list_free (ch->patchpoints);
+	if (ch->patchpoints)
+		list_free (ch->patchpoints);
 	free (ch);
 }
 
@@ -161,8 +162,10 @@ mixer_channel_destroy (MixerChannel *ch)
 void
 mixer_channel_start_reader (MixerChannel *ch)
 {
-	if (ch->data_reader_thread == 0)
+	if (!ch->reader_thread_running) {
 		pthread_create (&(ch->data_reader_thread), NULL, data_reader, ch);
+		ch->reader_thread_running = 1;
+	}
 }
 
 
@@ -227,7 +230,7 @@ mixer_channel_advance_pointers (MixerChannel *ch)
 	if (ch->output >= ch->buffer_end)
 		ch->output = ch->buffer;
 	ch->space_left += ch->this_chunk_size;
-	if (ch->space_left >= ch->buffer_size && ch->data_reader_thread == -1)
+	if (ch->space_left >= ch->buffer_size && !ch->reader_thread_running)
 		ch->data_end_reached = 1;
 	pthread_mutex_unlock (&(ch->mutex));
 }
