@@ -56,7 +56,7 @@ html_start ($title);
           (repetition != 0 and start_time <= $cur_time and mod($cur_time-start_time-(daylight*3600)+$daylight, repetition) < length))
           order by time_slot_id desc";
 		$res = db_query ($query);
-		$row = mysql_fetch_assoc ($res)) {
+		$row = mysql_fetch_assoc ($res);
 		$time_slot_id = $row["time_slot_id"];
 		$start_time = $row["start_time"];
 		$length = $row["length"];
@@ -64,7 +64,7 @@ html_start ($title);
 		$template_id = $row["template_id"];
 		$fallback_id = $row["fallback_id"];
 		$end_prefade = $row["end_prefade"];
-		$end_time = $stat_time+$length;
+		$end_time = $start_time+$length;
 		mysql_free_result ($res);
 		$start_time = strftime ($date_template, $start_time);
 		$end_time = strftime ($date_template, $end_time);

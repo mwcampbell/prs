@@ -53,7 +53,7 @@ while ($dest_cur_time < $dest_end_date) {
           (repetition != 0 and start_time <= $source_cur_time and mod($source_cur_time-start_time-(daylight*3600)+$daylight, repetition) < length))
           order by time_slot_id desc";
 		$res = db_query ($query);
-		$row = mysql_fetch_assoc ($res)) {
+		$row = mysql_fetch_assoc ($res);
 		$time_slot_id = $row["time_slot_id"];
 		$start_time = $row["start_time"];
 		$length = $row["length"];
@@ -61,8 +61,7 @@ while ($dest_cur_time < $dest_end_date) {
 		$template_id = $row["template_id"];
 		$fallback_id = $row["fallback_id"];
 		$end_prefade = $row["end_prefade"];
-		$end_time = $stat_time+$length;
-		mysql_free_result ($res);
+		$end_time = $start_time+$length;
 		$start_time = $dest_cur_time;
 		$dest_cur_time = $dest_cur_time+$length;
 		$query = "insert into schedule (start_time, length, repetition,
@@ -70,10 +69,13 @@ while ($dest_cur_time < $dest_end_date) {
         ($start_time, $length, $repetition,
         $daylight, $template_id, $fallback_id, $end_prefade)";
 		db_query ($query);
+		mysql_free_result ($res);
 		$source_cur_time = $end_time;
 	}
+}
 ?>
 <a href = "schedule.php">Back to Schedule Administration page</a>
 <?
 html_end ();
 exit ();
+?> 
