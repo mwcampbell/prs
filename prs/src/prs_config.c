@@ -95,7 +95,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 				shout_set_description (s, tmp);
 			tmp = xmlGetProp (cur, "bitrate");
 			if (tmp)
-				shout_set_bitrate (s, atoi (tmp));
+				shout_set_audio_info (s, SHOUT_AI_BITRATE, tmp);
 			tmp = xmlGetProp (cur, "protocol");
 			shout_set_protocol (s, SHOUT_PROTOCOL_XAUDIOCAST);
 			if (tmp) {
@@ -105,8 +105,6 @@ stream_config (mixer *m, xmlNodePtr cur)
 					shout_set_protocol (s, SHOUT_PROTOCOL_HTTP);
 				if (!xmlStrcmp (tmp, "icy"))
 					shout_set_protocol (s, SHOUT_PROTOCOL_ICY);
-				if (!xmlStrcmp (tmp, "ice"))
-					shout_set_protocol (s, SHOUT_PROTOCOL_ICE);
 			}
 			tmp = xmlGetProp (cur, "format");
 			if (!xmlStrcmp (tmp, "mp3"))
