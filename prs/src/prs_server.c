@@ -250,7 +250,6 @@ main (int argc, char *argv[])
   PRS *prs = prs_new ();
 
   completion_init ();
-  debug_set_flags (DEBUG_FLAGS_ALL);
   
   if (argc > 1)
     config_filename = argv[1];

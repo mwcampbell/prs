@@ -575,7 +575,7 @@ scheduler_main_thread (void *data)
 		while (current < target) {
 			current = scheduler_schedule_next_event (s);
 		}
-		usleep ((current-target+s->preschedule)*1000000);
+		usleep ((current-target-s->preschedule)*1000000);
 		target = current;
 	}
 }

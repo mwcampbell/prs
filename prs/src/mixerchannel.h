@@ -1,5 +1,6 @@
 #ifndef _MIXER_CHANNEL_H_
 #define _MIXER_CHANNEL_H_
+#include <pthread.h>
 #include "list.h"
 
 
