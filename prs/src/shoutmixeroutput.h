@@ -39,5 +39,6 @@ shout_mixer_output_new (const char *name,
 			shout_t *s,
 			const int stereo,
 			list *args_list,
-			const char *archive_file_name);
+			const char *archive_file_name,
+			double retry_delay);
 #endif

@@ -514,6 +514,7 @@ scheduler_schedule_next_event (scheduler *s)
 			t->end_time = i->end_time;
 			t->end_prefade = stack_entry->t->end_prefade;
 			t->fallback_id = -1;
+			t->handle_overlap = HANDLE_OVERLAP_FADE;
 			stack_entry->event_number++;
 			if (stack_entry->event_number > stack_entry->length && !stack_entry->t->repeat_events) {
 				scheduler_pop_template (s);

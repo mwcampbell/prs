@@ -45,6 +45,7 @@
 
 typedef struct {
 	shout_t *shout;
+	int retry_delay;
 	pid_t encoder_pid;
 	int encoder_output_fd;
 	int encoder_input_fd;
@@ -193,13 +194,25 @@ shout_thread (void *data)
 {
 	MixerOutput *o = NULL;
 	shout_info *i = NULL;
+	int retry_delay;
+	int blocks_waited = 0;
+	int connected = 0;
 	char buffer[1024];
 	char *tmp;
 	int bytes_read, bytes_left;
-
+	
 	assert (data != NULL);
 	o = (MixerOutput *) data;
 	i = (shout_info *) o->data;
+
+	/*
+	 *
+	 * Guess roughly how many blocks to wait before retrying the
+	 * connection if it's disconnected
+	 *
+	 */
+
+	retry_delay = (double)(shout_get_bitrate(i->shout)*1000/8/1024)*i->retry_delay;
 
 	while (!i->stream_reset) {
 		tmp = buffer;
@@ -212,7 +225,32 @@ shout_thread (void *data)
 			tmp += bytes_read;
 			bytes_left -= bytes_read;
 		}
-		shout_send (i->shout, buffer, 1024-bytes_left);
+		if (!connected && !(blocks_waited%retry_delay)) {
+			int rv;
+
+			debug_printf (DEBUG_FLAGS_GENERAL, "Attempting to connect to server.\n");
+			rv = shout_open (i->shout);
+			if (!rv) {
+				connected = 1;
+				debug_printf (DEBUG_FLAGS_GENERAL, "Connected to server.\n");
+			}
+			else {
+				debug_printf (DEBUG_FLAGS_GENERAL,
+					      "Server connection attempt failed: %s\n", shout_get_error (i->shout));
+				blocks_waited = 0;
+			}
+		}
+		else if (connected) {
+			int rv = shout_send (i->shout, buffer, 1024-bytes_left);
+			if (rv) {
+				debug_printf (DEBUG_FLAGS_GENERAL, "Error sending data to server: %s\n", shout_get_error (i->shout));
+				shout_close (i->shout);
+				connected = 0;
+				blocks_waited = 0;
+			}
+		}
+		else
+			blocks_waited++;
 		if (i->archive_file_fd > 0)
 			write (i->archive_file_fd, buffer, 1024-bytes_left);
 		if (bytes_left > 0)
@@ -249,7 +287,8 @@ shout_mixer_output_new (const char *name,
 			shout_t *s,
 			const int stereo,
 			list *encoder_args,
-			const char *archive_file_name)
+			const char *archive_file_name,
+			double retry_delay)
 {
 	MixerOutput *o;
 	shout_info *i;
@@ -274,6 +313,8 @@ shout_mixer_output_new (const char *name,
 	else
 		i->archive_file_fd = -1;
 
+	i->retry_delay = retry_delay;
+
 	o = malloc (sizeof (MixerOutput));
 	if (!o) {
 		free (i);
@@ -294,12 +335,6 @@ shout_mixer_output_new (const char *name,
 	mixer_output_alloc_buffer (o, latency);
 
 	i->shout_thread_id = 0;
-	if (shout_open (i->shout))
-	{
-		fprintf (stderr, "Couldn't connect to icecast server.\n");
-		mixer_output_destroy (o);
-		return NULL;
-	}
 	start_encoder (o);
 	return o;
 }

@@ -57,7 +57,8 @@ stream_config (mixer *m, xmlNodePtr cur)
 
 	while (cur != NULL) {
 		if (!xmlStrcmp (cur->name, "stream")) {
-			
+			double retry_delay;
+
 			/* create the shout connection */
 
 			s = shout_new ();
@@ -105,7 +106,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 					shout_set_protocol (s, SHOUT_PROTOCOL_ICY);
 				if (!xmlStrcmp (tmp, "ice"))
 					shout_set_protocol (s, SHOUT_PROTOCOL_ICE);
-				}
+			}
 			tmp = xmlGetProp (cur, "format");
 			if (!xmlStrcmp (tmp, "mp3"))
 				shout_set_format (s, SHOUT_FORMAT_MP3);
@@ -126,6 +127,11 @@ stream_config (mixer *m, xmlNodePtr cur)
 				channels = atoi (tmp);
 			else
 				channels = 2;
+			tmp = xmlGetProp (cur, "retry_delay");
+			if (tmp)
+				retry_delay = atof (tmp);
+			else
+				retry_delay = 10.0;
 			archive_file_name = xmlGetProp (cur, "archive_file_name");
 			name = xmlGetProp (cur, "name");
 
@@ -142,7 +148,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 				child = child->next;
 			}
 			o = shout_mixer_output_new (name, rate, channels,
-						    m->latency, s, stereo, args, archive_file_name);
+						    m->latency, s, stereo, args, archive_file_name, retry_delay);
 			mixer_add_output (m, o);
 		}
 		cur = cur->next;
