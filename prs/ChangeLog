@@ -1,3 +1,8 @@
+2003-01-06  Marc Mulcahy  <marc@plbb.net>
+
+	* src/shoutmixeroutput.c (shout_thread): Ensure 4k buffers are sent
+	to the server.
+
 2003-01-04  Marc Mulcahy  <marc@plbb.net>
 
 	* src/mixer.ch (mixer_set_default_level): Allows a default level to

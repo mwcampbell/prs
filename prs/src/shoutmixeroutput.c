@@ -162,22 +162,28 @@ shout_thread (void *data)
 {
 	MixerOutput *o = NULL;
 	shout_info *i = NULL;
-	char buffer[1024];
-	int bytes_read;
+	char buffer[4096];
+	char *tmp;
+	int bytes_read, bytes_left;
 
 	assert (data != NULL);
 	o = (MixerOutput *) data;
 	i = (shout_info *) o->data;
 
 	while (!i->stream_reset) {
-		bytes_read = read (i->encoder_output_fd, buffer, 1024);
-		if (bytes_read < 0)
-			debug_printf (DEBUG_FLAGS_MIXER,
-				      "read error in shout thread: %s\n",
-				      strerror (errno));
-		if (bytes_read > 0) {
-			shout_send (i->shout, buffer, bytes_read);
+		tmp = buffer;
+		bytes_left = 4096;
+
+		while (bytes_left) {
+			bytes_read = read (i->encoder_output_fd, tmp, bytes_left);
+			if (bytes_read <= 0)
+				break;
+			tmp += bytes_read;
+			bytes_left -= bytes_read;
 		}
+		shout_send (i->shout, buffer, 4096-bytes_left);
+	if (bytes_left > 0)
+		i->stream_reset = 1;
 	}
 	fprintf (stderr, "Shout thread exiting...\n");
 }
