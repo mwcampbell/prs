@@ -140,7 +140,7 @@ mixer_main_thread (void *data)
 			if (ch->data_end_reached) {
 
 				/* Get rid of this channel */
-
+				
 				debug_printf (DEBUG_FLAGS_MIXER,
 					      "mixer: end of data for %s\n",
 					      ch->name);

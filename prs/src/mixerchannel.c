@@ -172,8 +172,6 @@ mixer_channel_get_data (MixerChannel *ch)
 
 	pthread_mutex_lock (&(ch->mutex));
 	rv = ch->get_data (ch);
-	if (rv < ch->chunk_size && ch->data_reader_thread == 0)
-		ch->data_end_reached = 1;
 	ch->input += rv*ch->channels;
 	if (ch->input >= ch->buffer_end)
 		ch->input = ch->buffer;
@@ -200,9 +198,6 @@ mixer_channel_process_levels (MixerChannel *ch)
 	ch->this_chunk_size  /= ch->channels;
 	if (ch->this_chunk_size >= ch->chunk_size)
 		ch->this_chunk_size = ch->chunk_size;
-	else if (ch->space_left != ch->buffer_size) {
-		ch->data_end_reached = 1;
-	}
 	if (ch->level != 1.0 || ch->fade != 1.0) {
 		if (ch->level != 1.0 || ch->fade != 1.0) {
 			tmp = ch->output;

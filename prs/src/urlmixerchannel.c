@@ -63,6 +63,7 @@ typedef struct {
 
 	char *url;
 	char *transfer_url;
+	char *archive_file_name;
 	int archive_file_fd;
 	
 	int connected;
@@ -115,7 +116,8 @@ channel_info_destroy (channel_info *i)
 	pthread_mutex_lock (&(i->mutex));
 	i->destroyed = 1;
 	pthread_mutex_unlock (&(i->mutex));
-	pthread_join (&(i->transfer_thread), NULL);
+	if (i->transfer_thread > 0)
+		pthread_join (&(i->transfer_thread), NULL);
 	
 	if (i->url)
 		free (i->url);
@@ -181,9 +183,12 @@ url_mixer_channel_get_data (MixerChannel *ch)
 			rv = 0;
 			break;
 		}
+		i->bad_blocks = 0;
 		remainder -= rv/sizeof(short);
 		tmp += rv/sizeof(short);
 	}
+	if (i->bad_blocks > 100)
+		ch->data_end_reached = 1;
 	return ch->chunk_size-(remainder/ch->channels);
 }
 
@@ -239,7 +244,7 @@ start_mp3_decoder (channel_info *i)
 	pipe (input);
 	pipe (output);
 	fcntl (output[0], F_SETFL, O_NONBLOCK);
-	fcntl (input[1], F_SETFL, O_NONBLOCK);
+//	fcntl (input[1], F_SETFL, O_NONBLOCK);
 	
 	pid = fork ();
 	if (pid == 0) {
@@ -307,7 +312,7 @@ mp3_process_first_block (channel_info *i,
 			mp3_header_parse (ulong_header, &mh);
 			if (mh.syncword == 0X0FFF &&
 			    mh.version > 0 && mh.layer > 0 &&
-			    mh.bitrate > 0 && mh.samplerate > 0) {
+			    mh.samplerate > 0) {
 				rv = buf;
 				break;
 			}
@@ -411,10 +416,19 @@ curl_write_func (void *ptr,
 	if (i->decoder_connected)
 		write (decoder_input_fd, (void *) buf, bytes_to_process);
 	pthread_mutex_lock (&(i->mutex));
+	if (i->destroyed)
+		close (i->decoder_input_fd);
 	if (connected)
 		bytes_sent += mem*size;
 	if (i->bytes_sent <= 4096 && bytes_sent > 4096 && connected) {
 		pthread_cond_broadcast (&(i->cond));
+		if (i->archive_file_name) {
+			i->archive_file_fd = open (i->archive_file_name, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
+			if (i->archive_file_fd <= 0)
+				i->archive_file_fd = -1;
+		}
+		else
+			i->archive_file_fd = -1;
 	}
 	i->bytes_sent = bytes_sent;
 	pthread_mutex_unlock (&(i->mutex));
@@ -445,7 +459,6 @@ curl_transfer_thread_func (void *data)
 			i->ch->data_end_reached = 1;
 	}
 	pthread_cond_broadcast (&(i->cond));
-	i->transfer_thread = -1;
 	pthread_mutex_unlock (&(i->mutex));
 }
 
@@ -465,6 +478,7 @@ url_mixer_channel_new (const char *name,
 	if (!i)
 		return NULL;
 
+	i->transfer_thread = 0;
 	i->url = strdup (location);
 	i->transfer_url = NULL;
 	i->rate = -1;
@@ -474,13 +488,12 @@ url_mixer_channel_new (const char *name,
 	/* Open archive file */
 
 	if (archive_file_name) {
-		i->archive_file_fd = open (archive_file_name, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
-		if (i->archive_file_fd <= 0)
-			i->archive_file_fd = -1;
-		}
+		i->archive_file_name = strdup (archive_file_name);
+	}
 	else
-		i->archive_file_fd = -1;
-
+		i->archive_file_name = NULL;
+	i->archive_file_fd = -1;
+	
         /* Set pid and fds to invalid */
 
 	i->decoder_pid = -1;
