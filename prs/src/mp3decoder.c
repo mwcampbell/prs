@@ -38,19 +38,19 @@
 
 
 MP3Decoder *
-mp3_decoder_new (const char *filename, int start_frame)
+mp3_decoder_new (const char *filename, double start_time)
 {
 	MP3Decoder *d = NULL;
 	int decoder_output[2] = {-1, -1};
 	int rv = -1;
-	char start_frame_str[10] = "0";
+	char start_time_str[10] = "0";
 
 	assert (filename != NULL);
 	debug_printf (DEBUG_FLAGS_CODEC,
 		      "mp3_decoder_new (\"%s\", %d)\n",
 		      filename, start_frame);
 	assert (start_frame >= 0);
-	sprintf (start_frame_str, "%d", start_frame);
+	sprintf (start_time_str, "%lf", start_time);
 
 	/* Create pipe */
 
@@ -76,7 +76,7 @@ mp3_decoder_new (const char *filename, int start_frame)
 		open ("/dev/null", O_WRONLY);
 		close (decoder_output[0]);
 		close (decoder_output[1]);
-		execlp ("mpg321", "mpg321", "-q", "-s", "-k", start_frame_str,
+		execlp ("madplay", "madplay", "-q", "-o", "raw:-", "-s", start_time_str,
 			filename, NULL);
 		debug_printf (DEBUG_FLAGS_CODEC,
 			      "mp3_decoder_new: exec failed: %s\n",

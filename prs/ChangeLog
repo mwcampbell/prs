@@ -1,3 +1,8 @@
+2003-07-12 Marc Mulcahy  <marc@plbb.net>
+
+	* src/mp3decoder.c src/mp3decoder.h: 
+	Switch to using madplay.  Decoder creation now takes a time rather than a frame number to start.
+	
 2003-04-24  Marc Mulcahy  <marc@plbb.net>
 
 	* src/multibandaudiocompressor.ch: Suppport linking bands together.
