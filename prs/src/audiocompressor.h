@@ -9,9 +9,7 @@ audio_compressor_new (int rate,
 		      double threshhold,
 		      double ratio,
 		      double attack_time,
-		      double release_time,
-		      double output_gain);
-
+		      double release_time);
 
 
 #endif

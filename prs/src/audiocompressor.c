@@ -88,8 +88,7 @@ audio_compressor_new (int rate,
 		      double threshhold,
 		      double ratio,
 		      double attack_time,
-		      double release_time,
-		      double output_gain)
+		      double release_time)
 {
   AudioFilter *f = audio_filter_new (rate, channels, buffer_size);
   CompressorData *d = malloc (sizeof (CompressorData));
@@ -103,7 +102,6 @@ audio_compressor_new (int rate,
   d->ratio = ratio;
   d->threshhold = threshhold;
   d->ithreshhold = pow (10.0, threshhold/20)*32767;
-  d->output_gain = output_gain;
   
   /* Convert attack/release times to sample-based values */
 
@@ -111,6 +109,7 @@ audio_compressor_new (int rate,
   compression_amount = pow (10.0, compression_amount/20);
   d->attack_time = pow (compression_amount, 1/(rate*attack_time));
   d->release_time = 1/pow (compression_amount, 1/(rate*release_time));
+  d->output_gain = 1/compression_amount*.66;
   
   f->data = d;
   f->process_data = audio_compressor_process_data;

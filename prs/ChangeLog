@@ -1,3 +1,8 @@
+2002-08-12  Marc Mulcahy <marc@plbb.net>
+
+	* src/audiocompressor.c src/audiocompressor.h: Automatically compute
+	output gain.
+
 2002-08-11  Marc Mulcahy <marc@plbb.net>
 
 	* src/audiocompressor.c: Fixed audio compressor again.

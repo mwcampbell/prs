@@ -173,6 +173,7 @@ setup_streams (mixer *m)
   char stream_name[1024];
   MixerOutput *o;
   shout_conn_t *new;
+  AudioFilter *f;
   
   for (i = 1; i <= 5; i++)
     {
@@ -183,8 +184,16 @@ setup_streams (mixer *m)
 	shout_mixer_output_set_connection (o, new);
       else if (new)
 	{
-	o = shout_mixer_output_new (stream_name, 44100, 2, new);
-	mixer_add_output (m, o);
+	  f = audio_compressor_new (44100, 2,
+				    44100*2*MIXER_LATENCY,
+				    -20,
+				    5.0,
+				    .01,
+				    2,
+				    2);
+	  o = shout_mixer_output_new (stream_name, 44100, 2, new);
+	  mixer_output_add_filter (o, f);
+	  mixer_add_output (m, o);
 	}
     }
 }
@@ -196,7 +205,6 @@ int main (void)
   mixer *m;
   MixerOutput *o;
   MixerChannel *ch;
-  AudioFilter *f;
   pthread_t playlist_thread;
   char input[81];
   int done = 0;
@@ -207,17 +215,9 @@ int main (void)
   m = mixer_new ();
   mixer_sync_time (m);
   setup_streams (m);
-  f = audio_compressor_new (44100, 2,
-			    44100*2*MIXER_LATENCY,
-			    -20,
-			    5.0,
-			    .1,
-			    2,
-			    2);
   o = oss_mixer_output_new ("soundcard",
 			    44100,
 			    2);
-  mixer_output_add_filter (o, f);
  mixer_add_output (m, o);
   
   
