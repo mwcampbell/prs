@@ -753,7 +753,7 @@ mixer_fade_channel (mixer *m,
 		return;
 
 	mixer_lock (m);
-	ch->fade = pow (fade_destination/ch->level, 1/(ch->rate*fade_time));
+	ch->fade = pow ((fade_destination+.001)/(ch->level+.001), 1/(ch->rate*fade_time));
 	ch->fade_destination = fade_destination;
 	mixer_unlock (m);
 }
@@ -778,8 +778,7 @@ mixer_fade_all (mixer *m,
 	for (tmp = m->channels; tmp; tmp = tmp->next) {
 		ch = (MixerChannel *) tmp->data;
 		assert (ch != NULL);
-		fprintf (stderr, "Fade is pow (%lf, %lf)\n", level/ch->level, 1/(ch->rate*fade_time));
-		ch->fade = pow (level/ch->level, 1.0/(ch->rate*fade_time));
+		ch->fade = pow ((level+.001)/(ch->level+.001), 1.0/(ch->rate*fade_time));
 		ch->fade_destination = level;
 		fprintf (stderr, "Fading %s %lf %lf.\n", ch->name, ch->fade, ch->fade_destination);
 	}
