@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include "mixerautomation.h"
+#include "db.h"
 
 
 
@@ -34,6 +35,24 @@ automation_event_destroy (AutomationEvent *e)
   if (e->detail2)
     free (e->detail2);
   free (e);
+}
+
+
+
+static void
+mixer_automation_log_event (MixerAutomation *a,
+			    AutomationEvent *e)
+{
+  Recording *r;
+
+  switch (e->type)
+    {
+      case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
+	r = find_recording_by_path (e->detail1);
+      add_log_entry (r->id, (int) a->last_event_time, (int) e->length);
+      recording_free (r);
+      break;
+    }
 }
 
 
@@ -131,9 +150,10 @@ mixer_automation_next_event (MixerAutomation *a)
     default:
       abort ();
     }
-  automation_event_destroy (e);
   a->events = list_delete_item (a->events, a->events);
   a->last_event_time = mixer_get_time (a->m);
+  mixer_automation_log_event (a, e);
+  automation_event_destroy (e);
   pthread_mutex_unlock (&(a->mut));
 }
 

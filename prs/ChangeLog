@@ -1,5 +1,9 @@
 2002-08-03  Marc Mulcahy <marc@plbb.net>
 
+	* src/db.c src/db.h src/mixerautomation.c: Added logging.
+
+2002-08-03  Marc Mulcahy <marc@plbb.net>
+
 	* src/scheduler.c src/scheduler.h: made scheduler thread-safe.
 
 2002-08-03  Marc Mulcahy <marc@plbb.net>

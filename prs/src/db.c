@@ -856,20 +856,20 @@ void
 create_config_status_tables (list *read_only_users,
 			     list *total_access_users)
 {
-char *config_create_query = 
+  char *config_create_query = 
   "create table config (
       config_key varchar (256),
       config_value varchar (256));";
- char *status_create_query = "create table status (
+  char *status_create_query = "create table status (
       status_key varchar (256),
-status_value varchar (256));";
+      status_value varchar (256));";
 
- create_table ("config",
+  create_table ("config",
 	      config_create_query,
 	      read_only_users,
 	      total_access_users,
 	      1);
- create_table ("status",
+  create_table ("status",
 	      status_create_query,
 	      read_only_users,
 	      total_access_users,
@@ -974,4 +974,42 @@ set_status_value (const char *key,
 
 
 
+int
+check_log_table (void)
+{
+  return (does_table_exist ("log"));
+}
 
+
+
+void
+create_log_table (list *read_only_users,
+		  list *total_access_users)
+{
+  char *log_create_query =
+    "create table log (
+      recording_id int,
+      start_time int,
+      length int)";
+
+  create_table ("log",
+		log_create_query,
+		read_only_users,
+		total_access_users,
+		1);  
+}
+
+
+
+void
+add_log_entry (int recording_id,
+	       int start_time,
+	       int length)
+{
+  PGresult *res;
+  char buffer[1024];
+
+  sprintf (buffer, "insert into log values (%d, %d, %d);", recording_id, start_time, length);
+  res = PQexec (connection, buffer);
+  PQclear (res);
+}

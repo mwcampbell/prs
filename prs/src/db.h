@@ -232,4 +232,22 @@ set_status_value (const char *key, const char *value);
 
 
 
+/*
+ *
+ * Log table
+ *
+ */
+
+int
+check_log_table (void);
+void
+create_log_table (list *read_only_users,
+		  list *total_access_users);
+void
+add_log_entry (int recording_id,
+	       int start_time,
+	       int length);
+
+
+
 #endif

@@ -51,6 +51,8 @@ int main (void)
     create_playlist_tables (NULL, users);
   if (!check_config_status_tables ())
     create_config_status_tables (NULL, users);
+  if (!check_log_table ())
+    create_log_table (NULL, users);
   
   /* Loop through all files found */
 
