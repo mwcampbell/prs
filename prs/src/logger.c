@@ -203,7 +203,7 @@ live365_log_file (void *data)
 		      CURLFORM_COPYCONTENTS, d->album,
 		      CURLFORM_END);
 	curl_formadd (&post, &end,
-		      CURLFORM_COPYNAME, "time",
+		      CURLFORM_COPYNAME, "seconds",
 		      CURLFORM_COPYCONTENTS, d->length,
 		      CURLFORM_END);
 	curl_easy_setopt (url, CURLOPT_HTTPPOST, post);
