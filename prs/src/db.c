@@ -440,7 +440,6 @@ get_playlist_template (double cur_time)
   time_of_day = cur_time-day_start;
   
   sprintf (buffer, "select * from playlist_template where start_time <= %lf and end_time > %lf;", time_of_day, time_of_day);
-  fprintf (stderr, "%s\n", buffer);
   res = PQexec (connection, buffer);
   if (PQntuples (res) != 1)
     {
@@ -454,7 +453,6 @@ get_playlist_template (double cur_time)
   
   t->start_time += day_start;
   t->end_time += day_start;
-  fprintf (stderr, "Template start time %lf, end time %lf.\n", t->start_time, t->end_time);
   return t;
 }
 
@@ -817,7 +815,6 @@ recording_picker_select (RecordingPicker *p,
   if (PQntuples (res) <= 0)
     {
       PQclear (res);
-      fprintf (stderr, "Query failed\n%s\n", buffer);
       return NULL;
     }
   n = rand ()%PQntuples (res);

@@ -1,3 +1,7 @@
+2002-07-29  Marc Mulcahy <marc@plbb.net>
+
+	* src/ db.c src/prs_server.c: Delete debug fprintf statements.
+
 2002-07-29  Marc Mulcahy <marc.mulcahy@sun.com>
 
 	* src/mixer.c: Made mixer_fade_channel_fade fail if a fade is

@@ -281,7 +281,6 @@ process_playlist_event (PlaylistTemplate *t,
 
       e->start_time = last_start_time = me->start_time;
       e->end_time = last_end_time = me->end_time;
-      fprintf (stderr, "Inserted event at %lf.\n", me->start_time);
       mixer_insert_event (m, me);
       return me->start_time;
     }
@@ -305,11 +304,9 @@ execute_playlist_template (PlaylistTemplate *t,
     return cur_time;
 
   p = recording_picker_new (t->artist_exclude, t->recording_exclude);
-  fprintf (stderr, "Startting template %s...\n", t->name);
   do
     {
       length = list_length (t->events);
-      fprintf (stderr, "Processing events in template %s...\n", t->name);
       for (i = 1; i <= length; i++)
 	{
 	  start_time = process_playlist_event (t,
@@ -338,7 +335,6 @@ execute_playlist_template (PlaylistTemplate *t,
 	  me->end_time = t->end_time;
 	  me->type = MIXER_EVENT_TYPE_FADE_ALL;
 	  mixer_insert_event (m, me);
-	  fprintf (stderr, "Event failed at %ld.\n", i);
 	  cur_time = t->end_time;
 	  me = (MixerEvent *) malloc (sizeof (MixerEvent));
 	  memset (me, 0, sizeof (MixerEvent));
