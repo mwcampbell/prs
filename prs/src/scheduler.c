@@ -502,7 +502,8 @@ scheduler_schedule_next_event (scheduler *s)
 		i->m = s->a->m;
 		i->a = s->a;
 		pthread_create (&url_manager_thread, NULL, url_manager, (void *) i);
-		
+		pthread_detach (url_manager_thread);		
+
 		/* Switch to fallback template and schedule backup program */
 
 		if (stack_entry->t->fallback_id != -1) {
