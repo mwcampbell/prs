@@ -58,8 +58,10 @@ config (Database **db, const char *filename)
 	cur = cur->xmlChildrenNode;
 	while (cur)
 	{
-		if (!xmlStrcmp (cur->name, "db"))
-			*db = db_from_config (cur);
+		if (!xmlStrcmp (cur->name, "db")) {
+			*db = db_new ();
+			db_from_config (cur, *db);
+		}
 		cur = cur->next;
 	}  
 	xmlFreeDoc (doc);

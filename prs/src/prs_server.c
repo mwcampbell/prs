@@ -210,7 +210,6 @@ main (int argc, char *argv[])
 
   free (malloc(8));
 
-  debug_set_flags (DEBUG_FLAGS_ALL);
   debug_printf (DEBUG_FLAGS_ALL,
 		"Prs started as pid %d\n", getpid ());
   if (argc > 1)

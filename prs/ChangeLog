@@ -1,3 +1,7 @@
+2003-02-07  Marc Mulcahy  <marc@plbb.net>
+
+	* Tweaks to get all the new database stuff working.
+
 2004-02-06  Marc Mulcahy  <marc@plbb.net>
 
 	* Applied Matt's patch to add SQLite support.

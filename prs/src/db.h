@@ -16,7 +16,10 @@ typedef struct _Database Database;
 Database *
 db_new (void);
 Database *
-db_from_config (xmlNodePtr cur);
+db_new (void);
+void
+db_from_config (xmlNodePtr cur,
+		Database *db);
 void
 db_close (Database *db);
 

@@ -76,26 +76,33 @@ db_close (Database *db)
 }
 
 Database *
-db_from_config (xmlNodePtr cur)
+db_new (void)
 {
-	Database *db = NULL;
+	Database *db;
+
+	db = (Database *) malloc (sizeof (Database));
+	assert (db != NULL);
+	db->db = NULL;
+	pthread_mutex_init (&(db->mutex), NULL);
+	return db;
+}
+
+void
+db_from_config (xmlNodePtr cur,
+		Database *db)
+{
 	xmlChar *filename = xmlGetProp (cur, "filename");
 	char *err;
 	if (filename == NULL)
 		filename = xmlStrdup ("prs.db");
 	debug_printf (DEBUG_FLAGS_DATABASE,
 		      "creating database object; filename = %s\n", filename);
-	db = (Database *) malloc (sizeof (Database));
-	assert (db != NULL);
-	pthread_mutex_init (&(db->mutex), NULL);
 	db->db = sqlite_open (filename, 1, &err);
 	if (db->db == NULL) {
 		fprintf (stderr, "Unable to open database: %s\n", err);
 		exit (EXIT_FAILURE);
-		return NULL;
 	}
 	xmlFree (filename);
-	return db;
 }
 
 
@@ -544,11 +551,11 @@ get_playlist_template (Database *db, double cur_time)
 	char *schedule_query =
     "select schedule.template_id, template_name, repeat_events, handle_overlap,"
     "artist_exclude, recording_exclude, start_time,"
-    "elength, repetition, fallback_id,"
+    "length, repetition, fallback_id,"
     "end_prefade from playlist_template, schedule "
     "where playlist_template.template_id = schedule.template_id and "
     "((repetition = 0 and start_time <= %lf and start_time+length > %lf) or"
-    "(repetition != 0 and start_time <= %lf and mod(%lf-start_time-(daylight*3600)+%d, repetition) < length))"
+    "(repetition != 0 and start_time <= %lf and (%lf-start_time-(daylight*3600)+%d)%(repetition) < length))"
     "order by time_slot_id desc";
 	daylight = is_daylight (cur_time);
 	assert (db != NULL);
@@ -946,7 +953,7 @@ recording_picker_select (RecordingPicker *p,
 			 double cur_time)
 {
 	list *tmp;
-	char *buffer;
+	char buffer[2048];
 	char category_part[1024];
 	int n;
 	Recording *r;
@@ -957,18 +964,21 @@ recording_picker_select (RecordingPicker *p,
       "length, audio_in, audio_out "
       "from recording, artist, category "
       "where recording.artist_id = artist.artist_id and "
-      "recording.category_id = category.category_id";
+      "recording.category_id = category.category_id ";
 	time_t ct;
 	PickerQueryData pdata;
 	QueryCallbackData rdata;
     
 	assert (p != NULL);
 	assert (p->db != NULL);
+
 	rdata.db = p->db;
 	rdata.l = NULL;
+
 	debug_printf (DEBUG_FLAGS_DATABASE,
 		      "recording_picker_select: cur_time=%f\n", cur_time);
 
+	strcpy (buffer, select_query);
 	db_lock (p->db);
 	ct = cur_time;
 	*category_part = 0;
@@ -981,11 +991,12 @@ recording_picker_select (RecordingPicker *p,
 			sprintf (temp, " and (category_name = '%s'", s);
 		strcat (category_part, temp);
 	}
-	if (category_list)
+	if (category_list) {
 		strcat (category_part, ")");
+		strcat (buffer, category_part);
+	}
 	if (cur_time >= 0) {
-		list *artists = NULL, *recordings = NULL;
-		int artists_strlen = 0, recordings_strlen = 0, first;
+		char exclude_part[1024];
 		char temp[1024];
 
 		/* Delete old items from exclude tables */
@@ -1000,74 +1011,12 @@ recording_picker_select (RecordingPicker *p,
 			 p->artist_exclude_table_name,
 			 (long) (cur_time-p->artist_exclude));
 		db_execute (p->db, temp, NULL, NULL);
-		sprintf (temp, "select artist_name from %s",
-			 p->artist_exclude_table_name);
-		pdata.first = 1;
-		pdata.strlen_p = &artists_strlen;
-		pdata.lp = &artists;
-		db_execute (p->db, temp, picker_query_cb, &pdata);
-		sprintf (temp, "select recording_id from %s",
-			 p->recording_exclude_table_name);
-		pdata.first = 0;
-		pdata.strlen_p = &recordings_strlen;
-		pdata.lp = &recordings;
-		db_execute (p->db, temp, picker_query_cb, &pdata);
-		buffer = malloc (artists_strlen + recordings_strlen + 2048);
-		assert (buffer != NULL);
-		strcpy (buffer, select_query);
-		if (category_list)
-			strcat (buffer, category_part);
-		strcat (buffer, " and recording.recording_id not in (");
-		first = 1;
-
-		for (tmp = recordings; tmp; tmp = tmp->next)
-		{
-			if (first)
-				first = 0;
-			else
-				strcat (buffer, ", ");
-
-			strcat (buffer, tmp->data);
-		}
-
-		if (first)
-			strcat (buffer, "null");
-		strcat (buffer, ") and artist_name not in (");
-		first = 1;
-
-		for (tmp = artists; tmp; tmp = tmp->next)
-		{
-			char *tmp_str = process_for_sql (tmp->data);
-
-			if (first)
-				first = 0;
-			else
-				strcat (buffer, ", ");
-
-			strcat (buffer, "'");
-			strcat (buffer, tmp_str);
-			strcat (buffer, "'");
-			free (tmp_str);
-		}
-
-		if (first)
-			strcat (buffer, "null");
-		strcat (buffer, ")");
-		string_list_free (artists);
-		string_list_free (recordings);
-	}
-	else
-	{
-		buffer = malloc (2048);
-		assert (buffer != NULL);
-		strcpy (buffer, select_query);
-		if (category_list)
-			strcat (buffer, category_part);
+		sprintf (exclude_part, " and recording.recording_id not in (select recording_id from %s) and artist_name not in (select artist_name from %s)", p->recording_exclude_table_name, p->artist_exclude_table_name);
+		strcat (buffer, exclude_part);
 	}
 	db_execute (p->db, buffer, &recording_query_cb, &rdata);
 	if (rdata.l == NULL)
 	{
-		free (buffer);
 		db_unlock (p->db);
 		debug_printf (DEBUG_FLAGS_DATABASE, "no recording found\n");
 		return NULL;
@@ -1089,7 +1038,6 @@ recording_picker_select (RecordingPicker *p,
 		free (artist_name);
 	}  
 
-	free (buffer);
 	db_unlock (p->db);
 	return r;
 }
