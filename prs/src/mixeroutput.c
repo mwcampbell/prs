@@ -33,16 +33,16 @@ mixer_output_destroy (MixerOutput *o)
 {
 	assert (o != NULL);
 	debug_printf (DEBUG_FLAGS_MIXER, "mixer_output_destroy called\n");
-	if (o->name)
-		free (o->name);
-	if (o->buffer)
-		free (o->buffer);
 	if (o->free_data)
 		o->free_data (o);
 	else {
 		if (o->data)
 			free (o->data);
 	}
+	if (o->name)
+		free (o->name);
+	if (o->buffer)
+		free (o->buffer);
 	free (o);
 }
 
