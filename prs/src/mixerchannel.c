@@ -163,8 +163,8 @@ mixer_channel_get_data (MixerChannel *ch)
 {
 	int rv;
 
-	pthread_mutex_lock (&(ch->mutex));
 	rv = ch->get_data (ch);
+	pthread_mutex_lock (&(ch->mutex));
 	ch->input += rv*ch->channels;
 	if (ch->input >= ch->buffer_end)
 		ch->input = ch->buffer;

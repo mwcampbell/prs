@@ -43,7 +43,9 @@ soundcard_setup (int rate,
 
 	/* Setup sound card */
 
-	fragment_size = log ((latency/44100.0)*rate*channels*sizeof (short))/log (2);
+	fcntl (soundcard_fd, F_SETFL, O_NONBLOCK);
+
+fragment_size = log ((latency/44100.0)*rate*channels*sizeof (short))/log (2);
 	tmp = 0x00040000|fragment_size;
 	if (ioctl (soundcard_fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0) {
 		perror ("ioctl on sound card failed");

@@ -1,3 +1,22 @@
+2004-02-08  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixerchannel.c (data_reader): Unlock the mutex during the
+	read, so that if it blocks the mixer doesn't block (duh).
+	
+	* src/soundcard.c (soundcard_setup): Put soundcard in nonblocking mode.
+
+2004-02-08  Marc Mulcahy  <marc@plbb.net>
+
+	* src/db.c (playlist_template_query_cb): The scheduler now uses
+	length internally in the database, so adjust for that when
+	creating the PlaylistTemplate internal structure from a database
+	result row.
+
+	* src/db.c (get_playlist_template): Sometimes a scheduler query
+	returns more than one valid template.  allow for this, and pick
+	the most recent addition.
+	
+
 2003-02-07  Marc Mulcahy  <marc@plbb.net>
 
 	* Tweaks to get all the new database stuff working.
