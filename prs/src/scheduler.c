@@ -146,10 +146,10 @@ scheduler_switch_templates (scheduler *s)
 		double start_delta;
 
 		if (s->prev_event_end_time >= e->t->end_time)
-			start_time = e->t->end_time;
+			start_time = e->t->end_time-e->t->end_prefade;
 		else
 			start_time = mixer_get_time (s->a->m);
-		start_delta = start_time-s->prev_event_start_time-e->t->end_prefade;
+		start_delta = start_time-s->prev_event_start_time;
 		ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
 		ae->delta_time = start_delta;
 		ae->length = e->t->end_prefade;
@@ -563,6 +563,7 @@ scheduler_main_thread (void *data)
 		while (current < target) {
 			current = scheduler_schedule_next_event (s);
 		}
+		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler sleeping for %lf seconds\n", current-target-s->preschedule);
 		usleep ((current-target-s->preschedule)*1000000);
 		target = current;
 	}
