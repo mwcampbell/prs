@@ -62,4 +62,5 @@ debug_printf (int flags,
 	}
 	free (timestring);
 	va_end (args);
+	fflush (stdout);
 }
