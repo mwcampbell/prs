@@ -24,9 +24,11 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -65,11 +67,15 @@ mp3_decoder_new (const char *filename, int start_frame)
 
 	rv = fork ();
 	if (!rv) {
+		signal (SIGPIPE, SIG_DFL);
 		close (0);
 		close (1);
 		close (2);
-		dup2 (decoder_output[1], 1);
+		open ("/dev/null", O_RDONLY);
+		dup (decoder_output[1]);
+		open ("/dev/null", O_WRONLY);
 		close (decoder_output[0]);
+		close (decoder_output[1]);
 		execlp ("mpg321", "mpg321", "-q", "-s", "-k", start_frame_str,
 			filename, NULL);
 		debug_printf (DEBUG_FLAGS_CODEC,
@@ -129,6 +135,5 @@ mp3_decoder_destroy (MP3Decoder *d)
 	debug_printf (DEBUG_FLAGS_CODEC,
 		      "mp3_decoder_destroy called\n");
 	close (d->fd);
-	kill (d->pid, SIGTERM);
 	free (d);
 }

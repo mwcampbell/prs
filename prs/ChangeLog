@@ -1,3 +1,8 @@
+2003-02-12  Matt Campbell  <mattcampbell@pobox.com>
+
+	* src/mp3decoder.c: Made a couple of fixes to ensure that decoder
+	processes and open file descriptors aren't left lying around.
+
 2003-01-30  Marc Mulcahy  <marc@plbb.net>
 
 	* src/scheduler.c (scheduler_schedule_next_event): Fix for path
