@@ -309,7 +309,7 @@ url_manager (void *data)
 		}
 		else {
 			if (ch->fade_destination != 1.0)
-				mixer_fade_channel (i->m, i->url 1.0, 1.0);
+				mixer_fade_channel (i->m, i->url, 1.0, 1.0);
 			ch = NULL;
 		}
 		usleep (retry_sleep_delay);
