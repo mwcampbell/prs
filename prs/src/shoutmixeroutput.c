@@ -80,6 +80,7 @@ start_encoder (MixerOutput *o)
 					sample_rate_arg,
 					bitrate_arg,
 					"-x",
+					"-q0",
 					"-",
 					"-",
 					NULL);
