@@ -84,7 +84,8 @@ mixer_enable_channel (mixer *m,
 		      const char *channel_name,
 		      int enabled);
 void
-mixer_delete_all_channels (mixer *m);
+mixer_delete_channels (mixer *m,
+		       const int key);
 MixerChannel *
 mixer_get_channel (mixer *m,
 		   const char *channel_name);

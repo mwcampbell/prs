@@ -103,7 +103,8 @@ mixer_channel_new (const int rate,
 	ch->level = 1.0;
 	ch->fade = 0.0;
 	ch->fade_destination = 1.0;
-
+	ch->key = -1;
+	
 	/* Overrideable functions */
 
 	ch->free_data = NULL;

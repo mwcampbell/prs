@@ -32,6 +32,7 @@ typedef struct _MixerChannel MixerChannel;
 
 
 struct  _MixerChannel {
+	int key;
 	char *name;
 	char *location;
 	int enabled;

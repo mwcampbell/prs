@@ -34,23 +34,24 @@
 
 
 typedef enum {
-  AUTOMATION_EVENT_TYPE_UNDEFINED,
-  AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL,
-  AUTOMATION_EVENT_TYPE_FADE_CHANNEL,
-  AUTOMATION_EVENT_TYPE_FADE_ALL,
-  AUTOMATION_EVENT_TYPE_DELETE_ALL  
+	AUTOMATION_EVENT_TYPE_UNDEFINED,
+	AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL,
+	AUTOMATION_EVENT_TYPE_FADE_CHANNEL,
+	AUTOMATION_EVENT_TYPE_FADE_ALL,
+	AUTOMATION_EVENT_TYPE_DELETE_CHANNELS
 } AUTOMATION_EVENT_TYPE;
 
 
 
 typedef struct {
-  AUTOMATION_EVENT_TYPE type;
-  double delta_time;
-  double length;
-  char *channel_name;
-  double level;
-  char *detail1;
-  char *detail2;
+	AUTOMATION_EVENT_TYPE type;
+	double delta_time;
+	double length;
+	char *channel_name;
+	double level;
+	int data;
+	char *detail1;
+	char *detail2;
 } AutomationEvent;
 
 
@@ -63,14 +64,14 @@ automation_event_destroy (AutomationEvent *e);
 
 
 typedef struct {
-  mixer *m;
-  Database *db;
+	mixer *m;
+	Database *db;
 
-  pthread_mutex_t mut;
-  int running;
-  pthread_t automation_thread;
-  double last_event_time;
-  list *events;
+	pthread_mutex_t mut;
+	int running;
+	pthread_t automation_thread;
+	double last_event_time;
+	list *events;
 } MixerAutomation;
 
 
@@ -82,7 +83,7 @@ mixer_automation_destroy (MixerAutomation *a);
 int
 mixer_automation_add_event (MixerAutomation *a,
 			    AutomationEvent *e);
-			    void
+void
 mixer_automation_next_event (MixerAutomation *a);
 int
 mixer_automation_start (MixerAutomation *a);

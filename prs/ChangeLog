@@ -1,5 +1,13 @@
 2003-01-16  Marc Mulcahy  <marc@plbb.net>
 
+	* src/mixerchannel.ch:  Added a key member to the MixerChannel
+	structure, and added a function to delete channels based on this key.
+
+	* src/mixerautomation.c: Added a data member to the AutomationEvent\
+	structure so we can include integer data with an automation event.
+	This will initially be used for deleting channels created for use in
+	a specific template.
+
 	* src/prs.c (prs_start): Switch to 60 second prescheduling.
 
 	* src/scheduler.c (scheduler_main_thread): Use sleep instead of

@@ -175,8 +175,8 @@ mixer_automation_next_event (MixerAutomation *a)
 	case AUTOMATION_EVENT_TYPE_FADE_ALL:
 		mixer_fade_all (a->m, e->level, e->length);
 		break;
-	case AUTOMATION_EVENT_TYPE_DELETE_ALL:
-		mixer_delete_all_channels (a->m);
+	case AUTOMATION_EVENT_TYPE_DELETE_CHANNELS:
+		mixer_delete_channels (a->m, e->data);
 		break;
 	}
 	a->events = list_delete_item (a->events, a->events);

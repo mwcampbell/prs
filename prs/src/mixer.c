@@ -691,7 +691,8 @@ mixer_patch_channel_all (mixer *m,
 
 
 void
-mixer_delete_all_channels (mixer *m)
+mixer_delete_channels (mixer *m,
+		       const int key)
 {
 	list *tmp;
 
@@ -704,10 +705,12 @@ mixer_delete_all_channels (mixer *m)
 		list *next = tmp->next;
 		MixerChannel *ch = (MixerChannel *) tmp->data;
 		assert (ch != NULL);
-		m->channels = list_delete_item (m->channels, tmp);
-		debug_printf (DEBUG_FLAGS_MIXER,
-			      "deleted channel %s\n", ch->name);
-		mixer_channel_destroy (ch);
+		if (ch->key == key) {
+			m->channels = list_delete_item (m->channels, tmp);
+			debug_printf (DEBUG_FLAGS_MIXER,
+				      "deleted channel %s\n", ch->name);
+			mixer_channel_destroy (ch);
+		}
 		tmp = next;
 	}
 	mixer_unlock (m);
