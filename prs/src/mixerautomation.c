@@ -78,6 +78,7 @@ mixer_automation_new (mixer *m, Database *db)
 	a->last_event_time = mixer_get_time (m);
 	a->automation_thread = 0;
 	a->running = 0;
+	a->l = NULL;
 	pthread_mutex_init (&(a->mut), NULL);
 	debug_printf (DEBUG_FLAGS_AUTOMATION, "Automation object created.\n");
 	return a;
@@ -93,7 +94,7 @@ mixer_automation_destroy (MixerAutomation *a)
 		return;
 	if (a->automation_thread > 0) {
 		a->running = 0;
-		pthread_join (&(a->automation_thread), NULL);
+		pthread_join (a->automation_thread, NULL);
 	}
 	for (tmp = a->events; tmp; tmp = tmp->next)
 	{
@@ -117,8 +118,14 @@ mixer_automation_add_event (MixerAutomation *a,
 		e->delta_time = 0;
 	pthread_mutex_lock (&(a->mut));
 	if (!a->events)
-		if (a->running)
+		if (a->running) {
+			double cur_time = mixer_get_time (a->m);
+			if (cur_time > a->last_event_time+e->delta_time) {
+				e->delta_time = 0;
+				a->last_event_time = cur_time;
+				}
 			mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
+		}
 	a->events = list_append (a->events, e);
 	pthread_mutex_unlock (&(a->mut));
 	switch (e->type) {
@@ -168,6 +175,8 @@ mixer_automation_next_event (MixerAutomation *a)
 			
 			mixer_patch_channel_all (a->m, e->channel_name);
 			mixer_enable_channel (a->m, e->channel_name, 1);
+		if (a->l)
+			logger_log_file (a->l, ch->location);
 		}
 		break;
 	case AUTOMATION_EVENT_TYPE_FADE_CHANNEL:
@@ -381,4 +390,16 @@ mixer_automation_get_last_event_end (MixerAutomation *a)
 	}
 	pthread_mutex_unlock (&(a->mut));
 	return rv;
+}
+
+
+void
+mixer_automation_add_logger (MixerAutomation *a,
+			     logger *l)
+{
+	if (!a || !l)
+		return;
+	pthread_mutex_lock (&(a->mut));
+	a->l = l;
+	pthread_mutex_unlock (&(a->mut));
 }

@@ -18,20 +18,38 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  *
- * vorbisfileinfo.h: Retrieve metadata from Ogg Vorbis files.
+ * logger.h: Header for the logger object.
  *
  */
+#ifndef _LOGGER_H
+#define _LOGGER_H
 
-#ifndef _VORBIS_FILE_INFO_H_
-#define _VORBIS_FILE_INFO_H_
-#include "fileinfo.h"
-
-
+#include "db.h"
 
 
-FileInfo *
-vorbis_file_info_new (const char *path,
-		      const unsigned short in_threshhold,
-		      const unsigned short out_threshhold);
-  
+typedef enum {
+	LOGGER_TYPE_LIVE365
+} LOGGER_TYPE;
+
+
+typedef struct {
+	LOGGER_TYPE type;
+	char *url;
+	char *username;
+	char *password;
+} logger;
+
+
+logger *
+logger_new (const LOGGER_TYPE type,
+	    const char *url,
+	    const char *username,
+	    const char *password);
+void
+logger_destroy (logger *l);
+void
+logger_log_file (logger *l,
+		 const char *path);
+
+
 #endif

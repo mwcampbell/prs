@@ -31,6 +31,7 @@
 #include "db.h"
 #include "mixerautomation.h"
 #include "scheduler.h"
+#include "logger.h"
 
 
 
@@ -43,6 +44,7 @@ typedef struct
 	int telnet_interface;
 	int telnet_port;
 	char *password;;
+	logger *logger;
 	pthread_t speex_connection_thread;
 	
 }

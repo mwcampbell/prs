@@ -31,7 +31,7 @@
 
 
 FileInfo *
-mp3_file_info_new (char *path, unsigned short in_threshhold,
-		   unsigned short out_threshhold);
+mp3_file_info_new (const char *path, const unsigned short in_threshhold,
+		   const unsigned short out_threshhold);
   
 #endif

@@ -36,6 +36,7 @@
 #include "ossmixerchannel.h"
 #include "shoutmixeroutput.h"
 #include "filemixeroutput.h"
+#include "logger.h"
 
 
 
@@ -351,6 +352,21 @@ telnet_config (PRS *prs, xmlNodePtr cur)
 
 
 
+static logger *
+logger_config (xmlNodePtr cur)
+{
+	LOGGER_TYPE type;
+	xmlChar *username = xmlGetProp (cur, "username");
+	xmlChar *password = xmlGetProp (cur, "password");
+	xmlChar *type_string = xmlGetProp (cur, "type");
+
+	if (!xmlStrcmp (type_string, "live365")) {
+		return logger_new (LOGGER_TYPE_LIVE365, NULL,
+				   username, password);
+	}
+}
+
+
 int
 prs_config (PRS *prs, const char *filename)
 {
@@ -377,6 +393,11 @@ prs_config (PRS *prs, const char *filename)
 			telnet_config (prs, cur);
 		else if (!xmlStrcmp (cur->name, "db"))
 			db_config (prs->db, cur);
+		else if (!xmlStrcmp (cur->name, "logger")) {
+			prs->logger = logger_config (cur);
+			mixer_automation_add_logger (prs->automation,
+						     prs->logger);
+		}
 		cur = cur->next;
 	}  
 	xmlFreeDoc (doc);

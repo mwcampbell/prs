@@ -43,9 +43,9 @@ typedef struct {
 	double audio_out;
 } FileInfo;
 
-typedef FileInfo * (*FileInfoConstructor) (char *path,
-					   unsigned short in_threshhold,
-					   unsigned short out_threshhold);
+typedef FileInfo * (*FileInfoConstructor) (const char *path,
+					   const unsigned short in_threshhold,
+					   const unsigned short out_threshhold);
 
 FileInfo * 
 file_info_new (const char *path,

@@ -126,6 +126,7 @@ prs_new (void)
 	prs->automation = mixer_automation_new (prs->mixer, prs->db);
 	prs->scheduler = scheduler_new (prs->automation, prs->db,
 					mixer_get_time (prs->mixer));
+	prs->logger = NULL;
 	return prs;
 }
 
