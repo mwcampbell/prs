@@ -54,6 +54,9 @@ start_encoder (MixerOutput *o)
 		char channels_arg[128];
 		char bitrate_arg[128];
       
+		sprintf (bitrate_arg, "-b%d", shout_get_bitrate (i->shout));
+		i->args_list = string_list_prepend (i->args_list, bitrate_arg);
+
 		if (shout_get_format (i->shout) == SHOUT_FORMAT_MP3) {
 			prog_name = "lame";
 			sprintf (sample_rate_arg, "-s%lf", (double) o->rate/1000);
@@ -81,12 +84,15 @@ start_encoder (MixerOutput *o)
 					     channels_arg);
 		}
 		
-		sprintf (bitrate_arg, "-b%d", shout_get_bitrate (i->shout));
-		i->args_list = string_list_prepend (i->args_list, bitrate_arg);
 		i->args_list = string_list_prepend (i->args_list,
 						    "-");
+		if (shout_get_format (i->shout) == SHOUT_FORMAT_MP3)
+			i->args_list = string_list_prepend (i->args_list,
+							    "-");
+		i->args_list = list_reverse (i->args_list);
 		i->args_list = string_list_prepend (i->args_list,
-						    "-");
+						    prog_name);
+		args_array = string_list_to_array (i->args_list);
 		close (0);
 		dup (encoder_input[0]);
 		close (encoder_input[1]);
@@ -96,10 +102,6 @@ start_encoder (MixerOutput *o)
 		dup (encoder_output[1]);
 		close (encoder_output[0]);
 
-		i->args_list = list_reverse (i->args_list);
-		i->args_list = string_list_prepend (i->args_list,
-						    prog_name);
-		args_array = string_list_to_array (i->args_list);
 		execvp (prog_name, args_array);
 	}
 	else {
