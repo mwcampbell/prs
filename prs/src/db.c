@@ -3,6 +3,8 @@
  *
  * Copyright 2003 Marc Mulcahy
  *
+ * db.c: Implementation of the PRS interface to the MySQL database.
+ *
  */
 
 #include <assert.h>
@@ -125,7 +127,7 @@ db_config (Database *db, xmlNodePtr cur)
 	password = xmlGetProp (cur, "password");
 	name = xmlGetProp (cur, "name");
 	db_connect (db, host, user, password,
-		    (name ? name : "prs"));
+		    (name) ? name : "prs");
 	if (name)
 		xmlFree (name);
 	if (host)
@@ -373,26 +375,26 @@ void
 create_recording_tables (Database *db)
 {
 	char *artist_create_query = 
-		"create table artist (
-      artist_id int primary key auto_increment,
-      artist_name varchar (200))";
+      "create table artist ("
+      "artist_id int primary key auto_increment,"
+      "artist_name varchar (200))";
 	char *category_create_query = 
-		"create table category (
-      category_id int primary key auto_increment,
-      category_name varchar (128))";
+      "create table category "
+      "category_id int primary key auto_increment,"
+      "category_name varchar (128))";
 	char *recording_create_query =
-		"create table recording (
-      recording_id int primary key auto_increment,
-      recording_name varchar (255),
-      recording_path varchar (255),
-      artist_id int,
-      category_id int,
-      date varchar (20),
-      rate int,
-      channels int,
-      length double,
-      audio_in double,
-      audio_out double)";
+      "create table recording ("
+      "recording_id int primary key auto_increment,"
+      "recording_name varchar (255),"
+      "recording_path varchar (255),"
+      "artist_id int,"
+      "category_id int,"
+      "date varchar (20),"
+      "rate int,"
+      "channels int,"
+      "length double,"
+      "audio_in double,"
+      "audio_out double)";
 
 	assert (db != NULL);
 	db_lock (db);
@@ -470,40 +472,40 @@ void
 create_playlist_tables (Database *db)
 {
 	char *playlist_template_create_query =
-		"create table playlist_template (
-      template_id int primary key auto_increment,
-      template_name varchar (100),
-      repeat_events int,
-      handle_overlap int,
-      artist_exclude double,
-      recording_exclude double)";
+      "create table playlist_template ("
+      "template_id int primary key auto_increment,"
+      "template_name varchar (100),"
+      "repeat_events int,"
+      "handle_overlap int,"
+      "artist_exclude double,"
+      "recording_exclude double)";
 	char *create_schedule_query =
-		"create table schedule (
-    time_slot_id int primary key auto_increment,
-    start_time double,
-    length double,
-    repetition double,
-    daylight int,
-    template_id int,
-    fallback_id int,
-    end_prefade double)";
+    "create table schedule ("
+    "time_slot_id int primary key auto_increment,"
+    "start_time double,"
+    "length double,"
+    "repetition double,"
+    "daylight int,"
+    "template_id int,"
+    "fallback_id int,"
+    "end_prefade double)";
 
 	char *create_playlist_event_query =
-		"create table playlist_event (
-      template_id int,
-      event_number int,
-      event_name varchar (100),
-      event_type varchar (20),
-      event_channel_name varchar (100),
-      event_level double,
-      event_anchor_event_number int,
-      event_anchor_position int,
-      event_offset double,
-      detail1 varchar (64),
-      detail2 varchar (64),
-      detail3 varchar (64),
-      detail4 varchar (64),
-      detail5 varchar (64))";
+      "create table playlist_event ("
+      "template_id int,"
+      "event_number int,"
+      "event_name varchar (100),"
+      "event_type varchar (20),"
+      "event_channel_name varchar (100),"
+      "event_level double,"
+      "event_anchor_event_number int,"
+      "event_anchor_position int,"
+      "event_offset double,"
+      "detail1 varchar (64),"
+      "detail2 varchar (64),"
+      "detail3 varchar (64),"
+      "detail4 varchar (64),"
+      "detail5 varchar (64))";
 
 	assert (db != NULL);
 	db_lock (db);
@@ -583,14 +585,14 @@ get_playlist_template (Database *db, double cur_time)
 	int daylight;
 	double repetition;
 	char *schedule_query =
-    "select schedule.template_id, template_name, repeat_events, handle_overlap,
-    artist_exclude, recording_exclude, start_time,
-    length, repetition, fallback_id,
-    end_prefade from playlist_template, schedule
-    where playlist_template.template_id = schedule.template_id and
-    ((repetition = 0 and start_time <= %lf and start_time+length > %lf) or
-    (repetition != 0 and start_time <= %lf and mod(%lf-start_time-(daylight*3600)+%d, repetition) < length))
-    order by time_slot_id desc";
+    "select schedule.template_id, template_name, repeat_events, handle_overlap,"
+    "artist_exclude, recording_exclude, start_time,"
+    "length, repetition, fallback_id,"
+    "end_prefade from playlist_template, schedule"
+    "where playlist_template.template_id = schedule.template_id and"
+    "((repetition = 0 and start_time <= %lf and start_time+length > %lf) or"
+    "(repetition != 0 and start_time <= %lf and mod(%lf-start_time-(daylight*3600)+%d, repetition) < length))"
+    "order by time_slot_id desc";
 
 	daylight = is_daylight (cur_time);
 	assert (db != NULL);
@@ -726,12 +728,12 @@ void
 create_user_table (Database *db)
 {
 	char *prs_users_create_query =
-		"create table prs_user (
-      user_id int primary key auto_increment,
-      user_name varchar (20),
-      password varchar (20),
-      email varchar (255),
-      type varchar (20))";
+      "create table prs_user ("
+      "user_id int primary key auto_increment,"
+      "user_name varchar (20),"
+      "password varchar (20),"
+      "email varchar (255),"
+      "type varchar (20))";
 
 	assert (db != NULL);
 	db_lock (db);
@@ -758,15 +760,15 @@ add_recording (Recording *r, Database *db)
 	char *category_name;
 	char *recording_date;
 	char *recording_insert_query =
-		"insert into recording
-      (recording_name,
-      recording_path, artist_id,
-      category_id, date,
-      rate, channels,
-      length, audio_in,
-       audio_out) values (
-      '%s', '%s', %d, %d, '%s',
-      %d, %d, %lf, %lf, %lf)";
+      "insert into recording"
+      "(recording_name,"
+      "recording_path, artist_id,"
+      "category_id, date,"
+      "rate, channels,"
+      "length, audio_in,"
+       "audio_out) values ("
+      "'%s', '%s', %d, %d, '%s',"
+      "%d, %d, %lf, %lf, %lf)";
       
 	assert (r != NULL);
 	assert (db != NULL);
@@ -853,13 +855,13 @@ find_recording_by_path (Database *db, const char *path)
 	char buffer[1024];
 	char *recording_path;
 	char *select_query = 
-		"select recording_id, recording_name, recording_path,
-      artist_name, category_name, date,
-      rate, channels,
-      length, audio_in, audio_out
-      from recording, artist, category
-      where recording.artist_id = artist.artist_id and
-      recording.category_id = category.category_id";
+      "select recording_id, recording_name, recording_path,"
+      "artist_name, category_name, date,"
+      "rate, channels,"
+      "length, audio_in, audio_out"
+      "from recording, artist, category"
+      "where recording.artist_id = artist.artist_id and"
+      "recording.category_id = category.category_id";
 
 	assert (db != NULL);
 	assert (path != NULL);
@@ -995,13 +997,13 @@ recording_picker_select (RecordingPicker *p,
 	int n;
 	Recording *r;
 	char *select_query = 
-		"select recording_id, recording_name, recording_path,
-      artist_name, category_name, date,
-      rate, channels,
-      length, audio_in, audio_out
-      from recording, artist, category
-      where recording.artist_id = artist.artist_id and
-      recording.category_id = category.category_id";
+      "select recording_id, recording_name, recording_path,"
+      "artist_name, category_name, date,"
+      "rate, channels,"
+      "length, audio_in, audio_out"
+      "from recording, artist, category"
+      "where recording.artist_id = artist.artist_id and"
+      "recording.category_id = category.category_id";
 	time_t ct;
     
 	assert (p != NULL);
@@ -1192,10 +1194,10 @@ void
 create_log_table (Database *db)
 {
 	char *log_create_query =
-		"create table log (
-      recording_id int,
-      start_time int,
-      length int)";
+      "create table log ("
+      "recording_id int,"
+      "start_time int,"
+      "length int)";
 
 	assert (db != NULL);
 	db_lock (db);
