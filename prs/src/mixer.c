@@ -56,10 +56,8 @@ mixer_main_thread (void *data)
 			break;
 		}
 		if (m->notify_time > 0 && m->cur_time >= m->notify_time) {
-			pthread_cond_signal (&(m->notify_condition));
-			pthread_cond_wait (&(m->notify_condition),
-					   &(m->mutex));
-			m->notify_time = -1.0;
+		  pthread_cond_signal (&(m->notify_condition));
+		  m->notify_time = -1.0;
 		}
 		for (tmp = m->busses; tmp; tmp = tmp->next) {
 			MixerBus *b = (MixerBus *) tmp->data;
@@ -716,13 +714,11 @@ mixer_wait_for_notification (mixer *m,
 	if (!m)
 		return;
 	mixer_lock (m);
-	m->notify_time = notify_time;
-	if (m->notify_time > 0 && m->notify_time < m->cur_time) {
-		m->notify_time = -1.0;
+	if (m->notify_time > 0 && notify_time < m->cur_time) {
 		mixer_unlock (m);
 		return;
 	}
+	m->notify_time = notify_time;
 	pthread_cond_wait (&(m->notify_condition), &(m->mutex));
-	pthread_cond_signal (&(m->notify_condition));
 	mixer_unlock (m);
 }
