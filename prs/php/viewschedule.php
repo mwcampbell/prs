@@ -56,6 +56,15 @@ html_start ($title);
           (repetition != 0 and start_time <= $cur_time and mod($cur_time-start_time-(daylight*3600)+$daylight, repetition) < length))
           order by time_slot_id desc";
 		$res = db_query ($query);
+		if (!$res) {
+			$query = "select start_time from schedule where start_time > $cur_time and start_time < $end_time";
+			$res = db_query ($query);
+			if (!$res)
+				break;
+			$row = mysql_fetch_assoc ($res);
+			$cur_time = $row["start_time"];
+			continue;
+		}
 		$row = mysql_fetch_assoc ($res);
 		$time_slot_id = $row["time_slot_id"];
 		$start_time = $row["start_time"];
@@ -110,8 +119,6 @@ html_start ($title);
 </td>
 <?
 	  mysql_free_result ($res);
-	  if ($length == 0)
-		  break;
 	  $cur_time += $length;
 }
 ?>

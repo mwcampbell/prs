@@ -12,9 +12,10 @@ else if ($action == 2) { /* Modify time slot */
 		html_error ("Error-- either start or end time is out of range");
 		exit ();
 	}
-	$query = "update schedule set start_time = $start_time, end_time = $end_time, template_id = $template_id where time_slot_id = $time_slot_id";
+	$length = $end_time-$start_time;
+	$query = "update schedule set start_time = $start_time, length = $length, template_id = $template_id where time_slot_id = $time_slot_id";
 }
 if ($query)
-db_query ($query);
+        db_query ($query);
 redirect ("viewschedule.php");
 ?>
