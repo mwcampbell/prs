@@ -172,18 +172,19 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 		buffer_end = f->buffer+f->buffer_size*f->channels;
 		while (iptr < buffer_end)
 		{
-			long val = abs(*iptr++);
-			if (val > peak1)
-				peak1 = val;
+			long val = *iptr++;
+			peak1 += val*val;
 			if (f->channels == 2)
 			{
-				long val = abs(*iptr++);
-				if (val > peak2)
-					peak2 = val;
+				long val = *iptr++;
+				peak2 += val*val;
 			}
 		}
+		peak1 = sqrt(peak1);
 		if (f->channels == 1)
 			peak2 = peak1;
+		else
+			peak2 = sqrt(peak2);
 		peak = ((peak1+peak2)/2)*(1-b->link)+
 			((prev_peak1+prev_peak2)/2)*b->link;
 		if (peak  > b->ithreshhold)

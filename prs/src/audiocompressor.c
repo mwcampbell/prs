@@ -52,17 +52,18 @@ audio_compressor_process_data (AudioFilter *f,
 	iptr = input;
 	buffer_end = input+input_length;
 	while (iptr < buffer_end) {
-		long val = abs(*iptr++);
-		if (val > peak1)
-			peak1 = val;
+		long val = *iptr++;
+		peak1 += val*val;
 		if (f->channels == 2) {
-			long val = abs(*iptr++);
-			if (val > peak2)
-				peak2 = val;
+			long val = *iptr++;
+			peak2 += val*val;
 		}
 	}
+	peak1 = sqrt (peak1);
 	if (f->channels == 1)
 		peak2 = peak1;
+	else
+		peak2 = sqrt(peak2);
 	if ((float)(peak1+peak2)/2 > d->ithreshhold) {
 		float peak_gain = log10 ((float)(peak1+peak2)/2/32767)*20;
 		float delta = d->threshhold-peak_gain;
