@@ -12,11 +12,14 @@ if (!$event_number) {
 	$event_number = $row["max"] + 1;
 	mysql_free_result ($res);
 }
+
 else {
 	$update_event = "yes";
 }
+
 if (!$event_name)
         $event_name = "event $event_number";
+
 html_start ("Add Path Event");
 ?>
 <form name="event" action="createevent.php" method="post">

@@ -76,6 +76,10 @@ while ($row = mysql_fetch_assoc ($res)) {
 <?
 	  if ($event_type == "random" || $event_type == "simple_random")
 		  echo " action=\"randomevent.php\">\n";
+	if ($event_type == "path")
+		  echo " action=\"pathevent.php\">\n";
+	if ($event_type == "url")
+		  echo " action=\"urlevent.php\">\n";
 ?>
 <input type="hidden" name="launched_from" id="launched_from" value="viewer">
 <input type = "hidden" name="template_id" id="template_id" value="<? echo $template_id ?>">

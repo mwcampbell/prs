@@ -22,6 +22,7 @@
 #include "mixeroutput.h"
 #include "vorbismixerchannel.h"
 #include "mp3mixerchannel.h"
+#include "wavemixerchannel.h"
 
 
 
@@ -35,11 +36,12 @@ typedef struct {
 } channel_type_constructor_link;
 
 
-#define N_LINKS 2
+#define N_LINKS 3
 
 channel_type_constructor_link type_links[N_LINKS] = {
 	{".mp3", mp3_mixer_channel_new},
-	{".ogg", vorbis_mixer_channel_new}
+	{".ogg", vorbis_mixer_channel_new},
+	{".wav", wave_mixer_channel_new}
 };
 
 

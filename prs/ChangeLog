@@ -1,3 +1,39 @@
+2004-02-13  Marc Mulcahy  <marc@plbb.net>
+
+	* Added support for editting path and url events from the web
+	interface.
+	
+	* Merged in wavemixerchannel support from the mysql branch.
+	
+2004-02-13  Marc Mulcahy  <marc@plbb.net>
+
+	* src/wavefileinfo.c (get_wave_audio_in): No ampersand on buffer
+	reads.
+	(get_wave_audio_out): No ampersand on buffer reads.
+
+	* src/wavemixerchannel.c (wave_mixer_channel_new): Fixed.
+
+	* src/mixerchannel.c (mixer_channel_new): Ensure resampler doesn't
+	get short-changed on nonstandard rates.  Hackish fix for audio
+	issues with nonstandard rates.
+
+2004-02-12  Marc Mulcahy  <marc@plbb.net>
+
+	* src/fileinfo.c: Add support for .wav files.
+
+	* src/mixer.c: Add support for .wav files.
+	
+	* src/wavemixerchannel.ch: Add .wav file support to the mixer.
+	
+2004-02-11  Marc Mulcahy  <marc@plbb.net>
+
+	* src/db.c (create_recording_tables): Fix busted query to create category table.
+	
+2004-02-11  Marc Mulcahy  <marc@plbb.net>
+
+	* src/Makefile.am (prs_server_SOURCES): Add .h files to the
+	distribution.
+
 2004-02-08  Marc Mulcahy  <marc@plbb.net>
 
 	* src/mixerchannel.c (data_reader): Unlock the mutex during the
@@ -16,7 +52,6 @@
 	returns more than one valid template.  allow for this, and pick
 	the most recent addition.
 	
-
 2003-02-07  Marc Mulcahy  <marc@plbb.net>
 
 	* Tweaks to get all the new database stuff working.

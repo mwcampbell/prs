@@ -13,6 +13,7 @@
 #include "fileinfo.h"
 #include "vorbisfileinfo.h"
 #include "mp3fileinfo.h"
+#include "wavefileinfo.h"
 
 
 typedef struct {
@@ -21,12 +22,13 @@ typedef struct {
 } extension_constructor_link;
 
 
-#define SUPPORTED_EXTENSIONS 3
+#define SUPPORTED_EXTENSIONS 4
 
 extension_constructor_link links[] = {
 	{".mp2", mp3_file_info_new},
 	{".mp3", mp3_file_info_new},
-	{".ogg", vorbis_file_info_new}
+	{".ogg", vorbis_file_info_new},
+	{".wav", wave_file_info_new}
 };
 
 

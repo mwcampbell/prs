@@ -25,12 +25,12 @@ get_wave_audio_in (FILE *fp,
 	double audio_in = 0.0;
 	int done = 0;
   
-	buffer_size = format_chunk->samples_per_second;
+	buffer_size = format_chunk->samples_per_second*sizeof(short);
 	buffer = (char *) malloc (buffer_size);
 
 	fseek (fp, WAVE_HEADER_SIZE, SEEK_SET);
 	while (!done) {
-		bytes_read = fread (&buffer, buffer_size, 1, fp);
+		bytes_read = fread (buffer, buffer_size, 1, fp);
 		end_buffer = buffer+bytes_read;
 		ptr = (short *) buffer;
 		while (ptr < (short *) end_buffer) {
@@ -62,7 +62,7 @@ get_wave_audio_out (FILE *fp,
 	double audio_out;
 	double seek_time;
   
-	buffer_size = format_chunk->samples_per_second*10;
+	buffer_size = format_chunk->samples_per_second*sizeof(short)*10;
 	buffer = (char *) malloc (buffer_size);
 
 	seek_time = data_chunk_header->len/sizeof(short)/format_chunk->samples_per_second;
@@ -74,7 +74,7 @@ get_wave_audio_out (FILE *fp,
 	       WAVE_HEADER_SIZE+(seek_time*sizeof(short)*format_chunk->samples_per_second),
 	       SEEK_SET);
 	
-	bytes_read = fread (&buffer, buffer_size, 1, fp);
+	bytes_read = fread (buffer, buffer_size, 1, fp);
 	end_buffer = buffer+bytes_read;
 	ptr = (short *) end_buffer-1;
 	while (ptr > (short *) buffer) {
