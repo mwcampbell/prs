@@ -78,6 +78,8 @@ audio_compressor_process_data (AudioFilter *f,
 				peak2 = val;
 		}
 	}
+	if (f->channels == 1)
+		peak2 = peak1;
 	if ((double)(peak1+peak2)/2 > d->ithreshhold) {
 		double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;
 		double delta = d->threshhold-peak_gain;

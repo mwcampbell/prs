@@ -120,11 +120,11 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 			{
 				in = *iptr;
 				out =
-					b->a1[0]*in +
-					b->a1[1]*b->x2[0] +
-					b->a1[2]*b->x2[1] -
-					b->b1[0]*b->y2[0] -
-					b->b1[1]*b->y2[1];
+					b->a2[0]*in +
+					b->a2[1]*b->x2[0] +
+					b->a2[2]*b->x2[1] -
+					b->b2[0]*b->y2[0] -
+					b->b2[1]*b->y2[1];
 				if (out > 32767)
 					out = 32767;
 				else if (out < -32768)
