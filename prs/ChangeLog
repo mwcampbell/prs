@@ -1,5 +1,7 @@
 2002-12-20  Matt Campbell  <mattcampbell@pobox.com>
 
+	* src/debug.c: Now includes sys/time.h instead of time.h.
+
 	* Added debug messages and assertions, improved error handling,
 	and did some other cleaup.
 
