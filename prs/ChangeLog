@@ -1,5 +1,8 @@
 2002-11-20  Marc Mulcahy  <marc@plbb.net>
 
+	* src/mp3fileinfo.c (get_mp3_file_info): Fix to build against id3lib
+	v3.8.1.
+	
 	* configure.in: Fixed mysql Autoconf support (I think).
 
 2002-11-19  Marc Mulcahy  <marc@plbb.net>
