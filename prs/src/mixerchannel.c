@@ -43,21 +43,23 @@ data_reader (void *data)
 		/* Copy chnanel variables into our local space */
 
 		int space_left;
+		int data_end_reached;
 		int chunk_size;
 		void *get_data;
 		
 		pthread_mutex_lock (&(ch->mutex));
 		space_left = ch->space_left;
+		data_end_reached = ch->data_end_reached;
 		chunk_size = ch->chunk_size;
 		get_data = ch->get_data;
 		pthread_mutex_unlock (&(ch->mutex));
 		
-		if (!ch->data_input_end_reached && space_left && ch->get_data) {
+		if (!data_end_reached && space_left && ch->get_data) {
 			int rv = mixer_channel_get_data (ch);
-			if (ch->data_input_end_reached)
+			if (rv < chunk_size)
 				done = 1;
 		}
-		else if (!ch->data_input_end_reached)
+		else if (!data_end_reached)
 			usleep ((double)(ch->chunk_size/ch->rate)*1000000);
 		else
 			done = 1;
@@ -98,7 +100,7 @@ mixer_channel_new (const int rate,
 
 	ch->patchpoints = NULL;
 	ch->enabled = 0;
-	ch->data_end_reached = ch->data_input_end_reached = 0;
+	ch->data_end_reached = 0;
 	ch->level = 1.0;
 	ch->fade = 1.0;
 	ch->fade_destination = 1.0;

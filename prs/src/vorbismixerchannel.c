@@ -62,8 +62,6 @@ vorbis_mixer_channel_get_data (MixerChannel *ch)
 		remainder -= rv / sizeof (short);
 		tmp += rv / sizeof (short);
 	}
-	if (remainder)
-		ch->data_input_end_reached = 1;
 	return ch->chunk_size-(remainder/ch->channels);
 }
 

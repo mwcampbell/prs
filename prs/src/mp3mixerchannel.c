@@ -44,8 +44,6 @@ mp3_mixer_channel_get_data (MixerChannel *ch)
 	assert (d != NULL);
 	rv = mp3_decoder_get_data (d, ch->input, ch->chunk_size*ch->channels);
 
-	if (rv <= 0)
-		ch->data_input_end_reached = 1;
 	return rv/ch->channels;
 }
 

@@ -63,7 +63,6 @@ struct  _MixerChannel {
 
 	/* end of data indicator */
 
-	int data_input_end_reached;
 	int data_end_reached;
 
 	void *data;
