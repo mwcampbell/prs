@@ -42,6 +42,7 @@ typedef struct {
 #define SUPPORTED_EXTENSIONS 2
 
 extension_constructor_link links[] = {
+	{".mp2", mp3_file_info_new},
 	{".mp3", mp3_file_info_new},
 	{".ogg", vorbis_file_info_new}
 };
