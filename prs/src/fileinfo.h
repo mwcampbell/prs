@@ -20,7 +20,8 @@ typedef struct {
 } FileInfo;
 
 typedef FileInfo * (*FileInfoConstructor) (char *path,
-					   unsigned short threshhold);
+					   unsigned short in_threshhold,
+					   unsigned short out_threshhold);
 
 void
 file_info_free (FileInfo *info);

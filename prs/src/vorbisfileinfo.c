@@ -151,7 +151,8 @@ process_vorbis_comments (OggVorbis_File *vf,
 
 FileInfo *
 get_vorbis_file_info (char *path,
-		      unsigned short threshhold)
+		      unsigned short in_threshhold,
+		      unsigned short out_threshhold)
 {
   FILE *fp;
   OggVorbis_File vf;
@@ -187,12 +188,12 @@ get_vorbis_file_info (char *path,
   info->length = ov_time_total(&vf, -1);
   process_vorbis_comments (&vf, info);
   
-  if (threshhold > 0)
-    info->audio_in = get_vorbis_audio_in (&vf, threshhold);
+  if (in_threshhold > 0)
+    info->audio_in = get_vorbis_audio_in (&vf, in_threshhold);
   else
     info->audio_in = -1.0;
-  if (threshhold > 0)
-    info->audio_out = get_vorbis_audio_out (&vf, threshhold);
+  if (out_threshhold > 0)
+    info->audio_out = get_vorbis_audio_out (&vf, out_threshhold);
   else
     info->audio_out = -1.0;
   

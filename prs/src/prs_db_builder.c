@@ -81,7 +81,7 @@ main (int argc, char *argv[])
 
       if (!recording_table_created)
 	{
-	  i = get_file_info (path, 0);
+	  i = get_file_info (path, 0, 0);
 	  r = find_recording_by_path (path);
 	  if (r && abs (i->length-r->length) <= .001 &&
 	      !strcmp (r->category, argc > 3 ? argv[3] : i->genre) &&
@@ -97,12 +97,12 @@ main (int argc, char *argv[])
 	      delete_recording (r);
 	      recording_free (r);
 	    }
-	  i = get_file_info (path, 1000);
+	  i = get_file_info (path, 1000, 2000);
 	  r = (Recording *) malloc (sizeof(Recording));
 	}
       else
 	{
-	  i = get_file_info (path, 1000);
+	  i = get_file_info (path, 1000, 2000);
 	  r = (Recording *) malloc (sizeof(Recording));
 	}
       if (i->name)

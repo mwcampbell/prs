@@ -123,7 +123,8 @@ get_mp3_audio_out (FileInfo *info, mp3info *mp3, int threshhold)
 
 
 FileInfo *
-get_mp3_file_info (char *path, unsigned short threshhold)
+get_mp3_file_info (char *path, unsigned short in_threshhold,
+		   unsigned short out_threshhold)
 {
   mp3info mp3;
   FileInfo *info;
@@ -176,11 +177,10 @@ get_mp3_file_info (char *path, unsigned short threshhold)
 	}
     }
   
-  if (threshhold > 0)
-    {
-      info->audio_in = get_mp3_audio_in (info, threshhold);
-      info->audio_out = get_mp3_audio_out (info, &mp3, threshhold);
-    }
+  if (in_threshhold > 0)
+    info->audio_in = get_mp3_audio_in (info, in_threshhold);
+  if (out_threshhold > 0)
+    info->audio_out = get_mp3_audio_out (info, &mp3, out_threshhold);
   
   return info;
 }

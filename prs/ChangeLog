@@ -1,5 +1,10 @@
 2002-11-10  Matt Campbell  <mattcampbell@pobox.com>
 
+	* src/fileinfo.h src/mp3fileinfo.c src/mp3fileinfo.h
+	src/prs_db_builder.c src/vorbisfileinfo.c src/vorbisfileinfo.h:
+	There are now two threshholds, one for audio_in and the other for
+	audio_out.
+
 	* src/mixerpatchpoint.c: Fixed resampling code so it correctly
 	handles the case when the channel is mono and the bus is stereo.
 

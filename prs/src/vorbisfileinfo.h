@@ -7,6 +7,7 @@
 
 FileInfo *
 get_vorbis_file_info (char *path,
-		      unsigned short threshhold);
+		      unsigned short in_threshhold,
+		      unsigned short out_threshhold);
   
 #endif
