@@ -41,7 +41,7 @@ for ($i = 1; $i <= min (count ($categories), 5); $i++)
 }
 foreach (array ("template_id", "event_number", "event_type") as $field)
 {
-	echo ("<input type=\"hidden\" name=\"$field\" value=\"$$field\">\n");
+	echo ("<input type=\"hidden\" name=\"$field\" value=\"" . $$field . "\">\n");
 }
 ?>
 <input type="submit" value="Add Event">
