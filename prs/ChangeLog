@@ -1,3 +1,7 @@
+2002-12-01  Matt Campbell  <mattcampbell@pobox.com>
+
+	* src/urlmixerchannel.c: Now includes signal.h.
+
 2002-12-01  Marc Mulcahy  <marc@plbb.net>
 
 	* src/mixerautomation.c (mixer_automation_destroy): Don't kill the
