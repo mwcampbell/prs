@@ -18,7 +18,7 @@ typedef struct {
 
 
 
-static void
+static int
 oss_mixer_channel_get_data (MixerChannel *ch)
 {
 	oss_info *i;
@@ -28,8 +28,8 @@ oss_mixer_channel_get_data (MixerChannel *ch)
   
 	if (!ch)
 		return;
-	tmp = ch->buffer;
-	remainder = ch->buffer_size;
+	tmp = ch->input;
+	remainder = ch->chunk_size*ch->channels;
 	i = (oss_info *) ch->data;
 	while (remainder > 0) {
 		rv = read (i->fd, tmp, remainder*sizeof(short));
@@ -38,16 +38,7 @@ oss_mixer_channel_get_data (MixerChannel *ch)
 		remainder -= rv/sizeof(short);
 		tmp += rv/sizeof(short);
 	}
-	if (remainder) {
-
-		/* We've reached the end of the data */
-
-		ch->data_end_reached = 1;
-		ch->buffer_length = ch->buffer_size-remainder;
-	}
-	else
-		ch->buffer_length = ch->buffer_size;
-	return;
+	return ch->chunk_size-(remainder/ch->channels);
 }
 
 
@@ -104,8 +95,8 @@ oss_mixer_channel_new (const char *name,
 		
 		/* Setup sound card */
 
-		fragment_size = log(mixer_latency*sizeof(short)/8)/log(2);
-		tmp = 0x00080000|fragment_size;
+		fragment_size = log(2*(mixer_latency/44100.0)*rate*channels*sizeof(short))/log(2);
+		tmp = 0x00010000|fragment_size;
 		if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0) {
 			close (i->fd);
 			free (i);

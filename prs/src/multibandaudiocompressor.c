@@ -58,8 +58,7 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 	assert (output != NULL);
 	assert (output_length >= 0);
 
-	for (tmp = (list *) f->data; tmp; tmp = tmp->next)
-	{
+	for (tmp = (list *) f->data; tmp; tmp = tmp->next) {
 		b = (band *) tmp->data;
 
 		/* Apply filter */
@@ -67,8 +66,7 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 		buffer_end = input+input_length;      
 		iptr = input;
 		optr = f->buffer;
-		while (iptr < buffer_end)
-		{
+		while (iptr < buffer_end) {
 			double in, out;
 			long new_val;
 			
@@ -120,7 +118,7 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 				*optr++ = out*b->volume;
 			}
 		}
-		buffer_end = f->buffer+f->buffer_size;
+		buffer_end = f->buffer+f->buffer_size*f->channels;
 		iptr = f->buffer;
 		optr = output;
 		while (iptr < buffer_end)

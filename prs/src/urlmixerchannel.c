@@ -145,12 +145,11 @@ url_mixer_channel_get_data (MixerChannel *ch)
 	if (!ch)
 		return;
 	i = (channel_info *) ch->data;
-	tmp = ch->buffer;
-	remainder = ch->buffer_size;
+	tmp = ch->input;
+	remainder = ch->chunk_size*ch->channels;
 	while (remainder > 0) {
 		rv = read (i->decoder_output_fd, tmp, remainder*sizeof(short));
 		if (rv == 0) {
-			ch->data_end_reached = 1;
 			break;
 		}
 		if (rv < 0) {
@@ -161,14 +160,7 @@ url_mixer_channel_get_data (MixerChannel *ch)
 		remainder -= rv/sizeof(short);
 		tmp += rv/sizeof(short);
 	}
-	if (remainder) {
-		if (i->bad_blocks > 10)
-			ch->data_end_reached = 1;
-		ch->buffer_length = ch->buffer_size-remainder;
-	}
-	else
-		ch->buffer_length = ch->buffer_size;
-	return;
+	return ch->chunk_size-(remainder/ch->channels);
 }
 
 

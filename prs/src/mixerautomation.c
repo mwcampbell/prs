@@ -43,26 +43,6 @@ automation_event_destroy (AutomationEvent *e)
 
 
 
-static void
-mixer_automation_log_event (MixerAutomation *a,
-			    AutomationEvent *e)
-{
-	Recording *r;
-
-	switch (e->type)
-	{
-	case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
-		r = find_recording_by_path (a->db, e->detail1);
-		if (r)
-			add_log_entry (a->db, r->id, (int) a->last_event_time,
-				       (int) e->length);
-		recording_free (r);
-		break;
-	}
-}
-
-
-
 MixerAutomation *
 mixer_automation_new (mixer *m, Database *db)
 {
@@ -188,7 +168,6 @@ mixer_automation_next_event (MixerAutomation *a)
 	}
 	a->events = list_delete_item (a->events, a->events);
 	a->last_event_time = mixer_get_time (a->m);
-	mixer_automation_log_event (a, e);
 	automation_event_destroy (e);
 	pthread_mutex_unlock (&(a->mut));
 }

@@ -1,3 +1,42 @@
+2003-01-02  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixer.c (mixer_main_thread): Changed all length specifications
+	to number of samples rather than bytes.
+	
+	* src/mixerchannel.c: Added support for creating a buffered
+	reader for a channel which runs in a separate thread.
+	
+	* src/mixerpatchpoint.c (mixer_patch_point_post_data): New support
+	for the circular buffer used by the buffered reader for mixer channels.
+
+	* src/urlmixerchannel.c (_GNU_SOURCE): Modified for new mixer
+	changes-- think it's broken.
+
+	* src/vorbismixerchannel.c: Added buffered reader and modified for
+	new mixer changes.
+
+	* src/mp3mixerchannel.c: Added support for new buffered reader and
+	mixer changes.
+
+	* src/shoutmixeroutput.c: Modified for new mixer changes.
+
+	* src/prs_server.c (mic_on): Added fade when mic is turned on.
+
+	* src/prs.c (prs_new): Changed mixer latency.
+	(speex_connection_handler): Added stubs for Speex connection handler.
+
+	* src/ossmixerchannel.c src/ossmixeroutput.c: REduced latency.
+
+	* src/multibandaudiocompressor.c: Modified for new mixer changes. 
+
+	* src/mixeroutput.c: Modified for new mixer changes.
+
+	* src/mixerbus.c: Modified for new mixer changes.
+
+	* src/filemixeroutput.c: Modified for new mixer changes.
+
+	* src/audiofilter.c: Modified to support mixer changes.
+
 2002-12-21  Marc Mulcahy  <marc@plbb.net>
 
 	* src/db.c (get_recording_from_result): Gets the entire list of

@@ -108,15 +108,15 @@ file_mixer_output_new (const char *name,
 
 	/* Initialize RIFF HEADER */
 
-	strncpy (&(i->riff.riff_id), "RIFF", 4);
+	strncpy ((i->riff.riff_id), "RIFF", 4);
 	
 	/* Length is unknown */
 
-	strncpy (&(i->riff.type_id), "WAVE", 4);
+	strncpy ((i->riff.type_id), "WAVE", 4);
 
 	/* Initialize format chunk */
 
-	strncpy (&(i->format_chunk_header.id), "fmt ", 4);
+	strncpy ((i->format_chunk_header.id), "fmt ", 4);
 	i->format_chunk_header.len = sizeof(format_header);
 	i->format_chunk.format_tag = WAVE_FORMAT_PCM;
 	i->format_chunk.channels = channels;
@@ -127,7 +127,7 @@ file_mixer_output_new (const char *name,
 
 	/* Initialize data chunk */
 
-	strncpy (&(i->data_chunk_header.id), "data", 4);
+	strncpy ((i->data_chunk_header.id), "data", 4);
 	
 	/* Data length is unknown */
 

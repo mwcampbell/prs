@@ -17,17 +17,17 @@ typedef struct {
 
 
 
-static void
+static int
 vorbis_mixer_channel_get_data (MixerChannel *ch)
 {
 	vorbis_file_info *i;
 	int remainder;
 	short *tmp;
 	int rv;
-
+	
 	assert (ch != NULL);
-	tmp = ch->buffer;
-	remainder = ch->buffer_size;
+	tmp = ch->input;
+	remainder = ch->chunk_size*ch->channels;
 	i = (vorbis_file_info *) ch->data;
 	assert (ch->data != NULL);
 	while (remainder > 0) {
@@ -38,14 +38,7 @@ vorbis_mixer_channel_get_data (MixerChannel *ch)
 		remainder -= rv / sizeof (short);
 		tmp += rv / sizeof (short);
 	}
-	if (remainder) {
-
-		/* We've reached the end of the data */
-
-		ch->data_end_reached = 1;
-		ch->buffer_length = ch->buffer_size - remainder;
-	} else
-		ch->buffer_length = ch->buffer_size;
+	return ch->chunk_size-(remainder/ch->channels);
 }
 
 
@@ -122,5 +115,6 @@ vorbis_mixer_channel_new (const char *name,
 	ch->get_data = vorbis_mixer_channel_get_data;
 	ch->free_data = vorbis_mixer_channel_free_data;
 
+	mixer_channel_start_reader (ch);
 	return ch;
 }

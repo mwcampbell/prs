@@ -129,7 +129,6 @@ stop_encoder (MixerOutput *o)
 
 	i = (shout_info *) o->data;
 	close (i->encoder_input_fd);
-	close (i->encoder_output_fd);
 	waitpid (i->encoder_pid, NULL, 0);
 }
 
@@ -146,9 +145,11 @@ shout_mixer_output_free_data (MixerOutput *o)
 		      "shout_mixer_output_free_data called\n");
 	i = (shout_info *) o->data;
 
+	stop_encoder (o);
+	i->stream_reset = 1;
+	pthread_join (i->shout_thread_id, NULL);
 	if (i->shout)
 		shout_free (i->shout);
-	stop_encoder (o);
 	if (i->args_list)
 		string_list_free (i->args_list);
 	free (o->data);
@@ -192,9 +193,9 @@ shout_mixer_output_post_data (MixerOutput *o)
 	i = (shout_info *) o->data;
 
 	if (i->shout_thread_id == 0)
-		pthread_create (&i->shout_thread_id, NULL, shout_thread, o);
+		pthread_create (&(i->shout_thread_id), NULL, shout_thread, o);
 	if (write (i->encoder_input_fd, o->buffer,
-		   o->buffer_size*sizeof(short)) < 0)
+		   o->buffer_size*sizeof(short)*o->channels) < 0)
 		debug_printf (DEBUG_FLAGS_MIXER,
 			      "shout_mixer_output_post_data: write: %s\n",
 			      strerror (errno));

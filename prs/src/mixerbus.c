@@ -27,12 +27,12 @@ mixer_bus_new (const char *name,
 	b->rate = rate;
 	b->channels = channels;
 	b->buffer_size = b->process_buffer_size =
-		latency/(88200/(b->rate*b->channels));
+		latency/44100.0*rate;
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "mixer_bus_new: buffer_size = %d\n", b->buffer_size);
-	b->buffer = (short *) malloc (b->buffer_size*sizeof(short));
+	b->buffer = (short *) malloc (b->buffer_size*sizeof(short)*channels);
 	assert (b->buffer != NULL);
-	b->process_buffer = (short *) malloc (b->buffer_size*sizeof(short));
+	b->process_buffer = (short *) malloc (b->buffer_size*sizeof(short)*channels);
 	assert (b->process_buffer != NULL);
 	b->filters = b->outputs = NULL;
 	b->enabled = 1;
@@ -72,6 +72,7 @@ mixer_bus_add_data (MixerBus *b,
 	tmp = b->buffer;
 	tmp2 = buffer;
 
+	length *= b->channels;
 	while (length--) {
 		samp = *tmp+*tmp2++;
 		if (samp > 32767)
@@ -118,8 +119,8 @@ mixer_bus_reset_data (MixerBus *b)
 {
 	assert (b != NULL);
 	assert (b->buffer != NULL);
-	memset (b->buffer, 0, (b->buffer_size)*sizeof(short));
-	memset (b->process_buffer, 0, (b->process_buffer_size)*sizeof(short));
+	memset (b->buffer, 0, (b->buffer_size)*sizeof(short)*b->channels);
+	memset (b->process_buffer, 0, (b->process_buffer_size)*sizeof(short)*b->channels);
 }
 
 

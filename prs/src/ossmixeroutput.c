@@ -50,7 +50,7 @@ oss_mixer_output_post_data (MixerOutput *o)
 	assert (o != NULL);
 	i = (oss_info *) o->data;
 
-	if (write (i->fd, o->buffer, o->buffer_size * sizeof (short)) < 0)
+	if (write (i->fd, o->buffer, o->buffer_size * sizeof (short)*o->channels) < 0)
 		debug_printf (DEBUG_FLAGS_MIXER,
 			      "oss_mixer_output_post_data: write error: %s\n",
 			      strerror (errno));
@@ -100,8 +100,8 @@ oss_mixer_output_new (const char *name,
 		
 		/* Setup sound card */
 
-		fragment_size = log (latency * sizeof (short) / 8) / log (2);
-		tmp = 0x00080000|fragment_size;
+		fragment_size = log (2*(latency/44100.0)*rate * sizeof (short) )  / log (2);
+		tmp = 0x00010000|fragment_size;
 		if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0) {
 			perror ("ioctl on sound card failed");
 			exit (EXIT_FAILURE);

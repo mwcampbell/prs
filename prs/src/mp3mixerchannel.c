@@ -18,11 +18,9 @@ mp3_mixer_channel_get_data (MixerChannel *ch)
 	assert (ch != NULL);
 	d = (MP3Decoder *) ch->data;
 	assert (d != NULL);
-	rv = mp3_decoder_get_data (d, ch->buffer, ch->buffer_size);
+	rv = mp3_decoder_get_data (d, ch->input, ch->chunk_size*ch->channels);
 
-	if (rv <= 0)
-		ch->data_end_reached = 1;
-	ch->buffer_length = rv;
+	return rv/ch->channels;
 }
 
 
@@ -85,5 +83,6 @@ mp3_mixer_channel_new (const char *name, const char *location,
 	ch->get_data = mp3_mixer_channel_get_data;
 	ch->free_data = mp3_mixer_channel_free_data;
 
+	mixer_channel_start_reader (ch);
 	return ch;
 }

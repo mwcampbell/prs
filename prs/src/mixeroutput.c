@@ -30,11 +30,11 @@ mixer_output_alloc_buffer (MixerOutput *o,
 {
 	assert (o != NULL);
 	assert (latency > 0);
-	o->buffer_size = latency/(88200/(o->rate*o->channels));
+	o->buffer_size = latency/44100.0*o->rate;
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "mixer_output_alloc_buffer: buffer_size = %d\n",
 		      o->buffer_size);
-	o->buffer = (short *) malloc (o->buffer_size*sizeof(short));
+	o->buffer = (short *) malloc (o->buffer_size*sizeof(short)*o->channels);
 	assert (o->buffer != NULL);
 }
 
@@ -54,6 +54,7 @@ mixer_output_add_data (MixerOutput *o,
 	tmp = o->buffer;
 	tmp2 = buffer;
 
+	length *= o->channels;
 	while (length--)
 		*tmp++ += *tmp2++;
 }
@@ -75,5 +76,5 @@ mixer_output_reset_data (MixerOutput *o)
 {
 	assert (o != NULL);
 	assert (o->buffer != NULL);
-	memset (o->buffer, 0, (o->buffer_size)*sizeof(short));
+	memset (o->buffer, 0, (o->buffer_size)*sizeof(short)*o->channels);
 }

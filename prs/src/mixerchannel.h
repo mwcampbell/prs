@@ -6,8 +6,7 @@
 typedef struct _MixerChannel MixerChannel;
 
 
-
-struct _MixerChannel {
+struct  _MixerChannel {
 	char *name;
 	char *location;
 	int enabled;
@@ -19,9 +18,15 @@ struct _MixerChannel {
 
 	/* buffer */
 	
+	pthread_mutex_t mutex;
+	pthread_t data_reader_thread;
 	short *buffer;
+	short *input;
+	short *output;
+	short *buffer_end;
+	int chunk_size;
 	int buffer_size;
-	int buffer_length;
+	int space_left;
 	
         /* Level and fading parameters */
 
@@ -35,14 +40,14 @@ struct _MixerChannel {
 
 	void *data;
 
-	/* List of busses to which this channel is patched */
+	/* List of patchpoints */
 
 	list *patchpoints;
 
 	/* overrideable methods */
 
 	void (*free_data) (MixerChannel *ch);
-	void (*get_data) (MixerChannel *ch);
+	int (*get_data) (MixerChannel *ch);
 };
 
 
@@ -53,7 +58,9 @@ mixer_channel_new (const int rate,
 		   const int latency);
 void
 mixer_channel_destroy (MixerChannel *ch);
-void
+int
 mixer_channel_get_data (MixerChannel *ch);
+void
+mixer_channel_start_reader (MixerChannel *ch);
 
 #endif

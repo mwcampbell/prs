@@ -1,5 +1,6 @@
 #ifndef _PRS_H
 #define _PRS_H
+#include <pthread.h>
 #include "mixer.h"
 #include "db.h"
 #include "mixerautomation.h"
@@ -9,13 +10,15 @@
 
 typedef struct
 {
-  mixer *mixer;
-  Database *db;
-  MixerAutomation *automation;
-  scheduler *scheduler;
-  int telnet_interface;
-  int telnet_port;
-  char *password;
+	mixer *mixer;
+	Database *db;
+	MixerAutomation *automation;
+	scheduler *scheduler;
+	int telnet_interface;
+	int telnet_port;
+	char *password;;
+	pthread_t speex_connection_thread;
+	
 }
 PRS;
 

@@ -22,11 +22,11 @@ audio_filter_new (int rate,
 	assert (f != NULL);
 	f->rate = rate;
 	f->channels = channels;
-	f->buffer_size = latency/(88200/(rate*channels));
+	f->buffer_size = latency/44100.0*rate;
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "audio_filter_new: buffer_size = %d\n",
 		      f->buffer_size);
-	f->buffer = (short *) malloc (f->buffer_size*sizeof(short));
+	f->buffer = (short *) malloc (f->buffer_size*sizeof(short)*channels);
 	assert (f->buffer != NULL);
 	f->buffer_length = 0;
 	f->data = NULL;
@@ -52,7 +52,7 @@ audio_filter_process_data (AudioFilter *f,
 	assert (output_length >= 0);
 	return f->process_data (f,
 				input,
-				input_length,
+				input_length*f->channels,
 				output,
-				output_length);
+				output_length*f->channels);
 }

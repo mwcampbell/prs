@@ -84,6 +84,8 @@ load_playlist (MixerAutomation *a, Database *db, FILE *in, FILE *out)
 static void
 mic_on (mixer *m)
 {
+	mixer_fade_all (m, .2, .5);
+	mixer_fade_channel (m, "soundcard", 1.0, .2);
 	mixer_enable_channel (m, "soundcard", 1);
 }
 
@@ -92,6 +94,7 @@ mic_on (mixer *m)
 static void
 mic_off (mixer *m)
 {
+	mixer_fade_all (m, 1, .5);
 	mixer_enable_channel (m, "soundcard", 0);
 }
 
@@ -190,12 +193,12 @@ main (int argc, char *argv[])
   const char *config_filename = "prs.conf";
   PRS *prs = prs_new ();
 
-  debug_set_flags (DEBUG_FLAGS_ALL);
   if (argc > 1)
     config_filename = argv[1];
   debug_printf (DEBUG_FLAGS_GENERAL, "Loading config file %s\n", config_filename);
   prs_config (prs, config_filename);
 
+  debug_set_flags (DEBUG_FLAGS_ALL);
   if (prs->telnet_interface)
     {
       /* Set up the server socket. */

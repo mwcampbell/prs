@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <sys/time.h>
 #include <time.h>
 #include <string.h>
@@ -48,7 +49,7 @@ mixer_main_thread (void *data)
 	
 	assert (m != NULL);
 	debug_printf (DEBUG_FLAGS_MIXER, "mixer main thread starting\n");
-	time_slice = (double) m->latency/88200;
+	time_slice = (double) m->latency/44100;
 	slice_length = time_slice*1000000;
 	gettimeofday (&start, NULL);
 	
@@ -105,7 +106,11 @@ mixer_main_thread (void *data)
 				tmp = next;
 				continue;
 			}
-			mixer_channel_get_data (ch);
+			if (ch->data_reader_thread == 0) {
+				int rv = mixer_channel_get_data (ch);
+				if (rv < ch->chunk_size)
+					ch->data_end_reached = 1;
+			}
 			for (tmp2 = ch->patchpoints; tmp2; tmp2 = tmp2->next) {
 				MixerPatchPoint  *p = (MixerPatchPoint *) tmp2->data;
 				assert (p != NULL);
@@ -743,15 +748,7 @@ mixer_fade_channel (mixer *m,
 		return;
 
 	mixer_lock (m);
-	if (ch->fade != 0.0)
-	{
-		debug_printf (DEBUG_FLAGS_MIXER,
-			      "channel %s already fading\n", ch->name);
-		mixer_unlock (m);
-		return;
-	}
-	fade_distance = fade_destination-(ch->level);
-	ch->fade = (fade_distance/fade_time)/ch->rate;
+	ch->fade = pow (fade_destination/ch->level, 1/(ch->rate*fade_time));
 	ch->fade_destination = fade_destination;
 	mixer_unlock (m);
 }
@@ -773,13 +770,13 @@ mixer_fade_all (mixer *m,
 		      level, fade_time);
 
 	mixer_lock (m);
-	for (tmp = m->channels; tmp; tmp = tmp->next)
-	{
+	for (tmp = m->channels; tmp; tmp = tmp->next) {
 		ch = (MixerChannel *) tmp->data;
 		assert (ch != NULL);
-		fade_distance = level-(ch->level);
-		ch->fade = (fade_distance/fade_time)/ch->rate;
+		fprintf (stderr, "Fade is pow (%lf, %lf)\n", level/ch->level, 1/(ch->rate*fade_time));
+		ch->fade = pow (level/ch->level, 1.0/(ch->rate*fade_time));
 		ch->fade_destination = level;
+		fprintf (stderr, "Fading %s %lf %lf.\n", ch->name, ch->fade, ch->fade_destination);
 	}
 	mixer_unlock (m);
 }
