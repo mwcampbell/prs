@@ -133,12 +133,14 @@ setup_streams (mixer *m)
 
 
 
-static double
+static void
 process_playlist_event (PlaylistTemplate *t,
 			int event_number,
 			RecordingPicker *p,
 			mixer *m,
-			double cur_time)
+			double cur_time,
+			double *start_time,
+			double *end_time)
 {
 
   /* Keep track of last event start and end times */
@@ -169,7 +171,10 @@ process_playlist_event (PlaylistTemplate *t,
 
   e = playlist_template_get_event (t, event_number);
   if (!e)
-    return -1.0;
+    {
+      *start_time = *end_time = -1.0;
+      return;
+    }
 
   /* Get the event to which this event is anchored */
 
@@ -202,7 +207,8 @@ process_playlist_event (PlaylistTemplate *t,
       (me->start_time > t->end_time))
     {
       free (me);
-      return -1.0;
+      *start_time = *end_time = -1.0;
+      return;
     }
   
   /* Set the channel name */
@@ -279,13 +285,16 @@ process_playlist_event (PlaylistTemplate *t,
 
       /* Wrap around at midnight */
 
-      e->start_time = last_start_time = me->start_time;
-      e->end_time = last_end_time = me->end_time;
+      *start_time = e->start_time = last_start_time = me->start_time;
+      *end_time = e->end_time = last_end_time = me->end_time;
       mixer_insert_event (m, me);
-      return me->start_time;
+      return;
     }
   else
-    return last_start_time;
+    {
+      *end_time = *start_time = -1.0;
+      return;
+    }
 }
 
 
@@ -298,7 +307,6 @@ execute_playlist_template (PlaylistTemplate *t,
   int length;
   int i;
   RecordingPicker *p;
-  double start_time = cur_time;
   
   if (!t)
     return cur_time;
@@ -309,21 +317,19 @@ execute_playlist_template (PlaylistTemplate *t,
       length = list_length (t->events);
       for (i = 1; i <= length; i++)
 	{
-	  start_time = process_playlist_event (t,
-						      i,
-						      p,
-						      m,
-					       cur_time);
-	    
-	  /* If we just queued an event more than 10 seconds in the future,
-	   * wait the difference less ten seconds
+	  double start_time, end_time;
+	  process_playlist_event (t, i, p, m, cur_time, &start_time,
+				  &end_time);
+	  
+	  /* If we just queued an event which starts more than 10 seconds in
+	   * the future, wait the difference less ten seconds
 	   */
 
 	  if (start_time > 0 && start_time > cur_time+10)
 	    usleep ((start_time-cur_time-10)*1000000);
-	  cur_time = start_time;
+	  cur_time = end_time;
 
-	  if (start_time < 0)
+	  if (end_time < 0)
 	    break;
 	}
       if (cur_time < 0)
