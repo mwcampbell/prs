@@ -5,6 +5,7 @@
 
 
 MixerChannel *
-mp3_mixer_channel_new (const char *name, const char *location);
+mp3_mixer_channel_new (const char *name, const char *location,
+		       const int mixer_latency);
 
 #endif

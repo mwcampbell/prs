@@ -42,7 +42,8 @@ struct _MixerBus {
 MixerBus *
 mixer_bus_new (const char *name,
 	       int rate,
-	       int channels);
+	       int channels,
+	       int latency);
 void
 mixer_bus_destroy (MixerBus *b);
 int

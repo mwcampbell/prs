@@ -8,44 +8,52 @@ typedef struct _MixerChannel MixerChannel;
 
 
 struct _MixerChannel {
-  char *name;
-  char *location;
-  int enabled;
+	char *name;
+	char *location;
+	int enabled;
   
-  /* Sample information */
+	/* Sample information */
 
-  int rate;
-  int channels;
+	int rate;
+	int channels;
 
-  /* Level and fading parameters */
+	/* buffer */
+	
+	short *buffer;
+	int buffer_size;
+	int buffer_length;
+	
+        /* Level and fading parameters */
 
-  double level;
-  double fade;
-  double fade_destination;
+	double level;
+	double fade;
+	double fade_destination;
 
-  /* end of data indicator */
+	/* end of data indicator */
 
-  int data_end_reached;
+	int data_end_reached;
 
-  void *data;
+	void *data;
 
-  /* List of busses to which this channel is patched */
+	/* List of busses to which this channel is patched */
 
-  list *busses;
+	list *patchpoints;
 
-  /* overrideable methods */
+	/* overrideable methods */
 
-  void (*free_data) (MixerChannel *ch);
-  int (*get_data) (MixerChannel *ch, short *buffer, int size);
+	void (*free_data) (MixerChannel *ch);
+	void (*get_data) (MixerChannel *ch);
 };
 
 
 
+MixerChannel *
+mixer_channel_new (int rate,
+		   int channels,
+		   int latency);
 void
 mixer_channel_destroy (MixerChannel *ch);
-int
-mixer_channel_get_data (MixerChannel *ch,
-			short *buffer,
-			int size);
+void
+mixer_channel_get_data (MixerChannel *ch);
 
 #endif

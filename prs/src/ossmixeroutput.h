@@ -7,5 +7,6 @@
 MixerOutput *
 oss_mixer_output_new (const char *name,
 		      int rate,
-		      int channels);
+		      int channels,
+		      int latency);
 #endif

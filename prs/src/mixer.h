@@ -10,30 +10,37 @@
 typedef struct _mixer mixer;
 
 struct _mixer {
-  pthread_t thread;
-  pthread_mutex_t mutex;
+	pthread_t thread;
+	pthread_mutex_t mutex;
 
+	/* Mixer latency:
+	 *
+	 * Defined as number of samples of 44.1 Khz audio
+	 *
+	 */
 
-  /* Notification */
+        int latency;
 
-  pthread_cond_t notify_condition;
-  double notify_time;
+        /* Notification */
+
+	pthread_cond_t notify_condition;
+	double notify_time;
   
-  /* Flag indicating whether mixer is running */
+	/* Flag indicating whether mixer is running */
 
-  int running;
+	int running;
   
-  double cur_time;
+	double cur_time;
 
-  list *channels;
-  list *busses;
-  list *outputs;
+	list *channels;
+	list *busses;
+	list *outputs;
 };
 
 
 
 mixer *
-mixer_new (void);
+mixer_new (int latency);
 int
 mixer_start (mixer *m);
 int
@@ -53,10 +60,10 @@ mixer_get_channel (mixer *m,
 		   const char *channel_name);
 void
 mixer_add_bus (mixer *m,
-		  MixerBus *b);
+	       MixerBus *b);
 void
 mixer_delete_bus (mixer *m,
-		     const char *bus_name);
+		  const char *bus_name);
 MixerBus *
 mixer_get_bus (mixer *m,
 	       const char *bus_name);
@@ -95,7 +102,7 @@ mixer_fade_all (mixer *m,
 		double fade_time);
 void
 mixer_reset_notification_time (mixer *m,
-			     double notification_time);
+			       double notification_time);
 void
 mixer_wait_for_notification (mixer *m,
 			     double notify_time);

@@ -185,9 +185,9 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 AudioFilter *
 multiband_audio_compressor_new (int rate,
 		      int channels,
-		      int buffer_size)
+		      int latency)
 {
-  AudioFilter *f = audio_filter_new (rate, channels, buffer_size);
+  AudioFilter *f = audio_filter_new (rate, channels, latency);
 
   f->data = NULL;
   f->process_data = multiband_audio_compressor_process_data;

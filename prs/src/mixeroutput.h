@@ -6,7 +6,6 @@
 
 
 
-#define MIXER_LATENCY .01
 
 
 
@@ -44,7 +43,8 @@ struct _MixerOutput {
 void
 mixer_output_destroy (MixerOutput *o);
 void
-mixer_output_alloc_buffer (MixerOutput *o);
+mixer_output_alloc_buffer (MixerOutput *o,
+			   const int latency);
 int
 mixer_output_add_data (MixerOutput *o,
 			 short *buffer,

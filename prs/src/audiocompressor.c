@@ -90,14 +90,14 @@ audio_compressor_process_data (AudioFilter *f,
 AudioFilter *
 audio_compressor_new (int rate,
 		      int channels,
-		      int buffer_size,
+		      int latency,
 		      double threshhold,
 		      double ratio,
 		      double attack_time,
 		      double release_time,
 		      double output_gain)
 {
-  AudioFilter *f = audio_filter_new (rate, channels, buffer_size);
+  AudioFilter *f = audio_filter_new (rate, channels, latency);
   CompressorData *d = malloc (sizeof (CompressorData));
   double compression_amount;
 

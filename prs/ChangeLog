@@ -1,3 +1,7 @@
+2002-11-09  Marc Mulcahy <marc@plbb.net>
+
+	* Checked in initial resampling support.
+
 2002-11-04  Marc Mulcahy <marc@plbb.net>
 
 	* src/mixerautomation.c: Folded loggin back in.

@@ -1,4 +1,6 @@
+#include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <malloc.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -52,11 +54,13 @@ oss_mixer_output_post_data (MixerOutput *o)
 MixerOutput *
 oss_mixer_output_new (const char *name,
 		      int rate,
-		      int channels)
+		      int channels,
+		      int latency)
 {
   MixerOutput *o;
   oss_info *i;
   int tmp;
+  int fragment_size;
   
   i = malloc (sizeof (oss_info));
   if (!i)
@@ -79,7 +83,8 @@ oss_mixer_output_new (const char *name,
 
       /* Setup sound card */
 
-      tmp = 0x0008000a;
+      fragment_size = log(latency*sizeof(short)/8)/log(2);
+      tmp = 0x00080000|fragment_size;
       if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0)
 	{
 	  close (i->fd);
@@ -137,7 +142,7 @@ oss_mixer_output_new (const char *name,
   o->free_data = oss_mixer_output_free_data;
   o->post_data = oss_mixer_output_post_data;
 
-  mixer_output_alloc_buffer (o);  
+  mixer_output_alloc_buffer (o, latency);  
   return o;
 }
 

@@ -6,7 +6,7 @@
 AudioFilter *
 audio_filter_new (int rate,
 		  int channels,
-		  int buffer_size)
+		  int latency)
 {
   AudioFilter *f = (AudioFilter *) malloc (sizeof (AudioFilter));
 
@@ -14,13 +14,14 @@ audio_filter_new (int rate,
     return NULL;
   f->rate = rate;
   f->channels = channels;
-  f->buffer = (short *) malloc (buffer_size*sizeof(short));
-  f->buffer_size = buffer_size;
+  f->buffer_size = latency/(88200/(rate*channels));
+  f->buffer = (short *) malloc (f->buffer_size*sizeof(short));
   f->buffer_length = 0;
   f->data = NULL;
   f->process_data = NULL;
   return f;
 }
+
 
 
 

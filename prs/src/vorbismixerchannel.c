@@ -7,42 +7,43 @@
 
 
 typedef struct {
-  OggVorbis_File *vf;
-  int section;
-  FILE *fp;
+	OggVorbis_File *vf;
+	int section;
+	FILE *fp;
 } vorbis_file_info;
 
 
 
-static int
-vorbis_mixer_channel_get_data (MixerChannel *ch,
-		      short *buffer, int size)
+static void
+vorbis_mixer_channel_get_data (MixerChannel *ch)
 {
-  vorbis_file_info *i;
-  int remainder = size;
-  short *tmp = buffer;
-  int rv;
+	vorbis_file_info *i;
+	int remainder;
+	short *tmp;
+	int rv;
   
-  if (!ch)
-    return 0;
-  i = (vorbis_file_info *) ch->data;
-  while (remainder > 0)
-    {
-      rv = ov_read ((i->vf), (char *)tmp, remainder*sizeof(short), 0, sizeof(short), 1, &(i->section));
-      if (rv <= 0)
-	break;
-      remainder -= rv/sizeof(short);
-      tmp += rv/sizeof(short);
-  }
-  if (remainder)
-    {
-      /* We've reached the end of the data */
+	if (!ch)
+		return;
+	tmp = ch->buffer;
+	remainder = ch->buffer_size;
+	i = (vorbis_file_info *) ch->data;
+	while (remainder > 0) {
+		rv = ov_read ((i->vf), (char *)tmp, remainder*sizeof(short), 0, sizeof(short), 1, &(i->section));
+		if (rv <= 0)
+			break;
+		remainder -= rv/sizeof(short);
+		tmp += rv/sizeof(short);
+	}
+	if (remainder) {
 
-      ch->data_end_reached = 1;
-      return size-remainder;
-    }
-  else
-    return size;
+		/* We've reached the end of the data */
+
+		ch->data_end_reached = 1;
+		ch->buffer_length = ch->buffer_size-remainder;
+	}
+	else
+		ch->buffer_length = ch->buffer_size;
+	return;
 }
 
 
@@ -50,75 +51,71 @@ vorbis_mixer_channel_get_data (MixerChannel *ch,
 static void
 vorbis_mixer_channel_free_data (MixerChannel *ch)
 {
-  vorbis_file_info *i;
+	vorbis_file_info *i;
 
-  if (!ch)
-    return;
-  i = (vorbis_file_info *) ch->data;
-  if (!i)
-    return;
-  ov_clear (i->vf);
-  free (i->vf);
-  free (i);
+	if (!ch)
+		return;
+	i = (vorbis_file_info *) ch->data;
+	if (!i)
+		return;
+	ov_clear (i->vf);
+	free (i->vf);
+	free (i);
 }
 
 
 
 MixerChannel *
 vorbis_mixer_channel_new (const char *name,
-		   const char *location)
+			  const char *location,
+			  const int mixer_latency)
 {
-  MixerChannel *ch;
-  vorbis_file_info *i;
-  vorbis_info *vi;
+	MixerChannel *ch;
+	vorbis_file_info *i;
+	vorbis_info *vi;
   
-  ch = malloc (sizeof(MixerChannel));
-  i = malloc (sizeof (vorbis_file_info));
+	i = malloc (sizeof (vorbis_file_info));
 
-  /* Allocate the OggVorbis_file structure */
+	/* Allocate the OggVorbis_file structure */
 
-  i->vf = malloc (sizeof(OggVorbis_File));
+	i->vf = malloc (sizeof(OggVorbis_File));
   
-  /* Open the file */
+	/* Open the file */
 
-  i->fp = fopen (location, "rb");
-  if (!(i->fp))
-    {
-      free (i);
-      free (ch);
-      return NULL;
-    }
+	i->fp = fopen (location, "rb");
+	if (!(i->fp)) {
+		free (i);
+		return NULL;
+	}
   
-  ov_open ((i->fp), (i->vf), NULL, 0);
-  ch->data = (void *) i;
-  ch->name = strdup (name);
-  ch->location = strdup (location);
-  ch->enabled = 1;
+	ov_open ((i->fp), (i->vf), NULL, 0);
+
+	/* Get sample rate information from file */
+
+	vi = ov_info (i->vf, -1);
+	ch = mixer_channel_new (vi->rate,
+				vi->channels,
+				mixer_latency);
+
+	ch->data = (void *) i;
+	ch->name = strdup (name);
+	ch->location = strdup (location);
+	ch->enabled = 1;
   
-  /* Set overrideable methods */
+	/* Set overrideable methods */
 
-  ch->get_data = vorbis_mixer_channel_get_data;
-  ch->free_data = vorbis_mixer_channel_free_data;
+	ch->get_data = vorbis_mixer_channel_get_data;
+	ch->free_data = vorbis_mixer_channel_free_data;
 
-  /* Get sample information from file */
+	/* Set level and fading parameters */
 
-  vi = ov_info (i->vf, -1);
-  ch->rate = vi->rate;
-  ch->channels = vi->channels;
+	ch->fade = 0.0;
+	ch->level = 1.0;
+	ch->fade_destination = 1.0;
 
-  /* Set level and fading parameters */
+	/* Set the end of data flag to 0 */
 
-  ch->fade = 0.0;
-  ch->level = 1.0;
-  ch->fade_destination = 1.0;
+	ch->data_end_reached = 0;
 
-  /* Set the end of data flag to 0 */
-
-  ch->data_end_reached = 0;
-
-  /* Default is patched to no outputs */
-
-  ch->busses = NULL;
-
-  return ch;
+	return ch;
 }

@@ -9,6 +9,7 @@ MixerOutput *
 shout_mixer_output_new (const char *name,
 			int rate,
 			int channels,
+			int latency,
 			shout_t *s,
 			int stereo);
 #endif

@@ -5,60 +5,84 @@
 
 
 
+MixerChannel *
+mixer_channel_new (int rate,
+		   int channels,
+		   int latency)
+{
+	MixerChannel *ch;
+
+	ch = (MixerChannel *) malloc (sizeof(MixerChannel));
+
+	ch->rate = rate;
+	ch->channels = channels;
+	ch->buffer_size = (int) ((double)latency/2*(double)rate/44100)*channels;
+	ch->buffer = (short *) malloc (sizeof(short)*ch->buffer_size);
+
+
+	/* Defaults to patched to no busses */
+
+	ch->patchpoints = NULL;
+	
+	return ch;
+}
+	
+
 void
 mixer_channel_destroy (MixerChannel *ch)
 {
-  if (!ch)
-    return;
-  if (ch->name)
-    free (ch->name);
-  if (ch->location)
-    free (ch->location);
-  if (ch->free_data)
-    ch->free_data (ch);
-  else
-    {
-      if (ch->data)
-	free (ch->data);
-    }
+	if (!ch)
+		return;
+	if (ch->name)
+		free (ch->name);
+	if (ch->location)
+		free (ch->location);
+	if (ch->free_data)
+		ch->free_data (ch);
+	else {
+		if (ch->data)
+			free (ch->data);
+	}
 
-  /* We don't own the busses, so just free the list */
+	/* Free the buffer */
 
-  list_free (ch->busses);
-  free (ch);
+	if (ch->buffer)
+		free (ch->buffer);
+
+        /* We don't own the patch points, so just free the list */
+
+	list_free (ch->patchpoints);
+	free (ch);
 }
 
 
 
-int
-mixer_channel_get_data (MixerChannel *ch,
-		      short *buffer,
-		      int size)
+void
+mixer_channel_get_data (MixerChannel *ch)
 {
-  int samples_read, i;
-  short *ptr = buffer;
-  short *end_buffer;
+	int i;
+	short *ptr;
+	short *end_buffer;
 
-  if (!ch)
-    return 0;
-  if (!ch->get_data)
-    return 0;
+	if (!ch)
+		return;
+	if (!ch->get_data)
+		return;
 
-  samples_read = ch->get_data (ch, buffer, size);
+	ch->get_data (ch);
 
-  /* Fading and level processing */
+	/* Fading and level processing */
 
-  end_buffer = buffer+samples_read;
-  while (ptr < end_buffer)
-    {
-      *ptr++ *= ch->level;
-      if (ch->channels == 2)
-	*ptr++ *= ch->level;
-      if ((ch->fade < 0 && ch->level <= ch->fade_destination) ||
-	  (ch->fade > 0 && ch->level >= ch->fade_destination))
-	ch->fade = 0.0;
-      if (ch->fade != 0.0)
-	ch->level += ch->fade;
-    }
-  return samples_read;
+	ptr = ch->buffer;
+	end_buffer = ch->buffer+ch->buffer_length;
+	while (ptr < end_buffer) {
+		*ptr++ *= ch->level;
+		if (ch->channels == 2)
+			*ptr++ *= ch->level;
+		if ((ch->fade < 0 && ch->level <= ch->fade_destination) ||
+		    (ch->fade > 0 && ch->level >= ch->fade_destination))
+			ch->fade = 0.0;
+		if (ch->fade != 0.0)
+			ch->level += ch->fade;
+	}
 }

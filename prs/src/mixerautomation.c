@@ -136,9 +136,11 @@ mixer_automation_next_event (MixerAutomation *a)
     {
     case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
       if (strcmp (e->detail1 + strlen (e->detail1) - 4, ".mp3") == 0)
-	ch = mp3_mixer_channel_new (e->channel_name, e->detail1);
+	ch = mp3_mixer_channel_new (e->channel_name, e->detail1,
+				    a->m->latency);
       else
-	ch = vorbis_mixer_channel_new (e->channel_name, e->detail1);
+	ch = vorbis_mixer_channel_new (e->channel_name, e->detail1,
+				       a->m->latency);
       ch->level = e->level;
 
       mixer_add_channel (a->m, ch);
@@ -153,7 +155,6 @@ mixer_automation_next_event (MixerAutomation *a)
     case AUTOMATION_EVENT_TYPE_DELETE_ALL:
       mixer_delete_all_channels (a->m);
       break;
-    default:
     }
   a->events = list_delete_item (a->events, a->events);
   a->last_event_time = mixer_get_time (a->m);

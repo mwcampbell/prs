@@ -46,7 +46,8 @@ file_mixer_output_post_data (MixerOutput *o)
 MixerOutput *
 file_mixer_output_new (const char *name,
 		      int rate,
-		      int channels)
+		      int channels,
+		       int latency)
 {
   MixerOutput *o;
   file_info *i;
@@ -82,7 +83,7 @@ file_mixer_output_new (const char *name,
   o->free_data = file_mixer_output_free_data;
   o->post_data = file_mixer_output_post_data;
 
-  mixer_output_alloc_buffer (o);  
+  mixer_output_alloc_buffer (o, latency);  
   return o;
 }
 

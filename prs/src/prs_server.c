@@ -49,7 +49,7 @@ mic_on (mixer *m)
 {
   MixerChannel *ch;
   
-  ch = oss_mixer_channel_new ("mic", 44100, 2);
+  ch = oss_mixer_channel_new ("mic", 44100, 2, m->latency);
   if (!ch)
     {
       fprintf (stderr, "Couldn't turn mic on\n");
@@ -71,7 +71,7 @@ mic_off (mixer *m)
   mixer_delete_channel (m, "mic");
   if (!global_data_get_soundcard_duplex ())
     {
-      MixerOutput *o = oss_mixer_output_new ("soundcard", 44100, 2);
+      MixerOutput *o = oss_mixer_output_new ("soundcard", 44100, 2, m->latency);
       mixer_add_output (m, o);
     }
   mixer_fade_all (m, 1.0, 1.0);
@@ -106,7 +106,7 @@ int main (void)
   scheduler *s;
   
   signal (SIGUSR1, prs_signal_handler);
-  m = mixer_new ();
+  m = mixer_new (2048);
   mixer_sync_time (m);
 
   /* Parse configuration file */
@@ -114,6 +114,9 @@ int main (void)
   prs_config (m);
 
 
+  ch = vorbis_mixer_channel_new ("test", "test.ogg", m->latency);
+  mixer_add_channel (m, ch);
+  mixer_patch_channel_all (m, "test");
   a = mixer_automation_new (m);
   mixer_start (m);
 

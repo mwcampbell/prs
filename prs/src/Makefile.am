@@ -22,6 +22,8 @@ prs_server_SOURCES = \
 	ossmixeroutput.c \
 	shoutmixeroutput.c \
 	filemixeroutput.c \
+	mixerpatchpoint.c \
+	resample.c \
 	mixerchannel.c \
 	vorbismixerchannel.c \
 	mp3mixerchannel.c \

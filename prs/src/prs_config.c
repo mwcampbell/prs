@@ -86,7 +86,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 			else
 				stereo = 1;
 			tmp = xmlGetProp (cur, "name");
-			o = shout_mixer_output_new (tmp, 44100, 2, s, stereo);
+			o = shout_mixer_output_new (tmp, 44100, 2, m->latency, s, stereo);
 			mixer_add_output (m, o);
 		}
 		cur = cur->next;
@@ -97,7 +97,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 
 
 static void
-audio_compressor_config (MixerBus *b, xmlNodePtr cur)
+audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 {
 	AudioFilter *f;
 	double threshhold, ratio, attack_time, release_time, output_gain;
@@ -109,7 +109,7 @@ audio_compressor_config (MixerBus *b, xmlNodePtr cur)
 	output_gain = atof (xmlGetProp (cur, "output_gain"));
 	f = audio_compressor_new (b->rate,
 				  b->channels,
-				  b->rate*b->channels*MIXER_LATENCY,
+				  m->latency,
 				  threshhold,
 				  ratio,
 				  attack_time,
@@ -122,7 +122,7 @@ audio_compressor_config (MixerBus *b, xmlNodePtr cur)
 
 
 static void
-multiband_audio_compressor_config (MixerBus *b, xmlNodePtr cur)
+multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 {
 	AudioFilter *f;
 	double freq;
@@ -135,7 +135,7 @@ multiband_audio_compressor_config (MixerBus *b, xmlNodePtr cur)
 
 	f = multiband_audio_compressor_new (b->rate,
 					    b->channels,
-					    b->rate*b->channels*MIXER_LATENCY);
+					    m->latency);
 
 	/* Add bands */
 
@@ -179,7 +179,7 @@ mixer_output_config (mixer *m, xmlNodePtr cur)
 	rate = atoi (xmlGetProp (cur, "rate"));
 	channels = atoi (xmlGetProp (cur, "channels"));
 	if (!xmlStrcmp (type, "oss"))
-		o = oss_mixer_output_new (name, rate, channels);
+		o = oss_mixer_output_new (name, rate, channels, m->latency);
 	if (o) {
 		mixer_add_output (m, o);   
 	}
@@ -208,7 +208,7 @@ mixer_bus_config (mixer *m, xmlNodePtr cur)
 	rate = atoi (xmlGetProp (cur, "rate"));
 	channels = atoi (xmlGetProp (cur, "channels"));
 	fprintf (stderr, "Creating mixer bus %s: %d, %d.\n", bus_name, rate, channels);
-	b = mixer_bus_new (bus_name, rate, channels);
+	b = mixer_bus_new (bus_name, rate, channels, m->latency);
 
 
 	/* Process filters and output patches */
@@ -216,9 +216,9 @@ mixer_bus_config (mixer *m, xmlNodePtr cur)
 	cur = cur->xmlChildrenNode;
 	while (cur) {
 		if (!xmlStrcmp (cur->name, "audiocompressor"))
-			audio_compressor_config (b, cur);
+			audio_compressor_config (m, b, cur);
 		if (!xmlStrcmp (cur->name, "multibandaudiocompressor"))
-			multiband_audio_compressor_config (b, cur);
+			multiband_audio_compressor_config (m, b, cur);
 		cur = cur->next;
 	}
 	mixer_add_bus (m, b);

@@ -30,7 +30,7 @@ struct _AudioFilter {
 AudioFilter *
 audio_filter_new (int rate,
 		  int channels,
-		  int buffer_size);
+		  int latency);
 int
 audio_filter_process_data (AudioFilter *f,
 			   short *input,

@@ -24,11 +24,12 @@ mixer_output_destroy (MixerOutput *o)
 
 
 void
-mixer_output_alloc_buffer (MixerOutput *o)
+mixer_output_alloc_buffer (MixerOutput *o,
+			   const int latency)
 {
   if (!o)
     return;
-  o->buffer_size = o->rate*o->channels*MIXER_LATENCY;
+  o->buffer_size = latency/(88200/(o->rate*o->channels));
   o->buffer = (short *) malloc (o->buffer_size*sizeof(short));
 }
 

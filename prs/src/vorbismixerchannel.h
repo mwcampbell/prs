@@ -6,6 +6,7 @@
 
 MixerChannel *
 vorbis_mixer_channel_new (const char *name,
-			  const char *location);
+			  const char *location,
+			  const int mixer_latency);
 
 #endif

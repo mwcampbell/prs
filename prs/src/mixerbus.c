@@ -7,7 +7,8 @@
 MixerBus *
 mixer_bus_new (const char *name,
 	       int rate,
-	       int channels)
+	       int channels,
+	       int latency)
 {
   MixerBus *b;
 
@@ -18,7 +19,8 @@ mixer_bus_new (const char *name,
     b->name = NULL;
   b->rate = rate;
   b->channels = channels;
-  b->buffer_size = b->process_buffer_size = b->rate*b->channels*MIXER_LATENCY;
+  b->buffer_size = b->process_buffer_size =
+	  latency/(88200/(b->rate*b->channels));
   b->buffer = (short *) malloc (b->buffer_size*sizeof(short));
   b->process_buffer = (short *) malloc (b->buffer_size*sizeof(short));
   b->filters = b->outputs = NULL;

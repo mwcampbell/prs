@@ -201,6 +201,7 @@ MixerOutput *
 shout_mixer_output_new (const char *name,
 			int rate,
 			int channels,
+			int latency,
 			shout_t *s,
 			int stereo)
 {
@@ -234,7 +235,7 @@ shout_mixer_output_new (const char *name,
 	o->free_data = shout_mixer_output_free_data;
 	o->post_data = shout_mixer_output_post_data;
 
-	mixer_output_alloc_buffer (o);
+	mixer_output_alloc_buffer (o, latency);
 
 	pthread_create (&i->shout_thread_id, NULL, shout_thread, (void *) o);
 	start_encoder (o);
