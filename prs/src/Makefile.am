@@ -16,6 +16,7 @@ prs_server_SOURCES = \
 	mp3fileinfo.c \
 	db.c \
 	list.c \
+	prs.c \
 	prs_config.c \
 	mixer.c \
 	mixerbus.c \

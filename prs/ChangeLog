@@ -1,3 +1,16 @@
+2002-11-10  Matt Campbell  <mattcampbell@pobox.com>
+
+	* src/prs_config.c src/prs_server.c: The configuration file to be
+	used can now be specified as a command-line argument.  If no
+	argument is given, prs.conf is still the default.
+
+	* src/prs.conf: Replaced Marc's stream details with more generic
+	place-holder values.
+
+	* Added a telnet interface so that PRS can be detached from the
+	terminal on which it was started but still be controlled if
+	desired.
+
 2002-11-10  Marc Mulcahy  <marc@plbb.net>
 
 	* Removed src/global_data.c and src/global_data.h.

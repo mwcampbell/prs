@@ -166,20 +166,6 @@ shout_mixer_output_free_data (MixerOutput *o)
 
 
 
-static void
-shout_mixer_output_post_data (MixerOutput *o)
-{
-	shout_info *i;
-  
-	if (!o)
-		return;
-	i = (shout_info *) o->data;
-
-	write (i->encoder_input_fd, o->buffer, o->buffer_size*sizeof(short));
-}
-
-
-
 static void *
 shout_thread (void *data)
 {
@@ -188,13 +174,6 @@ shout_thread (void *data)
 	char buffer[1024];
 	int bytes_read;
   
-	if (shout_open (i->shout))
-	{
-		fprintf (stderr, "Couldn'[t connect to icecast server.\n");
-		o->enabled = 0;
-		return;
-	}
-	fprintf (stderr, "Connected OK.\n");
 	while (!i->stream_reset)
 	{
 		bytes_read = read (i->encoder_output_fd, buffer, 1024);
@@ -205,6 +184,22 @@ shout_thread (void *data)
 		}
 	}
 	fprintf (stderr, "Shout thread exiting...\n");
+}
+
+
+
+static void
+shout_mixer_output_post_data (MixerOutput *o)
+{
+	shout_info *i;
+  
+	if (!o)
+		return;
+	i = (shout_info *) o->data;
+
+	if (i->shout_thread_id == 0)
+		pthread_create (&i->shout_thread_id, NULL, shout_thread, o);
+	write (i->encoder_input_fd, o->buffer, o->buffer_size*sizeof(short));
 }
 
 
@@ -249,7 +244,13 @@ shout_mixer_output_new (const char *name,
 
 	mixer_output_alloc_buffer (o, latency);
 
-	pthread_create (&i->shout_thread_id, NULL, shout_thread, (void *) o);
+	i->shout_thread_id = 0;
+	if (shout_open (i->shout))
+	{
+		fprintf (stderr, "Couldn't connect to icecast server.\n");
+		mixer_output_destroy (o);
+		return NULL;
+	}
 	start_encoder (o);
 	return o;
 }

@@ -40,7 +40,6 @@ stream_config (mixer *m, xmlNodePtr cur)
 			tmp = xmlGetProp (cur, "password");
 			if (tmp)
 				shout_set_password (s, tmp);
-			printf ("Set password to %s.\n", tmp);
 			tmp = xmlGetProp (cur, "mount");
 			if (tmp)
 				shout_set_mount (s, tmp);
@@ -103,7 +102,6 @@ stream_config (mixer *m, xmlNodePtr cur)
 		}
 		cur = cur->next;
 	}
-	fprintf (stderr, "Processing stream configuration...\n");
 }
 
 
@@ -128,7 +126,6 @@ audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 				  release_time,
 				  output_gain);
 	mixer_bus_add_filter (b, f);
-	fprintf (stderr, "Compressor: %lf, %lf, %lf, %lf, %lf.\n", threshhold, ratio, attack_time, release_time, output_gain);
 }
 
 
@@ -163,7 +160,7 @@ multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 			output_gain = atof (xmlGetProp(cur, "output_gain"));
 			if (freq > b->rate/2)
 				freq = b->rate/2;
-multiband_audio_compressor_add_band (f,
+			multiband_audio_compressor_add_band (f,
 							     freq,
 							     threshhold,
 							     ratio,
@@ -247,7 +244,6 @@ mixer_bus_config (mixer *m, xmlNodePtr cur)
 	bus_name = xmlGetProp (cur, "name");
 	rate = atoi (xmlGetProp (cur, "rate"));
 	channels = atoi (xmlGetProp (cur, "channels"));
-	fprintf (stderr, "Creating mixer bus %s: %d, %d.\n", bus_name, rate, channels);
 	b = mixer_bus_new (bus_name, rate, channels, m->latency);
 
 
@@ -270,7 +266,6 @@ static void
 mixer_config (mixer *m, xmlNodePtr cur)
 {
 	cur = cur->xmlChildrenNode;
-	fprintf (stderr, "Processing mixer configuration...\n");
 	while (cur != NULL) {
 		if (!xmlStrcmp (cur->name, "bus"))
 			mixer_bus_config (m, cur);
@@ -287,12 +282,12 @@ mixer_config (mixer *m, xmlNodePtr cur)
 
 
 int
-prs_config (mixer *m)
+prs_config (PRS *prs, const char *filename)
 {
 	xmlDocPtr doc;
 	xmlNodePtr cur;
 
-	doc = xmlParseFile ("prs.conf");
+	doc = xmlParseFile (filename);
 	if (doc == NULL) {
 		fprintf (stderr, "Can't process configuration file.\n");
 		return -1;
@@ -305,11 +300,20 @@ prs_config (mixer *m)
 	cur = cur->xmlChildrenNode;
 	while (cur) {
 		if (!xmlStrcmp (cur->name, "stream_config"))
-			stream_config (m, cur);
+			stream_config (prs->mixer, cur);
 		else if (!xmlStrcmp (cur->name, "mixer_config")) 
-			mixer_config (m, cur);
-		else
-			fprintf (stderr, "Skipping %s node...\n", cur->name);
+			mixer_config (prs->mixer, cur);
+		else if (!xmlStrcmp (cur->name, "telnet")) {
+			xmlChar *password = xmlGetProp (cur, "password");
+			xmlChar *port = xmlGetProp (cur, "port");
+			if (password != NULL)
+				prs->password = strdup (password);
+			if (port == NULL)
+				prs->telnet_port = 4777;
+			else
+				prs->telnet_port = atoi (port);
+			prs->telnet_interface = 1;
+		}
 		cur = cur->next;
 	}  
 	xmlFreeDoc (doc);
