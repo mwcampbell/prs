@@ -285,7 +285,7 @@ main (int argc, char *argv[])
 
   completion_init ();
   
-  debug_set_flags (DEBUG_FLAGS_ALL);
+//  debug_set_flags (DEBUG_FLAGS_ALL);
   signal (SIGSEGV, segv_handler);
   if (argc > 1)
     config_filename = argv[1];
