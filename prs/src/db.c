@@ -394,7 +394,7 @@ create_playlist_tables (list *read_only_users,
 
 
 void
-playlist_template_free (PlaylistTemplate *t)
+playlist_template_destroy (PlaylistTemplate *t)
 {
   if (!t)
     return;
@@ -413,6 +413,11 @@ get_playlist_template_from_result (PGresult *res,
 {
   PlaylistTemplate *t = (PlaylistTemplate *) malloc (sizeof(PlaylistTemplate));
 
+  if (!t)
+    {
+      fprintf (stderr, "Something is very broken.\n");
+      abort ();
+      }
   t->id = atoi (PQgetvalue (res, row, 0));
   t->name = strdup (PQgetvalue (res, row, 1));
   t->start_time = atof (PQgetvalue (res, row, 2));
@@ -465,7 +470,6 @@ playlist_event_free (PlaylistEvent *e)
   if (!e)
     return;
   if (e->channel_name)
-    if (e->channel_name)
       free (e->channel_name);
   if (e->detail1)
     free (e->detail1);
@@ -726,7 +730,7 @@ recording_picker_new (double artist_exclude,
 
 
 void
-recording_picker_free (RecordingPicker *p)
+recording_picker_destroy (RecordingPicker *p)
 {
   PGresult *res;
   char buffer[1024];

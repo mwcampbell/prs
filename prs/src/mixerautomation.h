@@ -53,14 +53,18 @@ void
 mixer_automation_destroy (MixerAutomation *a);
 int
 mixer_automation_add_event (MixerAutomation *a,
-			    AutomationEvent *e,
-			    double start_time);
-void
+			    AutomationEvent *e);
+			    void
 mixer_automation_next_event (MixerAutomation *a);
 int
 mixer_automation_start (MixerAutomation *a);
 int
 mixer_automation_stop (MixerAutomation *a);
+void
+mixer_automation_set_start_time (MixerAutomation *a,
+				 double start_time);
+double
+mixer_automation_get_last_event_end (MixerAutomation *a);
 
 
 

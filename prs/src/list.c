@@ -14,10 +14,14 @@
 void *
 list_get_item (list *l, int item)
 {
+  if (item < 0)
+    return NULL;
   while (item-- && l)
     l = l->next;
   if (l)
     return l->data;
+  else
+    return NULL;
 }
 
 

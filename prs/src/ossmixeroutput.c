@@ -25,7 +25,11 @@ oss_mixer_output_free_data (MixerOutput *o)
   if (!o->data)
     return;
   i = (oss_info *) o->data;
-  close (i->fd);
+  if (!global_data_get_soundcard_duplex ())
+    {
+      close (i->fd);
+      global_data_set_soundcard_fd (-1);
+    }
   free (o->data);
 }
 
@@ -60,47 +64,60 @@ oss_mixer_output_new (const char *name,
 
   /* Open the sound device */
 
-  i->fd = open ("/dev/dsp", O_RDWR);
+  i->fd = global_data_get_soundcard_fd ();
+  if (i->fd < 0)
+    {
+      i->fd = open ("/dev/dsp", O_RDWR);
+      if (i->fd < 0)
+	{
+	  global_data_set_soundcard_duplex (0);
+	  i->fd = open ("/dev/dsp", O_WRONLY);
+	}
+      else
+	global_data_set_soundcard_duplex (1);
+      global_data_set_soundcard_fd (i->fd);
+
+      /* Setup sound card */
+
+      tmp = 0x00040009;
+      if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0)
+	{
+	  close (i->fd);
+	  free (i);
+	  return NULL;
+	}
+      tmp = AFMT_S16_LE;
+      if (ioctl (i->fd, SNDCTL_DSP_SAMPLESIZE, &tmp) < 0)
+	{
+	  close (i->fd);
+	  free (i);
+	  return NULL;
+	}
+      if (channels == 1)
+	tmp = 0;
+      else
+	tmp = 1;
+      if (ioctl (i->fd, SNDCTL_DSP_STEREO, &tmp) < 0)
+	{
+	  close (i->fd);
+	  free (i);
+	  return NULL;
+	}
+      tmp = rate;
+      if (ioctl (i->fd, SNDCTL_DSP_SPEED, &tmp) < 0)
+	{
+	  close (i->fd);
+	  free (i);
+	  return NULL;
+	}
+  
+    }
   if (i->fd < 0)
     {
       free (i);
       return NULL;
-      }
+    }
 
-  /* Setup sound card */
-
-  tmp = 0x00040009;
-  if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0)
-    {
-      close (i->fd);
-      free (i);
-      return NULL;
-    }
-  tmp = AFMT_S16_LE;
-  if (ioctl (i->fd, SNDCTL_DSP_SAMPLESIZE, &tmp) < 0)
-    {
-      close (i->fd);
-      free (i);
-      return NULL;
-    }
-  if (channels == 1)
-    tmp = 0;
-  else
-    tmp = 1;
-  if (ioctl (i->fd, SNDCTL_DSP_STEREO, &tmp) < 0)
-    {
-      close (i->fd);
-      free (i);
-      return NULL;
-    }
-  tmp = rate;
-  if (ioctl (i->fd, SNDCTL_DSP_SPEED, &tmp) < 0)
-    {
-      close (i->fd);
-      free (i);
-      return NULL;
-    }
-  
   o = malloc (sizeof (MixerOutput));
   if (!o)
     {
@@ -122,19 +139,6 @@ oss_mixer_output_new (const char *name,
   mixer_output_alloc_buffer (o);  
   o->enabled = 1;
   return o;
-}
-
-
-
-int
-oss_mixer_output_get_fd (MixerOutput *o)
-{
-  oss_info *i;
-  
-  if (!o)
-    return -1;
-  i = (oss_info *) o->data;
-  return i->fd;
 }
 
 

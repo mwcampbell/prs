@@ -74,44 +74,16 @@ mixer_automation_destroy (MixerAutomation *a)
 
 int
 mixer_automation_add_event (MixerAutomation *a,
-			    AutomationEvent *e,
-			    double start_time)
+			    AutomationEvent *e)
 {
-  AutomationEvent *next_event;
-  double last_event_time, next_event_time;
-  list *tmp;
-  
   if (!a)
     return -1;
   if (!e)
     return -1;
-  last_event_time = next_event_time = a->last_event_time;
-  next_event = NULL;
-  for (tmp = a->events; tmp; tmp = tmp->next)
-    {
-      next_event = (AutomationEvent *) tmp->data;
-      next_event_time = last_event_time+next_event->delta_time;
-      if (start_time < next_event_time)
-	break;
-      last_event_time = next_event_time;
-    }  
-  e->delta_time = start_time-last_event_time;
-  if (e->delta_time < 0)
-    e->delta_time = 0.0;
-
-  if (tmp)
-    next_event->delta_time = next_event_time-start_time;
-  
-  if (tmp == a->events)
-    {
+  if (!a->events)
       if (a->running)
-	mixer_reset_notification_time (a->m, last_event_time+e->delta_time);
-      a->events = list_prepend (tmp, e);
-    }
-  else if (tmp)
-    tmp = list_insert_before (tmp, e);
-  else
-    a->events = list_append (a->events, e);
+	mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
+  a->events = list_append (a->events, e);
 }
 
 
@@ -120,7 +92,6 @@ void
 mixer_automation_next_event (MixerAutomation *a)
 {
   AutomationEvent *e;
-  double cur_time;
   MixerChannel *ch;      
   
   if (!a)
@@ -129,9 +100,7 @@ mixer_automation_next_event (MixerAutomation *a)
     e = (AutomationEvent *) a->events->data;
   else
     return;
-  cur_time = mixer_get_time (a->m);
-  a->last_event_time = cur_time;
-  
+
   /* Do event */
 
   switch (e->type)
@@ -157,6 +126,7 @@ mixer_automation_next_event (MixerAutomation *a)
     }
   automation_event_destroy (e);
   a->events = list_delete_item (a->events, a->events);
+  a->last_event_time = mixer_get_time (a->m);
 }
 
 
@@ -165,8 +135,15 @@ static void *
 mixer_automation_main_thread (void *data)
 {
   MixerAutomation *a = (MixerAutomation *) data;
+
   while (1)
     {
+
+
+      /* Wait time defaults to wait for like thirty years in the case where
+       * we have no event in the queue
+       */
+
       double wait_time = (double) (0x7ffffff);
       AutomationEvent *e;
 
@@ -174,11 +151,31 @@ mixer_automation_main_thread (void *data)
 	e = (AutomationEvent *) a->events->data;
       else
 	e = NULL;
+
+
+      /* If there's an event at the top of the queue, set the mixer wait
+       * notification to notify us when it's time has been reached
+       */
+
       if (e)
-	wait_time = a->last_event_time+e->delta_time;
+	{
+	  wait_time = a->last_event_time+e->delta_time;
+	}
+      
+
+      /* If the automation isn't running, bail */
+
       if (!a->running)
 	break;
+
+
+      /* Wait for the mixer to notify us that the specified time has been reached */
+
       mixer_wait_for_notification (a->m, wait_time);
+
+
+      /* If someone turned automation off while we were waiting, bail now */
+
       if (!a->running)
 	break;
       mixer_automation_next_event (a);
@@ -220,3 +217,47 @@ mixer_automation_stop (MixerAutomation *a)
   pthread_join ((a->automation_thread), NULL);
   return 0;
 }
+
+
+
+void
+mixer_automation_set_start_time (MixerAutomation *a,
+				double start_time)
+{
+  AutomationEvent *e;
+
+  if (!a)
+    return;
+  a->last_event_time = start_time;
+  if (a->events)
+    e = (AutomationEvent *) a->events->data;
+  else
+    e = NULL;
+  if (e)
+    mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
+}
+
+
+
+double
+mixer_automation_get_last_event_end (MixerAutomation *a)
+{
+  double event_start_time, event_end_time, rv;
+  list *tmp;
+  
+  if (!a)
+    return -1.0;
+
+  rv = event_start_time = event_end_time = a->last_event_time;
+  for (tmp = a->events; tmp; tmp = tmp->next)
+    {
+      AutomationEvent *e = (AutomationEvent *) tmp->data;
+      event_start_time += e->delta_time;
+      event_end_time = event_start_time + e->length;
+      if (event_end_time > rv)
+	rv = event_end_time;
+    }
+  return rv;
+}
+
+  

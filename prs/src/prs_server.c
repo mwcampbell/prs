@@ -11,6 +11,7 @@
 #include "vorbismixerchannel.h"
 #include "ossmixerchannel.h"
 #include "global_data.h"
+#include "scheduler.h"
 
 
 
@@ -43,11 +44,16 @@ static void
 mic_on (mixer *m)
 {
   MixerChannel *ch;
-  MixerOutput *o;
   
-  o = mixer_get_output (m, "soundcard");
-  ch = oss_mixer_channel_new ("mic", 44100, 2, oss_mixer_output_get_fd (o));
+  ch = oss_mixer_channel_new ("mic", 44100, 2);
+  if (!ch)
+    {
+      fprintf (stderr, "Couldn't turn mic on\n");
+      return;
+    }
   mixer_fade_all (m, .3, 1.0);
+  if (!global_data_get_soundcard_duplex ())
+    mixer_delete_output (m, "soundcard");
   mixer_add_channel (m, ch);
   mixer_patch_channel_all (m, "mic");
 }
@@ -58,6 +64,11 @@ static void
 mic_off (mixer *m)
 {
   mixer_delete_channel (m, "mic");
+  if (!global_data_get_soundcard_duplex ())
+    {
+      MixerOutput *o = oss_mixer_output_new ("soundcard", 44100, 2);
+      mixer_add_output (m, o);
+    }
   mixer_fade_all (m, 1.0, 1.0);
 }
 
@@ -178,254 +189,6 @@ setup_streams (mixer *m)
 
 
 
-
-static void
-process_playlist_event (PlaylistTemplate *t,
-			int event_number,
-			RecordingPicker *p,
-			MixerAutomation *a,
-			double cur_time,
-			double *start_time,
-			double *end_time)
-{
-
-  /* Keep track of last event start and end times */
-
-  static double last_start_time = -1.0, last_end_time = -1.0;
-  static PlaylistTemplate *last_template = NULL;
-
-  PlaylistEvent *e;
-  PlaylistEvent *anchor_event;
-  Recording *r;
-  list *categories;
-  AutomationEvent *ae;
-  
-  /* Ensure that last_start_time and last_end_time are initialized */
-  
-  if (last_template && last_template->id != t->id)
-    {
-      if (!last_template)
-	last_start_time = last_end_time = cur_time;
-      else
-	last_start_time = last_end_time = t->start_time;
-      last_template = t;
-    }  
-  else
-    last_start_time = last_end_time = cur_time;
-  
-  /* Get the PlaylistEvent from the template */
-
-  e = playlist_template_get_event (t, event_number);
-  if (!e)
-    {
-      *start_time = *end_time = -1.0;
-      return;
-    }
-
-  /* Get the event to which this event is anchored */
-
-  if (e->anchor_event_number >= 0)
-    anchor_event = playlist_template_get_event (t, e->anchor_event_number);
-  else
-    anchor_event = NULL;
-  
-  /* Create the mixer event */
-
-  ae = automation_event_new ();
-
-  /* Compute the start time of this event */
-
-  if (anchor_event && anchor_event->start_time != -1.0)
-    *start_time = last_start_time = 
-    (e->anchor_position)
-      ? (anchor_event->end_time+e->offset)
-      : (anchor_event->start_time+e->offset);
-  else
-    *start_time = last_start_time =
-      (e->anchor_position)
-      ? (last_end_time+e->offset)
-      : (last_start_time+e->offset);
-  
-  /* If the start time isn't within the template start and end times, bail now */
-
-  if ((t->start_time != -1.0 && t->end_time != 1.0) &&
-      (*start_time > t->end_time))
-    {
-      automation_event_destroy (ae);
-      *start_time = *end_time = -1.0;
-      return;
-    }
-  
-  /* Set the channel name */
-  
-  ae->channel_name = strdup (e->channel_name);
-
-  switch (e->type)
-    {
-    case EVENT_TYPE_SIMPLE_RANDOM:
-    case EVENT_TYPE_RANDOM:
-
-      /* The five details are category names, so make a list of them */
-
-      if (*e->detail1)
-	categories = string_list_prepend (NULL, e->detail1);
-      if (*e->detail2)
-	categories = string_list_prepend (categories, e->detail2);
-      if (*e->detail3)
-	categories = string_list_prepend (categories, e->detail3);
-      if (*e->detail4)
-	categories = string_list_prepend (categories, e->detail4);
-      if (*e->detail5)
-	categories = string_list_prepend (categories, e->detail5);
-
-      if (e->type == EVENT_TYPE_SIMPLE_RANDOM)
-	r = recording_picker_select (p, categories, -1);
-      else
-	r = recording_picker_select (p, categories, *start_time);
-
-      /* Free the list of categories */
-
-      list_free (categories);
-
-      /* if the recording selection failed, the event has a zero length since
-       * there is no event, so just return the current time
-       */
-
-      if (!r)
-	{
-	  automation_event_destroy (ae);
-	  ae = NULL;
-	  break;
-	}
-      
-      ae->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
-      ae->detail1 = strdup (r->path);
-      ae->level = e->level;
-      *start_time -= r->audio_in;
-      ae->length = r->audio_out;
-      recording_free (r);
-      break;
-    case EVENT_TYPE_FADE:
-    
-      ae->type = AUTOMATION_EVENT_TYPE_FADE_CHANNEL;
-      ae->level = e->level;
-      ae->length = atof (e->detail1);
-      ae->detail1 = strdup (e->detail1);
-      break;
-
-    case EVENT_TYPE_PATH:
-
-      r = find_recording_by_path (e->detail1);
-      ae->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
-      ae->detail1 = strdup (r->path);
-      ae->level = e->level;
-      *start_time -= r->audio_in;
-      ae->length = r->audio_out;
-      recording_free (r);
-      break;
-    }
-  
-  if (ae)
-    {
-
-      e->start_time = last_start_time = *start_time;
-      *end_time = e->end_time = last_end_time = *start_time+ae->length;
-      mixer_automation_add_event (a, ae, *start_time);
-      return;
-    }
-  else
-    {
-      *end_time = last_end_time;
-      *start_time = last_start_time;
-      return;
-    }
-}
-
-
-
-static double
-execute_playlist_template (PlaylistTemplate *t,
-			   MixerAutomation *a,
-			   double cur_time)
-{
-  int length;
-  int i;
-  RecordingPicker *p;
-  
-  if (!t)
-    return cur_time;
-
-  p = recording_picker_new (t->artist_exclude, t->recording_exclude);
-  do
-    {
-      length = list_length (t->events);
-      for (i = 1; i <= length; i++)
-	{
-	  double start_time, end_time;
-	  process_playlist_event (t, i, p, a, cur_time, &start_time,
-				  &end_time);
-	  
-	  /* If we just queued an event which starts more than 10 seconds in
-	   * the future, wait the difference less ten seconds
-	   */
-
-	  if (start_time > 0 && start_time > cur_time+10)
-	    usleep ((start_time-cur_time-10)*1000000);
-	  cur_time = end_time;
-
-	  if (end_time < 0)
-	    break;
-	}
-      if (cur_time < 0)
-	{
-	  AutomationEvent *ae = automation_event_new ();
-	  ae->level = 0.0;
-	  ae->length = 5.0;
-	  ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
-	  mixer_automation_add_event (a, ae, t->end_time-5);
-	  cur_time = t->end_time;
-	}
-    }
-  while (t->repeat_events && cur_time > t->start_time && cur_time < t->end_time);
-  recording_picker_free (p);
-  return cur_time;
-}
-
-
-
-static void *
-playlist_main_thread (void *data)
-{
-  MixerAutomation *a = (MixerAutomation *) data;
-  double cur_time;
-  PlaylistTemplate *t;
-
-  cur_time = mixer_get_time (a->m);  
-
-  while (1)
-    {
-      t = get_playlist_template (cur_time);
-      if (t)
-	{
-	  double new_time = execute_playlist_template (t, a, cur_time);
-	  playlist_template_free (t);
-	  cur_time = new_time;
-	}
-      else
-      {
-
-	/* Wait ten seconds, then re-sync wih the mixer and try again */
-
-	usleep (10000000);
-	cur_time = mixer_get_time (a->m);
-      }
-    }
-  return 0;
-}
-
-
-
-
 int main (void)
 {
   mixer *m;
@@ -435,7 +198,8 @@ int main (void)
   char input[81];
   int done = 0;
   MixerAutomation *a;
-
+  scheduler *s;
+  
   signal (SIGUSR1, prs_signal_handler);
   connect_to_database ("prs");
   m = mixer_new ();
@@ -450,7 +214,10 @@ int main (void)
   printf ("Running as pid %d.\n", getpid ());
   a = mixer_automation_new (m);
   mixer_start (m);
-  pthread_create (&playlist_thread, NULL, playlist_main_thread, a);
+
+  s = scheduler_new (a, mixer_get_time (m)+10);
+
+  scheduler_start (s, 10);
 
   while (!done)
     {

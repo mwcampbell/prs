@@ -1,4 +1,4 @@
-bin_PROGRAMS = prs_db_builder prs_server
+bin_PROGRAMS = prs_db_builder prs_server prs_test
 
 prs_db_builder_SOURCES = \
 	db.c \
@@ -18,5 +18,11 @@ prs_server_SOURCES = \
 	vorbismixerchannel.c \
 	ossmixerchannel.c \
 	mixerautomation.c \
+	scheduler.c \
 	prs_server.c
+
+prs_test_SOURCES = \
+	test.c \
+	list.c \
+	db.c
 

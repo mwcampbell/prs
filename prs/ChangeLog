@@ -1,3 +1,12 @@
+2002-08-03  Marc Mulcay <marc@plbb.net>
+
+	* src/global_data.c src/global_data.h src/ossmixerchannel.c
+	src/ossmixerchannel.c: better handling for full and half duplex
+	sound cards.
+
+	* src/scheduler.c src/scheduler.h src/prs_server.c: added new
+	scheduler.
+
 202-08-02  Marc Mulcahy <marc@plbb.net>
 
 	* src/prs_server.c: Made recording selection failures work as

@@ -8,7 +8,4 @@ MixerOutput *
 oss_mixer_output_new (const char *name,
 		      int rate,
 		      int channels);
-int
-oss_mixer_output_get_fd (MixerOutput *o);
-
 #endif

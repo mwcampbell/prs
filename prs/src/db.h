@@ -85,7 +85,7 @@ void
 create_playlist_tables (list *read_only_users,
 				list *total_access_users);
 void
-playlist_template_free (PlaylistTemplate *t);
+playlist_template_destroy (PlaylistTemplate *t);
 
 PlaylistTemplate *
 get_playlist_template (double cur_time);
@@ -201,7 +201,7 @@ RecordingPicker *
 recording_picker_new (double artist_exclude,
 		      double recording_exclude);
 void
-recording_picker_free (RecordingPicker *p);
+recording_picker_destroy (RecordingPicker *p);
 Recording *
 recording_picker_select (RecordingPicker *p,
 			 list *category_list,

@@ -23,6 +23,8 @@ static pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 
 
 static int global_flags = 0;
+static int soundcard_fd = -1;
+static int soundcard_duplex = 0;
 
 
 
@@ -56,4 +58,50 @@ global_data_is_flag_set (prs_flag flag)
   rv = global_flags;
   pthread_mutex_unlock (&mut);
   return rv ?1 :0;
+}
+
+
+
+int
+global_data_get_soundcard_fd (void)
+{
+  int rv;
+
+  pthread_mutex_lock (&mut);
+  rv = soundcard_fd;
+  pthread_mutex_unlock (&mut);
+  return rv;
+}
+
+
+
+void
+global_data_set_soundcard_fd (int fd)
+{
+  pthread_mutex_lock (&mut);
+  soundcard_fd = fd;
+  pthread_mutex_unlock (&mut);
+}
+
+
+
+int
+global_data_get_soundcard_duplex (void)
+{
+  int rv;
+
+  pthread_mutex_lock (&mut);
+  rv = soundcard_duplex;
+  pthread_mutex_unlock (&mut);
+  return rv;
+}
+
+
+
+void
+global_data_set_soundcard_duplex (int duplex)
+{
+  pthread_mutex_lock (&mut);
+  soundcard_duplex = duplex;
+  pthread_mutex_unlock (&mut);
 }

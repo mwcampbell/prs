@@ -23,7 +23,14 @@ void
 global_data_clear_flag (prs_flag flag);
 int
 global_data_is_flag_set (prs_flag flag);
-
+int
+global_data_get_soundcard_fd (void);
+void
+global_data_set_soundcard_fd (int fd);
+int
+global_data_get_soundcard_duplex (void);
+void
+global_data_set_soundcard_duplex (int duplex);
 
 
 

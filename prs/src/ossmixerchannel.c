@@ -59,10 +59,11 @@ oss_mixer_channel_free_data (MixerChannel *ch)
   i = (oss_info *) ch->data;
   if (!i)
     return;
-  tmp = 1;
-  ioctl (i->fd, SNDCTL_DSP_POST, &tmp);
-  ioctl (i->fd, SNDCTL_DSP_SYNC, &tmp);
-  close (i->fd);
+  if (!global_data_get_soundcard_duplex ())
+    {
+      close (i->fd);
+      global_data_set_soundcard_fd (-1);
+    }
   free (i);
 }
 
@@ -71,8 +72,7 @@ oss_mixer_channel_free_data (MixerChannel *ch)
 MixerChannel *
 oss_mixer_channel_new (const char *name,
 		       int rate,
-		       int channels,
-		       int fd)
+		       int channels)
 {
   MixerChannel *ch;
   oss_info *i;
@@ -84,15 +84,22 @@ oss_mixer_channel_new (const char *name,
 
   /* Open the sound device */
 
-  i->fd = fd;
-  
+  i->fd = global_data_get_soundcard_fd ();
   if (i->fd < 0)
     {
-      i->fd = open ("/dev/dsp", O_RDONLY);
-      
+      i->fd = open ("/dev/dsp", O_RDWR);
+      if (i->fd < 0)
+	{
+	  global_data_set_soundcard_duplex (0);
+	  i->fd = open ("/dev/dsp", O_RDONLY);
+	}
+      else
+	global_data_set_soundcard_duplex (1);
+      global_data_set_soundcard_fd (i->fd);
+
       /* Setup sound card */
 
-      tmp = 0X00040009;
+      tmp = 0x00040009;
       if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0)
 	{
 	  close (i->fd);
@@ -123,9 +130,13 @@ oss_mixer_channel_new (const char *name,
 	  free (i);
 	  return NULL;
 	}
-
-      }
   
+    }
+  if (i->fd < 0)
+    {
+      free (i);
+      return NULL;
+      }
   ch = (MixerChannel *) malloc (sizeof (MixerChannel));
   if (!ch)
     {
@@ -147,7 +158,7 @@ oss_mixer_channel_new (const char *name,
 
   ch->level = 1.0;
   ch->fade = 0.0000001;
-  ch->fade_destination = 100.0;
+  ch->fade_destination = 1.0;
   ch->outputs = NULL;
   ch->enabled = 1;
   ch->data_end_reached = 0;
