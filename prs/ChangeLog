@@ -1,3 +1,7 @@
+2002-12-03 Marc Mulcahy <marc@plbb.net>
+
+	* php/addevents.php: Fixed typo.
+	
 2002-12-01  Matt Campbell  <mattcampbell@pobox.com>
 
 	* src/urlmixerchannel.c: Now includes signal.h.

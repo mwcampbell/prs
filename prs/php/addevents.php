@@ -36,7 +36,7 @@ if ($new_template)
 
 	$query = "insert into playlist_template (template_name, start_time, end_time, repeat_events, artist_exclude, recording_exclude) values ('" . addslashes ($template_name) . "', $start_time, $end_time, $template_events_repeat, $artist_exclude, $recording_exclude)";
 	db_query ($query);
-	$template_it = mysql_insert_id ();
+	$template_id = mysql_insert_id ();
 }
 else if (!$template_id)
 {
