@@ -101,7 +101,7 @@ int
 main (int argc, char *argv[])
 {
   char path[1024], find_cmd[1024], opt;
-  char *category = "", *config_file = "prs.conf";
+  char *category = NULL, *config_file = "prs.conf";
   FILE *fp;
   FileInfo *i;
   Database *db = db_new ();
