@@ -158,7 +158,7 @@ mp3_file_info_new (char *path, unsigned short in_threshhold,
       (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
       char title[256];
-      ID3Field_GetASCII (field, title, 256);
+      ID3Field_GetASCII (field, title, 256, 1);
       info->name = strdup (title);
     }
   
@@ -166,7 +166,7 @@ mp3_file_info_new (char *path, unsigned short in_threshhold,
       (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
       char artist[256];
-      ID3Field_GetASCII (field, artist, 256);
+      ID3Field_GetASCII (field, artist, 256, 1);
       info->artist = strdup (artist);
     }
   
@@ -174,7 +174,7 @@ mp3_file_info_new (char *path, unsigned short in_threshhold,
       (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
       char album[256];
-      ID3Field_GetASCII (field, album, 256);
+      ID3Field_GetASCII (field, album, 256, 1);
       info->album = strdup (album);
     }
   
@@ -182,7 +182,7 @@ mp3_file_info_new (char *path, unsigned short in_threshhold,
       (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
       char date[256];
-      ID3Field_GetASCII (field, date, 256);
+      ID3Field_GetASCII (field, date, 256, 1);
       info->date = strdup (date);
     }
   
@@ -190,7 +190,7 @@ mp3_file_info_new (char *path, unsigned short in_threshhold,
       (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
       char genre[256];
-      ID3Field_GetASCII (field, genre, 256);
+      ID3Field_GetASCII (field, genre, 256, 1);
       info->genre = strdup (genre);
     }
   
