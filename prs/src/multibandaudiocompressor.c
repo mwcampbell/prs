@@ -177,7 +177,7 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 				peak1 = val;
 			if (f->channels == 2)
 			{
-				long val = (*iptr++);
+				long val = abs(*iptr++);
 				if (val > peak2)
 					peak2 = val;
 			}

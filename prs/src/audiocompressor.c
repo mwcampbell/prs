@@ -56,7 +56,7 @@ audio_compressor_process_data (AudioFilter *f,
 		if (val > peak1)
 			peak1 = val;
 		if (f->channels == 2) {
-			long val = (*iptr++);
+			long val = abs(*iptr++);
 			if (val > peak2)
 				peak2 = val;
 		}

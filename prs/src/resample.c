@@ -128,7 +128,7 @@ static void win_kaiser(float *dest, int N, double alpha, int width)
 int res_init(res_state *state, int channels, int outfreq, int infreq, res_parameter op1, ...)
 {
 	double beta = 16.0,
-		cutoff = 0.80,
+		cutoff = 1.0,
 		gain = 1.0;
 	int taps = 45;
 
