@@ -93,8 +93,9 @@ mixer_automation_destroy (MixerAutomation *a)
 	if (!a)
 		return;
 	if (a->automation_thread > 0) {
+		mixer_reset_notification_time (a->m, mixer_get_time (a->m));
 		a->running = 0;
-		pthread_cancel (a->automation_thread);
+		pthread_join (a->automation_thread, NULL);
 	}
 	for (tmp = a->events; tmp; tmp = tmp->next)
 	{
@@ -243,14 +244,10 @@ mixer_automation_main_thread (void *data)
 
 		pthread_mutex_unlock (&(a->mut));
 		mixer_wait_for_notification (a->m, wait_time);
-
 		/* If someone turned automation off while we were waiting, bail now */
 
-		pthread_testcancel ();
-
 		pthread_mutex_lock (&(a->mut));
-		if (!a->running)
-		{
+		if (!a->running) {
 			pthread_mutex_unlock (&(a->mut));
 			break;
 		}
