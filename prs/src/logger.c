@@ -250,42 +250,38 @@ shoutcast_log_file (logger_data *d)
 	struct HttpPost *end = NULL;
 	char *filename = NULL;
 	char *address;
+	CURLcode ret;
+	char *encoded_password;
+	char *encoded_filename;
+	
+
 
         /* Create mock file name for "least popular tracks" feature */
 
-	if (d->l->url)
-		asprintf (&address, "%s/admin.cgi", d->l->url);
 	asprintf (&filename, "%s - %s - %s", d->artist, d->name, d->album);
+	encoded_filename = curl_escape (filename, strlen(filename));
+	encoded_password = curl_escape (d->l->password, strlen(d->l->password));
 	
+	asprintf (&address, "%s/admin.cgi?mode=updinfo&pass=%s&song=%s", d->l->url, encoded_password, encoded_filename);
 	url = curl_easy_init ();
 	curl_easy_setopt (url, CURLOPT_URL,
 			  address);
 	
 	curl_easy_setopt (url, CURLOPT_NOSIGNAL, 1);
 
-        /* Setup post data */
-
-	curl_formadd (&post, &end,
-		      CURLFORM_COPYNAME, "mode",
-		      CURLFORM_COPYCONTENTS, "updinfo",
-		      CURLFORM_END);
-	curl_formadd (&post, &end,
-		      CURLFORM_COPYNAME, "pass",
-		      CURLFORM_COPYCONTENTS, d->l->password,
-		      CURLFORM_END);
-	curl_formadd (&post, &end,
-		      CURLFORM_COPYNAME, "song",
-		      CURLFORM_COPYCONTENTS, filename,
-		      CURLFORM_END);
-	curl_easy_setopt (url, CURLOPT_HTTPPOST, post);
-	curl_easy_perform (url);
+	curl_easy_setopt (url, CURLOPT_USERAGENT, "Mozilla");
+	ret = curl_easy_perform (url);
 	curl_easy_cleanup (url);
-	curl_formfree (post);
 	logger_data_destroy (d);
 	if (address)
 		free (address);
-	if (filename)
+	
+	if (filename) {
 		free (filename);
+		curl_free (encoded_filename);
+	}
+	if (encoded_password)
+		curl_free (encoded_password);
 }
 
 

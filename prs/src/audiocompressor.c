@@ -31,18 +31,18 @@
 
 
 typedef struct {
-	double threshhold;
+	float threshhold;
 	short ithreshhold;
-	double ratio;
-	double attack_time;
-	double release_time;
-	double output_gain;
+	float ratio;
+	float attack_time;
+	float release_time;
+	float output_gain;
   
 	/* Processing state variables */
 
-	double level;
-	double fade;
-	double fade_destination;
+	float level;
+	float fade;
+	float fade_destination;
 } CompressorData;
 
 
@@ -80,9 +80,9 @@ audio_compressor_process_data (AudioFilter *f,
 	}
 	if (f->channels == 1)
 		peak2 = peak1;
-	if ((double)(peak1+peak2)/2 > d->ithreshhold) {
-		double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;
-		double delta = d->threshhold-peak_gain;
+	if ((float)(peak1+peak2)/2 > d->ithreshhold) {
+		float peak_gain = log10 ((float)(peak1+peak2)/2/32767)*20;
+		float delta = d->threshhold-peak_gain;
 		d->fade_destination = pow (10.0, (delta-delta/d->ratio)/20);
 		if (d->fade_destination < d->level)
 			d->fade = d->attack_time;
@@ -128,15 +128,15 @@ AudioFilter *
 audio_compressor_new (int rate,
 		      int channels,
 		      int latency,
-		      double threshhold,
-		      double ratio,
-		      double attack_time,
-		      double release_time,
-		      double output_gain)
+		      float threshhold,
+		      float ratio,
+		      float attack_time,
+		      float release_time,
+		      float output_gain)
 {
 	AudioFilter *f = NULL;
 	CompressorData *d = NULL;
-	double compression_amount;
+	float compression_amount;
 
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "audio_compressor_new(%d, %d, %d, %f, %f, %f, %f, %f)\n",

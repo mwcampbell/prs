@@ -36,29 +36,29 @@
 
 
 typedef struct {
-	double threshhold;
+	float threshhold;
 	short ithreshhold;
-	double ratio;
-	double attack_time;
-	double release_time;
-	double volume;
-	double output_gain;  
+	float ratio;
+	float attack_time;
+	float release_time;
+	float volume;
+	float output_gain;  
 
 	/* Filter stuff */
 
-	double a0, a1, a2, b0, b1, b2;
-	double x1[2];
-	double y1[2];
-	double x2[2];
-	double y2[2];
+	float a0, a1, a2, b0, b1, b2;
+	float x1[2];
+	float y1[2];
+	float x2[2];
+	float y2[2];
   
-	double link;
+	float link;
 
         /* Processing state variables */
 
-	double level;
-	double fade;
-	double fade_destination;
+	float level;
+	float fade;
+	float fade_destination;
 } band;
 
 static int
@@ -70,7 +70,7 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 {
 	long long peak1, peak2;
 	long prev_peak1, prev_peak2;
-	double peak;
+	float peak;
 	short *buffer_end;
 	short *iptr, *optr;
 	list *tmp;
@@ -92,7 +92,7 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 		iptr = input;
 		optr = f->buffer;
 		while (iptr < buffer_end) {
-			double in, out;
+			float in, out;
 			long new_val;
 			
 			in = *iptr;
@@ -205,8 +205,8 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 			((prev_peak1+prev_peak2)/2)*b->link;
 		if (peak  > b->ithreshhold)
 		{
-			double peak_gain = log10 ((double)(peak1+peak2)/2/32767)*20;      
-			double delta = b->threshhold-peak_gain;
+			float peak_gain = log10 ((float)(peak1+peak2)/2/32767)*20;      
+			float delta = b->threshhold-peak_gain;
 			b->fade_destination = pow (10.0, (delta-delta/b->ratio)/20);
 			if (b->fade_destination < b->level)
 				b->fade = b->attack_time;
@@ -243,23 +243,23 @@ multiband_audio_compressor_new (int rate,
 
 void
 multiband_audio_compressor_add_band (AudioFilter *f,
-				     double freq,
-				     double threshhold,
-				     double ratio,
-				     double attack_time,
-				     double release_time,
-				     double volume,
-				     double output_gain,
-				     double link)
+				     float freq,
+				     float threshhold,
+				     float ratio,
+				     float attack_time,
+				     float release_time,
+				     float volume,
+				     float output_gain,
+				     float link)
 {
-	double compression_amount;
+	float compression_amount;
 	band *b ;
 	list *bands;
-	double omega = 2*PI*freq/f->rate;
-	double sine = sin(omega);
-	double cosine = cos(omega);
-	double Q = 1;
-	double alpha = sine/(2*Q);
+	float omega = 2*PI*freq/f->rate;
+	float sine = sin(omega);
+	float cosine = cos(omega);
+	float Q = 1;
+	float alpha = sine/(2*Q);
 
 	
 	b = (band *) malloc (sizeof (band));

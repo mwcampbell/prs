@@ -63,9 +63,9 @@ struct  _MixerChannel {
 	
         /* Level and fading parameters */
 
-	double level;
-	double fade;
-	double fade_destination;
+	float level;
+	float fade;
+	float fade_destination;
 
 	/* end of data indicator */
 

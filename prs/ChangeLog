@@ -1,3 +1,9 @@
+2003-08-02 Marc Mulcahy  <marc@plbb.net>
+	
+	* src/logger.c: Fix shoutcast title streaming logging.
+
+	* Mixer and all audio filters now use floats instead of doubles.
+
 2003-08-01 Marc Mulcahy  <marc@plbb.net>
 
 	* src/logger.ch (shoutcast_log_file): Added shoutcast title

@@ -32,14 +32,14 @@ multiband_audio_compressor_new (int rate,
 		      int buffer_size);
 void
 multiband_audio_compressor_add_band (AudioFilter *f,
-				     double freq,
-				     double threshhold,
-				     double ratio,
-				     double attack_time,
-				     double release_time,
-				     double volume,
-				     double output_gain,
-				     double link);
+				     float freq,
+				     float threshhold,
+				     float ratio,
+				     float attack_time,
+				     float release_time,
+				     float volume,
+				     float output_gain,
+				     float link);
 
 
 #endif

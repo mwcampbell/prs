@@ -30,11 +30,11 @@ AudioFilter *
 audio_compressor_new (int rate,
 		      int channels,
 		      int buffer_size,
-		      double threshhold,
-		      double ratio,
-		      double attack_time,
-		      double release_time,
-		      double output_gain);
+		      float threshhold,
+		      float ratio,
+		      float attack_time,
+		      float release_time,
+		      float output_gain);
 
 
 #endif

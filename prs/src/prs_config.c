@@ -198,7 +198,7 @@ static void
 audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 {
 	AudioFilter *f;
-	double threshhold, ratio, attack_time, release_time, output_gain;
+	float threshhold, ratio, attack_time, release_time, output_gain;
 
 	threshhold = atof (xmlGetProp (cur, "threshhold"));
 	ratio = atof (xmlGetProp (cur, "ratio"));
@@ -222,14 +222,14 @@ static void
 multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 {
 	AudioFilter *f;
-	double freq;
-	double threshhold;
-	double ratio;
-	double attack_time;
-	double release_time;
-	double pre_process_gain;
-	double output_gain;
-	double link;
+	float freq;
+	float threshhold;
+	float ratio;
+	float attack_time;
+	float release_time;
+	float pre_process_gain;
+	float output_gain;
+	float link;
 
 	f = multiband_audio_compressor_new (b->rate,
 					    b->channels,
