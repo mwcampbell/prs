@@ -12,6 +12,8 @@
 #include "ossmixerchannel.h"
 #include "global_data.h"
 #include "scheduler.h"
+#include "audiofilter.h"
+#include "audiocompressor.h"
 
 
 
@@ -194,6 +196,7 @@ int main (void)
   mixer *m;
   MixerOutput *o;
   MixerChannel *ch;
+  AudioFilter *f;
   pthread_t playlist_thread;
   char input[81];
   int done = 0;
@@ -204,10 +207,18 @@ int main (void)
   m = mixer_new ();
   mixer_sync_time (m);
   setup_streams (m);
+  f = audio_compressor_new (44100, 2,
+			    44100*2*MIXER_LATENCY,
+			    -20,
+			    5.0,
+			    .1,
+			    2,
+			    2);
   o = oss_mixer_output_new ("soundcard",
 			    44100,
 			    2);
-  mixer_add_output (m, o);
+  mixer_output_add_filter (o, f);
+ mixer_add_output (m, o);
   
   
   printf ("Running as pid %d.\n", getpid ());

@@ -188,14 +188,6 @@ scheduler_schedule_next_event (scheduler *s)
       ae->delta_time -= r->audio_in;
       ae->length = r->audio_out;
       e->end_time = e->start_time+r->audio_out;
-      {
-	time_t st = (time_t) e->start_time;
-	time_t et = (time_t) e->end_time;
-	fprintf (stderr, "%s", ctime (&st));
-	fprintf (stderr, "%s", ctime (&et));
-	fprintf (stderr, "Playing %s - %s\n", r->name, r->artist);
-	fprintf (stderr, "Delta %lf, length %lf\n", ae->delta_time, ae->length);
-      }
       recording_free (r);
       break;
     case EVENT_TYPE_FADE:
@@ -205,14 +197,6 @@ scheduler_schedule_next_event (scheduler *s)
       ae->length = atof (e->detail1);
       e->end_time = e->start_time + ae->length;
       ae->detail1 = strdup (e->detail1);
-      {
-	time_t st = (time_t) e->start_time;
-	time_t et = (time_t) e->end_time;
-	fprintf (stderr, "%s", ctime (&st));
-	fprintf (stderr, "%s", ctime (&et));
-	fprintf (stderr, "Fading %s to %lf\n", e->channel_name, e->level);
-	fprintf (stderr, "Delta %lf, length %lf\n", ae->delta_time, ae->length);
-      }
       break;
 
     case EVENT_TYPE_PATH:
@@ -236,7 +220,7 @@ scheduler_schedule_next_event (scheduler *s)
       if (ae)
 	automation_event_destroy (ae);
       scheduler_pop_template (s);
-      s->prev_event_start_time = s->prev_event_end_time = s->last_event_end_time;
+      s->prev_event_end_time = s->last_event_end_time;
       pthread_mutex_unlock (&(s->mut));
       return scheduler_schedule_next_event (s);
     }

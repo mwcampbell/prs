@@ -1,6 +1,10 @@
 #ifndef _MIXER_OUTPUT_H
 #define _MIXER_OUTPUT_H
 
+#include "list.h"
+#include "audiofilter.h"
+
+
 
 #define MIXER_LATENCY .01
 
@@ -24,6 +28,12 @@ struct _MixerOutput {
 
   short *buffer;
   int buffer_size;
+  short *process_buffer;
+  int process_buffer_size;
+  
+  /* Audio filters */
+
+  list *filters;
 
   /* user data */
 
@@ -49,4 +59,7 @@ void
 mixer_output_post_output (MixerOutput *o);
 void
 mixer_output_reset_output (MixerOutput *o);
+void
+mixer_output_add_filter (MixerOutput *o,
+AudioFilter *f);
 #endif

@@ -79,7 +79,7 @@ oss_mixer_output_new (const char *name,
 
       /* Setup sound card */
 
-      tmp = 0x00040009;
+      tmp = 0x00080009;
       if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0)
 	{
 	  close (i->fd);
