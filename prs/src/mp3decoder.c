@@ -130,6 +130,5 @@ mp3_decoder_destroy (MP3Decoder *d)
 		      "mp3_decoder_destroy called\n");
 	close (d->fd);
 	kill (d->pid, SIGTERM);
-	waitpid (d->pid, NULL, 0);
 	free (d);
 }
