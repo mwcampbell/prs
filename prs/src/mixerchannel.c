@@ -43,23 +43,23 @@ data_reader (void *data)
 		/* Copy chnanel variables into our local space */
 
 		int space_left;
-		int data_end_reached;
+		int reader_thread_running;
 		int chunk_size;
 		void *get_data;
 		
 		pthread_mutex_lock (&(ch->mutex));
 		space_left = ch->space_left;
-		data_end_reached = ch->data_end_reached;
+		reader_thread_running = ch->reader_thread_running;
 		chunk_size = ch->chunk_size;
 		get_data = ch->get_data;
 		pthread_mutex_unlock (&(ch->mutex));
 		
-		if (!data_end_reached && space_left && ch->get_data) {
+		if (reader_thread_running && space_left && ch->get_data) {
 			int rv = mixer_channel_get_data (ch);
 			if (rv < chunk_size)
 				done = 1;
 		}
-		else if (!data_end_reached)
+		else if (reaeer_thread_running)
 			usleep ((double)(ch->chunk_size/ch->rate)*1000000);
 		else
 			done = 1;
@@ -130,9 +130,10 @@ mixer_channel_destroy (MixerChannel *ch)
 
 	/* Ensure the data reader quits */
 
-	if (ch->data_reader_thread > 0)
+	if (ch->data_reader_thread > 0) {
+		ch->reader_thread_running = 0;
 		pthread_join (ch->data_reader_thread, NULL);
-
+	}
 	if (ch->free_data)
 		ch->free_data (ch);
 	else {
