@@ -787,6 +787,8 @@ mixer_fade_channel (mixer *m,
 		      "fading channel %s: destionation=%f, time=%f\n",
 		      channel_name, fade_destination, fade_time);
 
+	if (fade_destination == 0)
+		fade_destination = .0001;
 	ch = mixer_get_channel (m, channel_name);
 
 	if (!ch)
@@ -814,12 +816,14 @@ mixer_fade_all (mixer *m,
 		      "fading all channels: level=%f, time=%f\n",
 		      level, fade_time);
 
+	if (level == 0)
+		level = .0001;
 	mixer_lock (m);
 	for (tmp = m->channels; tmp; tmp = tmp->next) {
 		ch = (MixerChannel *) tmp->data;
 		assert (ch != NULL);
 		if (ch->enabled) {
-			ch->fade = pow ((level+.001)/(ch->level+.001), 1.0/(ch->rate*fade_time));
+			ch->fade = pow (level/(ch->level), 1.0/(ch->rate*fade_time));
 			ch->fade_destination = level;
 		}
 	}
