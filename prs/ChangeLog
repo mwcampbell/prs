@@ -1,5 +1,7 @@
 2002-11-25  Marc Mulcahy  <marc@plbb.net>
 
+	* src/urlmixerchannel.c (url_mixer_channel_new): Fix stupidity.
+
 	* src/urlmixerchannel.ch Makefile.am: Added support for retrieving
 	streams and files via libcurl.
 

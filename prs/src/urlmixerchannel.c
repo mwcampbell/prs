@@ -11,6 +11,7 @@
 
 
 typedef enum {
+	CHANNEL_TYPE_UNKNOWN,
 	CHANNEL_TYPE_MP3,
 	CHANNEL_TYPE_LAST
 } channel_type;
@@ -30,7 +31,6 @@ typedef struct {
 	char *transfer_url;
 
 	int connected;
-
 
 	/* Decoder process ID and input and output fds */
 
@@ -125,13 +125,11 @@ curl_header_func (void *ptr,
 	else
 		val = strdup (tmp+2);
 	if (!strcmp (key, "Content-Type")) {
-	
 		if (!strcmp(val, "audio/mpeg"))
 			i->type = CHANNEL_TYPE_MP3;
 	}
 	if (!strcmp (key, "Location")) {
 		i->transfer_url = strdup (val);
-		return 0;
 	}
 	if (key)
 		free (key);
@@ -282,14 +280,13 @@ curl_write_func (void *ptr,
 			bytes_to_process = (mem*size)-(buf-(char *)ptr);
 			i->connected = 1;
 			start_mp3_decoder (i);
+			pthread_cond_broadcast (&(i->cond));
 		}
-		pthread_cond_broadcast (&(i->cond));
 	}
 	
 	write (i->decoder_input_fd, (void *) buf, bytes_to_process);
 	return mem*size;
 }
-
 
 
 static void *
@@ -310,8 +307,8 @@ curl_transfer_thread_func (void *data)
 	curl_easy_perform (url);
 	curl_easy_cleanup (url);
 	pthread_mutex_lock (&(i->mutex));
-	i->connected = 0;
-	pthread_cond_broadcast (&(i->cond));
+	if (i->connected == 0)
+		pthread_cond_broadcast (&(i->cond));
 	pthread_mutex_unlock (&(i->mutex));
 }
 
@@ -333,7 +330,12 @@ url_mixer_channel_new (const char *name,
 	i->rate = -1;
 	i->channels = -1;
 	
-	/* Flag indicating whether we're connected */
+	/* Set pid and fds to invalid */
+
+	i->decoder_pid = -1;
+	i->decoder_input_fd = i->decoder_output_fd = -1;
+
+        /* Flag indicating whether we're connected */
 
 	i->connected = 0;
 	
@@ -345,7 +347,6 @@ url_mixer_channel_new (const char *name,
         /* start transfer thread-- also handles redirects */
 
 	while (!(i->connected) && attempts < 5) {
-		fprintf (stderr, "Loading %s.\n", i->url);
 		if (pthread_create (&(i->transfer_thread),
 				    NULL,
 				    curl_transfer_thread_func,
@@ -370,6 +371,7 @@ url_mixer_channel_new (const char *name,
 
 		if (!(i->transfer_url) && (!i->connected || i->rate == -1 ||
 					   i->channels == -1)) {
+			pthread_join (&(i->transfer_thread), NULL);
 			channel_info_destroy (i);
 			fprintf (stderr, "Error creating channel, %d %d %d.\n",
 				 i->connected, i->rate, i->channels);
@@ -380,8 +382,6 @@ url_mixer_channel_new (const char *name,
 			free (i->url);
 			i->url = i->transfer_url;
 			i->transfer_url = NULL;
-			if (i->connected == 1)
-				pthread_cond_wait (&(i->cond), &(i->mutex));
 			pthread_mutex_unlock (&(i->mutex));
 		}
 		else
