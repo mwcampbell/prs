@@ -431,7 +431,7 @@ get_playlist_template (double time)
   PGresult *res;
   char buffer[1024];
 
-  sprintf (buffer, "select * from playlist_template where start_time < %lf and end_time > %lf;", time, time);
+  sprintf (buffer, "select * from playlist_template where start_time <= %lf and end_time > %lf;", time, time);
   res = PQexec (connection, buffer);
   if (PQntuples (res) != 1)
     {

@@ -1,3 +1,8 @@
+2002-07-29  Marc Mulcahy <marc@plbb.net>
+
+	* src/db.c: made template start times inclusive and template end times
+	non inclusive so overlapping templates don't result in problems.
+
 2002-07-22  Marc Mulcahy <marc@plbb.net>
 	
 	* src/prs_server.c: Added a signal handler for SIGUSR1.  Added
