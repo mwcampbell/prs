@@ -63,7 +63,8 @@ scheduler_new (MixerAutomation *a,
   s->scheduler_thread = 0;
   s->running = 0;
   s->preschedule = 0.0;
-return s;
+  pthread_mutex_init (&(s->mut), NULL);
+  return s;
 }
 
 
@@ -71,8 +72,15 @@ return s;
 void
 scheduler_destroy (scheduler *s)
 {
+  pthread_t thread;
+
   if (!s)
     return;
+  pthread_mutex_lock (&(s->mut));
+  s->running = 0;
+  thread = s->scheduler_thread;
+  pthread_mutex_unlock (&(s->mut));
+  pthread_join (thread, NULL);
   list_free (s->template_stack);
   free (s);
 }
@@ -88,9 +96,11 @@ scheduler_schedule_next_event (scheduler *s)
   AutomationEvent *ae;
   list *categories = NULL;
   Recording *r;
+  double rv;
   
   if (!s)
     return;
+  pthread_mutex_lock (&(s->mut));
   if (!s->template_stack)
     {
       time_t ct = (time_t) s->cur_time;
@@ -99,14 +109,17 @@ scheduler_schedule_next_event (scheduler *s)
 
       t = get_playlist_template (s->cur_time);
       if (!t)
-	return s->last_event_end_time;
+	{
+	  pthread_mutex_unlock (&(s->mut));
+	  return s->last_event_end_time;
+	  }
       scheduler_push_template (s, t, 1);
     }
 
   stack_entry = (template_stack_entry *) s->template_stack->data;
   e = list_get_item (stack_entry->t->events, stack_entry->event_number-1);
   anchor = list_get_item (stack_entry->t->events, e->anchor_event_number-1);
-
+  
   /* compute start time */
 
   if (anchor)
@@ -194,16 +207,17 @@ scheduler_schedule_next_event (scheduler *s)
       break;
     }
   
-  /* If the end time of the event falls outside this template, go to a new one */
+  /* If the start time of the event falls outside this template, go to a new one */
 
-      if (e->start_time > stack_entry->t->end_time)
-	{
-	  if (ae)
-	    automation_event_destroy (ae);
-	  scheduler_pop_template (s);
-	  s->last_event_end_time = s->cur_time = mixer_automation_get_last_event_end (s->a);
-	  return scheduler_schedule_next_event (s);
-	}
+  if (e->start_time > stack_entry->t->end_time)
+    {
+      if (ae)
+	automation_event_destroy (ae);
+      scheduler_pop_template (s);
+      s->last_event_end_time = s->cur_time = mixer_automation_get_last_event_end (s->a);
+      pthread_mutex_unlock (&(s->mut));
+      return scheduler_schedule_next_event (s);
+    }
   if (ae)
     mixer_automation_add_event (s->a, ae);
   stack_entry->event_number++;
@@ -211,7 +225,9 @@ scheduler_schedule_next_event (scheduler *s)
     stack_entry->event_number = 1;
   s->last_event_start_time = e->start_time;
   s->last_event_end_time = e->end_time;
-  return s->last_event_start_time;
+  rv = s->last_event_start_time;
+  pthread_mutex_unlock (&(s->mut));
+  return rv;
 }
 
 
@@ -222,16 +238,21 @@ scheduler_main_thread (void *data)
   scheduler *s = (scheduler *) data;
   double target, current;
   
+  pthread_mutex_lock (&(s->mut));
   current = target = s->cur_time;
+  pthread_mutex_unlock (&(s->mut));
   while (1)
     {
+      pthread_mutex_lock (&(s->mut));
       if (!s->running)
-	break;
+	{
+	  pthread_mutex_unlock (&(s->mut));
+	  break;
+	}
+      pthread_mutex_unlock (&(s->mut));
       target += s->preschedule;
       while (current < target)
-	{
-	  current = scheduler_schedule_next_event (s);
-	  }
+	current = scheduler_schedule_next_event (s);
       usleep ((current-target)*900000);
       target = current;
     }
@@ -245,10 +266,15 @@ scheduler_start (scheduler *s,
 {
   if (!s)
     return;
+  pthread_mutex_lock (&(s->mut));
   if (s->running)
-    return;
+    {
+      pthread_mutex_unlock (&(s->mut));
+      return;
+    }
   s->preschedule = preschedule;
   s->running = 1;
   pthread_create (&(s->scheduler_thread), NULL, scheduler_main_thread, (void *) s);
+  pthread_mutex_unlock (&(s->mut));
 }
   

@@ -1,10 +1,12 @@
 #ifndef _SCHEDULER_H
 #define _SCHEDULER_H
+#include <pthread.h>
 #include "mixerautomation.h"
 
 
 
 typedef struct {
+  pthread_mutex_t mut;
   MixerAutomation *a;
   double cur_time;
   double last_event_start_time;
