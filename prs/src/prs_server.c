@@ -4,6 +4,9 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
+#include "fileinfo.h"
+#include "vorbisfileinfo.h"
+#include "mp3fileinfo.h"
 #include "prs_config.h"
 #include "db.h"
 #include "mixerautomation.h"
@@ -11,7 +14,6 @@
 #include "shoutmixeroutput.h"
 #include "vorbismixerchannel.h"
 #include "ossmixerchannel.h"
-#include "global_data.h"
 #include "scheduler.h"
 #include "audiofilter.h"
 #include "audiocompressor.h"
@@ -23,44 +25,67 @@
 
 
 static void
-sound_on (mixer *m)
+load_playlist (MixerAutomation *a)
 {
-  MixerOutput *o;
-  
-  o = mixer_get_output (m, "soundcard");
-  o->enabled = 1;
+	char pl_name[1025];
+	char path[1025];
+	AutomationEvent *e;
+	FILE *fp;
+	double delta = 0.0;
+	
+	fprintf (stderr, "Enter playlist name: ");
+	fgets (pl_name, 1024, stdin);
+	pl_name[strlen(pl_name)-1] = 0;
+	fp = fopen (pl_name, "rb");
+
+	if (!fp) {
+		fprintf (stderr, "File not found.\n");
+		return;
+	}
+
+	while (!feof (fp)) { 
+		Recording *r;
+		AutomationEvent *e = automation_event_new ();
+	
+		fgets (path, 1024, fp);
+		path[strlen(path)-1] = 0;
+
+		e->detail1 = strdup (path);
+		e->level = 1.0;
+		e->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
+		r = find_recording_by_path (path);
+		if (!r) {
+			FileInfo *i;
+			char *ext;
+			
+			ext = path + strlen(path)-4;
+			if (!strcmp (ext, ".ogg"))
+				i = get_vorbis_file_info (path, 2000, 3000);
+			if (!strcmp (ext, ".mp3"))
+				i = get_mp3_file_info (path, 2000, 3000);
+			if (!i) {
+				fclose (fp);
+				fprintf (stderr, "File not found in playlist.\n");
+				return;
+			}
+			e->channel_name = strdup ("ACB Radio Test");
+			e->delta_time = delta-i->audio_in;
+			delta = e->length = i->audio_out;
+		}
+		else {
+			e->channel_name = strdup (r->name);
+			e->delta_time = delta-r->audio_in;
+			delta = e->length = r->audio_out;
+		}
+		mixer_automation_add_event (a, e);
+	}
 }
-
-
-
-static void
-sound_off (mixer *m)
-{
-  MixerOutput *o;
-  
-  o = mixer_get_output (m, "soundcard");
-  o->enabled = 0;
-}
-
 
 
 static void
 mic_on (mixer *m)
 {
-  MixerChannel *ch;
-  
-  ch = oss_mixer_channel_new ("mic", 44100, 2, m->latency);
-  if (!ch)
-    {
-      fprintf (stderr, "Couldn't turn mic on\n");
-      return;
-    }
-  mixer_fade_all  (m, .2, 1.0);
-  if (!global_data_get_soundcard_duplex ())
-    mixer_delete_output (m, "soundcard");
-  ch->level = .8;
-  mixer_add_channel (m, ch);
-  mixer_patch_channel_all (m, "mic");
+	mixer_enable_channel (m, "soundcard", 1);
 }
 
 
@@ -68,28 +93,22 @@ mic_on (mixer *m)
 static void
 mic_off (mixer *m)
 {
-  mixer_delete_channel (m, "mic");
-  if (!global_data_get_soundcard_duplex ())
-    {
-      MixerOutput *o = oss_mixer_output_new ("soundcard", 44100, 2, m->latency);
-      mixer_add_output (m, o);
-    }
-  mixer_fade_all (m, 1.0, 1.0);
+	mixer_enable_channel (m, "soundcard", 0);
 }
-
 
 
 static void
-prs_signal_handler (int signum)
+sound_on (mixer *m)
 {
-  switch (signum)
-    {
-    case SIGUSR1:
-      global_data_set_flag (PRS_FLAG_STREAM_RESET_REQUEST);
-      break;
-    }
+	mixer_enable_output (m, "soundcard", 1);
 }
 
+
+static void
+sound_off (mixer *m)
+{
+	mixer_enable_output (m, "soundcard", 0);
+}
 
 
 int main (void)
@@ -105,24 +124,15 @@ int main (void)
   MixerAutomation *a;
   scheduler *s;
   
-  signal (SIGUSR1, prs_signal_handler);
   m = mixer_new (2048);
   mixer_sync_time (m);
 
   /* Parse configuration file */
 
   prs_config (m);
-
-
-  ch = vorbis_mixer_channel_new ("test", "test.ogg", m->latency);
-  mixer_add_channel (m, ch);
-  mixer_patch_channel_all (m, "test");
 			   a = mixer_automation_new (m);
   mixer_start (m);
 
-  s = scheduler_new (a, mixer_get_time (m)+10);
-
-  scheduler_start (s, 10);
 
   while (!done)
     {
@@ -132,24 +142,19 @@ int main (void)
       if (!strcmp(input, "quit"))
 	break;
       if (!strcmp (input, "on"))
-	mic_on (m);
+	      mic_on (m);
       if (!strcmp (input, "off"))
-	mic_off (m);
-      if (!strcmp (input, "soundon"))
-	sound_on (m);
-      if (!strcmp (input, "soundoff"))
-	sound_off (m);
-      if (!strcmp (input, "n"))
-	mixer_automation_next_event (a);
+	      mic_off (m);
       if (!strcmp (input, "start"))
-	mixer_automation_start (a);
+	      mixer_automation_start (a);
       if (!strcmp (input, "stop"))
-	mixer_automation_stop (a);
-      if (!strcmp (input, "date"))
-	{
-	  time_t t = (time_t) mixer_get_time (m);
-	  fprintf (stderr, "%s", ctime (&t));
-	}      
+	      mixer_automation_stop (a);
+      if (!strcmp (input, "load"))
+	      load_playlist (a);
+    if (!strcmp (input, "soundon"))
+	    sound_on (m);
+    if (!strcmp (input, "soundoff"))
+	    sound_off (m);
     }
   fprintf (stderr, "Destroying scheduler...\r");
   scheduler_destroy (s);

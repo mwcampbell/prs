@@ -49,7 +49,8 @@ mixer_automation_log_event (MixerAutomation *a,
     {
       case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
 	r = find_recording_by_path (e->detail1);
-	add_log_entry (r->id, (int) a->last_event_time, (int) e->length);
+	if (r)
+		add_log_entry (r->id, (int) a->last_event_time, (int) e->length);
 	recording_free (r);
       break;
     }

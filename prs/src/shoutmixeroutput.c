@@ -85,13 +85,25 @@ start_encoder (MixerOutput *o)
 					"-",
 					NULL);
 			else
-				execlp ("lame",
+				if (o->channels == 2)
+					execlp ("lame",
 					"lame",
 					"-r",
 					sample_rate_arg,
 					bitrate_arg,
 					"-x",
 					"-a",
+					"-mm",
+					"-",
+					"-",
+					NULL);
+				else
+			execlp ("lame",
+					"lame",
+					"-r",
+					sample_rate_arg,
+					bitrate_arg,
+					"-x",
 					"-mm",
 					"-",
 					"-",

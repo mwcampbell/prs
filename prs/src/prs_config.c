@@ -8,6 +8,7 @@
 #include "audiocompressor.h"
 #include "multibandaudiocompressor.h"
 #include "ossmixeroutput.h"
+#include "ossmixerchannel.h"
 #include "shoutmixeroutput.h"
 
 
@@ -160,8 +161,9 @@ multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 			release_time = atof (xmlGetProp(cur, "release_time"));
 			pre_process_gain = atof (xmlGetProp(cur, "pre_process_gain"));
 			output_gain = atof (xmlGetProp(cur, "output_gain"));
-			fprintf (stderr, "Adding %lf.\n", freq);
-			multiband_audio_compressor_add_band (f,
+			if (freq > b->rate/2)
+				freq = b->rate/2;
+multiband_audio_compressor_add_band (f,
 							     freq,
 							     threshhold,
 							     ratio,
@@ -199,11 +201,38 @@ mixer_output_config (mixer *m, xmlNodePtr cur)
 
 
 static void
+mixer_channel_config (mixer *m, xmlNodePtr cur)
+{
+	MixerChannel *ch = NULL;
+	int rate, channels;
+	xmlChar *name;
+	xmlChar *location;
+	xmlChar *type;
+
+	name = xmlGetProp (cur, "name");
+	type = xmlGetProp (cur, "type");
+	rate = atoi (xmlGetProp (cur, "rate"));
+	channels = atoi (xmlGetProp (cur, "channels"));
+	if (!xmlStrcmp (type, "oss"))
+		ch = oss_mixer_channel_new (name, rate, channels, m->latency);
+	if (ch) {
+		ch->enabled = 0;
+		mixer_add_channel (m, ch);   
+	}
+}
+
+
+
+static void
 mixer_patch_config (mixer *m, xmlNodePtr cur)
 {
+	xmlChar *channel_name = xmlGetProp (cur, "channel");
 	xmlChar *bus_name = xmlGetProp (cur, "bus");
 	xmlChar *output_name = xmlGetProp (cur, "output");
-	mixer_patch_bus (m, bus_name, output_name);
+	if (channel_name && bus_name)
+		mixer_patch_channel (m, channel_name, bus_name);
+	else if (bus_name && output_name)
+		mixer_patch_bus (m, bus_name, output_name);
 }
 
 
@@ -247,6 +276,8 @@ mixer_config (mixer *m, xmlNodePtr cur)
 			mixer_bus_config (m, cur);
 		if (!xmlStrcmp (cur->name, "output"))
 			mixer_output_config (m, cur);
+		if (!xmlStrcmp (cur->name, "channel"))
+			mixer_channel_config (m, cur);
 		if (!xmlStrcmp (cur->name, "patch"))
 			mixer_patch_config (m, cur);
 		cur = cur->next;

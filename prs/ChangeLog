@@ -1,3 +1,41 @@
+2002-11-10  Marc Mulcahy  <marc@plbb.net>
+
+	* Removed src/global_data.c and src/global_data.h.
+
+	* Added src/soundcard.c and src/soundcard.h for storing and retrieving
+	parameters about the currently open soundcard.
+
+	* src/ossmixerchannel.c src/ossmixeroutput.c: Modified to use new
+	soundcard.c functions.
+
+	* src/Makefile.am: removed references to global_data.c and
+	global_data.h.  added soundcard.c to the list of sources for
+	prs_server.  added fileinfo.c vorbisfileinfo.c and mp3fieinfo.c to the
+	list of sources for prs_server.
+	
+	* src/mixer.c src/mixer.h (mixer_enable_channel)
+	(mixer_enable_output): Added functions for enabling and disabling
+	channels and outputs.  these are thread-safe and better than
+	maniuplating the MixerChannel and MixerOutput data structures directly.
+		
+	* src/mixerautomation.c (mixer_automation_log_event): Add entry to log
+	only if the recording can be found in the database.
+	
+	* src/multibandaudiocompressor.c
+	(multiband_audio_compressor_process_data): Fixed bug in handling
+	mono audio.
+	
+	* src/prs_config.c (mixer_channel_config): Added ability to add
+	channels to the mixer in the config file.  Currently ohnly works for
+	oss channels.
+	
+	* src/prs.conf: Added oss mixer channel configuration to configuration file.
+	
+	* src/prs_server.c (load_playlist): Added simple playlist loader.
+	
+	* src/shoutmixeroutput.c (start_encoder): Fixed spawning of mp3 encode
+	for mono streams with mono buses.
+	
 2002-11-10  Matt Campbell  <mattcampbell@pobox.com>
 
 	* src/fileinfo.h src/mp3fileinfo.c src/mp3fileinfo.h

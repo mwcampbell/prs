@@ -287,6 +287,23 @@ mixer_delete_channel (mixer *m,
 
 
 
+void
+mixer_enable_channel (mixer *m,
+		      const char *channel_name,
+		      int enabled)
+{
+	MixerChannel *ch;
+
+	if (!m)
+		return;
+	ch = mixer_get_channel (m, channel_name);
+	if (!ch)
+		return;
+	mixer_lock (m);
+	ch->enabled = enabled;
+	mixer_unlock (m);
+}
+
 MixerChannel *
 mixer_get_channel (mixer *m,
 		   const char *channel_name)
@@ -421,6 +438,25 @@ mixer_delete_output (mixer *m,
 	mixer_unlock (m);
 }
 
+
+
+
+void
+mixer_enable_output (mixer *m,
+		     const char *output_name,
+		     int enabled)
+{
+	MixerOutput *o;
+
+	if (!m)
+		return;
+	o = mixer_get_output (m, output_name);
+	if (!o)
+		return;
+	mixer_lock (m);
+	o->enabled = enabled;
+	mixer_unlock (m);
+}
 
 
 

@@ -54,6 +54,10 @@ void
 mixer_delete_channel (mixer *m,
 		      const char *channel_name);
 void
+mixer_enable_channel (mixer *m,
+		      const char *channel_name,
+		      int enabled);
+void
 mixer_delete_all_channels (mixer *m);
 MixerChannel *
 mixer_get_channel (mixer *m,
@@ -73,6 +77,10 @@ mixer_add_output (mixer *m,
 void
 mixer_delete_output (mixer *m,
 		     const char *output_name);
+void
+mixer_enable_output (mixer *m,
+		     const char *output_name,
+		     int enabled);
 MixerOutput *
 mixer_get_output (mixer *m,
 		  const char *output_name);

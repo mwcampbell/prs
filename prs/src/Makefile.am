@@ -11,7 +11,9 @@ prs_db_builder_SOURCES = \
 	prs_db_builder.c
 
 prs_server_SOURCES = \
-	global_data.c \
+	fileinfo.c \
+	vorbisfileinfo.c \
+	mp3fileinfo.c \
 	db.c \
 	list.c \
 	prs_config.c \
@@ -20,6 +22,7 @@ prs_server_SOURCES = \
 	mixerbus.h \
 	mixeroutput.c \
 	ossmixeroutput.c \
+	soundcard.c \
 	shoutmixeroutput.c \
 	filemixeroutput.c \
 	mixerpatchpoint.c \

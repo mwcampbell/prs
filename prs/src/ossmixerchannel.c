@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <sys/soundcard.h>
 #include "mixerchannel.h"
+#include "soundcard.h"
 
 
 
@@ -62,10 +63,9 @@ oss_mixer_channel_free_data (MixerChannel *ch)
 	i = (oss_info *) ch->data;
 	if (!i)
 		return;
-	if (!global_data_get_soundcard_duplex ())
-	{
+	if (!soundcard_get_duplex ()) {
 		close (i->fd);
-		global_data_set_soundcard_fd (-1);
+		soundcard_set_fd (-1);
 	}
 	free (i);
 }
@@ -89,17 +89,19 @@ oss_mixer_channel_new (const char *name,
 
 	/* Open the sound device */
 
-	i->fd = global_data_get_soundcard_fd ();
+	i->fd = soundcard_get_fd ();
 	if (i->fd < 0) {
 		i->fd = open ("/dev/dsp", O_RDWR);
 		if (i->fd < 0) {
-			global_data_set_soundcard_duplex (0);
+			soundcard_set_duplex (0);
 			i->fd = open ("/dev/dsp", O_RDONLY);
 		}
 		else
-			global_data_set_soundcard_duplex (1);
-		global_data_set_soundcard_fd (i->fd);
-
+			soundcard_set_duplex (1);
+		soundcard_set_fd (i->fd);
+		soundcard_set_rate (rate);
+		soundcard_set_channels (channels);
+		
 		/* Setup sound card */
 
 		fragment_size = log(mixer_latency*sizeof(short)/8)/log(2);
@@ -131,6 +133,13 @@ oss_mixer_channel_new (const char *name,
 			return NULL;
 		}
   
+	}
+	else {
+		
+		/* Make channel parameters match open sound card parameters */
+
+		rate = soundcard_get_rate ();
+		channels = soundcard_get_channels ();
 	}
 	if (i->fd < 0) {
 		free (i);
