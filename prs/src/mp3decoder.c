@@ -47,9 +47,9 @@ mp3_decoder_new (const char *filename, double start_time)
 
 	assert (filename != NULL);
 	debug_printf (DEBUG_FLAGS_CODEC,
-		      "mp3_decoder_new (\"%s\", %d)\n",
-		      filename, start_frame);
-	assert (start_frame >= 0);
+		      "mp3_decoder_new (\"%s\", %lf)\n",
+		      filename, start_time);
+	assert (start_time >= 0);
 	sprintf (start_time_str, "%lf", start_time);
 
 	/* Create pipe */
