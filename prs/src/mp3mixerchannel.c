@@ -3,7 +3,7 @@
 #include <string.h>
 #include "mixerchannel.h"
 #include "mp3decoder.h"
-#include "mp3tech.h"
+#include "mp3header.h"
 
 
 
@@ -46,22 +46,18 @@ mp3_mixer_channel_new (const char *name, const char *location,
 {
 	MixerChannel *ch = NULL;
 	MP3Decoder *d = NULL;
-	mp3info mp3;
+	mp3_header_t mh;
+	FILE *fp;
   
-	memset (&mp3, 0, sizeof (mp3));
-	mp3.file = fopen (location, "rb");
-	if (!mp3.file)
+	fp = fopen (location, "rb");
+	if (!fp)
 		return NULL;
-	mp3.filename = strdup (location);
-	get_mp3_info (&mp3, SCAN_QUICK, 0);
-	fclose (mp3.file);
-	mp3.file = NULL;
-	free (mp3.filename);
-	mp3.filename = NULL;
+	mp3_header_read (fp, &mh);
+	fclose (fp);
 	/* Get sample information from file */
 
-	ch = mixer_channel_new (header_frequency (&mp3.header),
-						   (mp3.header.mode == 3) ? 1 : 2,
+	ch = mixer_channel_new (mh.samplerate,
+						   (mh.mode == 3) ? 1 : 2,
 						   mixer_latency);
 
 	d = mp3_decoder_new (location, 0);

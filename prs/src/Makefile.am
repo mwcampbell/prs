@@ -6,7 +6,7 @@ prs_db_builder_SOURCES = \
 	mp3fileinfo.c \
 	vorbisfileinfo.c \
 	mp3decoder.c \
-	mp3tech.c \
+	mp3header.c \
 	list.c	\
 	prs_db_builder.c
 
@@ -32,7 +32,7 @@ prs_server_SOURCES = \
 	vorbismixerchannel.c \
 	mp3mixerchannel.c \
 	mp3decoder.c \
-	mp3tech.c \
+	mp3header.c \
 	ossmixerchannel.c \
 	audiofilter.c \
 	audiocompressor.c \

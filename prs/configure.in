@@ -27,6 +27,7 @@ AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
 AC_CHECK_LIB(mysqlclient, mysql_init, LIBS="$LIBS -lmysqlclient")
 AC_CHECK_LIB(shout, shout_open, LIBS="$LIBS -lshout")
 AC_CHECK_LIB(curl, curl_easy_init, LIBS="$LIBS -lcurl")
+AC_CHECK_LIB(id3, ID3Tag_New, LIBS="$LIBS -lid3")
 
 
 dnl --------------------------------------------------

@@ -1,3 +1,8 @@
+2002-11-18  Matt Campbell  <mattcampbell@pobox.com>
+
+	* Fixed calculation of length and audio_out values for MP3
+	recordings, and switched to id3lib for ID3 tag retrieval.
+
 2002-11-16  Matt Campbell  <mattcampbell@pobox.com>
 
 	* configure.in src/db.c src/db.h: Quit using mysql_config, because

@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <id3.h>
 #include "fileinfo.h"
 #include "mp3decoder.h"
 #include "mp3fileinfo.h"
-#include "mp3tech.h"
+#include "mp3header.h"
 
 
 
@@ -41,6 +42,32 @@ static char *genres[MAX_GENRE + 2] = {
 };
 
 
+
+static int
+mp3_scan (FileInfo *info)
+{
+  int frames = 0, samples = 0;
+  FILE *fp = fopen (info->path, "rb");
+  mp3_header_t mh;
+  int sample_rate = -1, channels = -1;
+
+  while (mp3_header_read (fp, &mh))
+    {
+      frames++;
+      if (sample_rate == -1)
+	sample_rate = mh.samplerate;
+      if (channels == -1)
+	channels = (mh.mode == MPEG_MODE_MONO) ? 1 : 2;
+      samples += mh.samples;
+      fseek (fp, mh.framesize, SEEK_CUR);
+    }
+
+  fclose (fp);
+  info->length = (double) samples / sample_rate;
+  info->rate = sample_rate;
+  info->channels = channels;
+  return frames;
+}
 
 static double
 get_mp3_audio_in (FileInfo *info, int threshhold)
@@ -83,7 +110,7 @@ get_mp3_audio_in (FileInfo *info, int threshhold)
 
 
 static double
-get_mp3_audio_out (FileInfo *info, mp3info *mp3, int threshhold)
+get_mp3_audio_out (FileInfo *info, int frames, int threshhold)
 {
   MP3Decoder *d = NULL;
   short *buffer = NULL, *end_buffer = NULL;
@@ -91,17 +118,16 @@ get_mp3_audio_out (FileInfo *info, mp3info *mp3, int threshhold)
   short *ptr;
   double audio_out;
   double seek_time;
-  double fps = (double) mp3->frames / mp3->seconds;
+  double fps = (double) frames / info->length;
   int skip_frames = 0;
   
-  buffer_size = info->rate * info->channels * 12;
+  buffer_size = info->rate * info->channels * 20;
   buffer = (short *) malloc (buffer_size * sizeof (short));
 
   seek_time = info->length - 10;
   if (seek_time < 0)
     seek_time = 0;
   skip_frames = (int) (seek_time * fps);
-  seek_time = skip_frames / fps;
   d = mp3_decoder_new (info->path, skip_frames);
 
   samples_read = mp3_decoder_get_data (d, buffer, buffer_size);
@@ -114,7 +140,7 @@ get_mp3_audio_out (FileInfo *info, mp3info *mp3, int threshhold)
       ptr--;
     }
   audio_out =
-    seek_time + (double) (ptr - buffer) / (info->rate * info->channels);
+    info->length - (double) (end_buffer - ptr) / (info->rate * info->channels);
   mp3_decoder_destroy (d);
   free (buffer);
   return audio_out;
@@ -126,18 +152,11 @@ FileInfo *
 get_mp3_file_info (char *path, unsigned short in_threshhold,
 		   unsigned short out_threshhold)
 {
-  mp3info mp3;
   FileInfo *info;
-
-  memset (&mp3, 0, sizeof (mp3));
-  mp3.file = fopen (path, "rb");
-  if (!mp3.file)
-    return NULL;
-  mp3.filename = path;
-  get_mp3_info (&mp3, SCAN_FULL, 1);
-  fclose (mp3.file);
-  mp3.file = NULL;
-  mp3.filename = NULL;
+  ID3Tag *tag;
+  ID3Frame *frame = NULL;
+  ID3Field *field = NULL;
+  int frames;
 
   /* Allocate the FileInfo structure */
 
@@ -154,33 +173,60 @@ get_mp3_file_info (char *path, unsigned short in_threshhold,
   info->date = NULL;
   info->album = NULL;
   info->track_number = NULL;
-  info->rate = header_frequency (&mp3.header);
-  info->channels = (mp3.header.mode == 3) ? 1 : 2;
-  info->length = mp3.seconds;
+  frames = mp3_scan (info);
   info->audio_in = -1.0;
   info->audio_out = -1.0;
 
-  if (mp3.id3_isvalid)
+  /* Get ID3 info. */
+  tag = ID3Tag_New ();
+  ID3Tag_Link (tag, path);
+
+  if ((frame = ID3Tag_FindFrameWithID (tag, ID3FID_TITLE)) != NULL &&
+      (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
     {
-      info->name = strdup (mp3.id3.title);
-      info->artist = strdup (mp3.id3.artist);
-      info->album = strdup (mp3.id3.album);
-      info->date = strdup (mp3.id3.year);
-
-      if (mp3.id3.genre[0] <= MAX_GENRE)
-	info->genre = strdup (genres[mp3.id3.genre[0]]);
-
-      if (mp3.id3.track[0] > 0)
-	{
-	  info->track_number = malloc (4);
-	  sprintf (info->track_number, "%u", mp3.id3.track[0]);
-	}
+      char title[256];
+      ID3Field_GetASCII (field, title, 256, 1);
+      info->name = strdup (title);
     }
+  
+  if ((frame = ID3Tag_FindFrameWithID (tag, ID3FID_LEADARTIST)) != NULL &&
+      (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
+    {
+      char artist[256];
+      ID3Field_GetASCII (field, artist, 256, 1);
+      info->artist = strdup (artist);
+    }
+  
+  if ((frame = ID3Tag_FindFrameWithID (tag, ID3FID_ALBUM)) != NULL &&
+      (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
+    {
+      char album[256];
+      ID3Field_GetASCII (field, album, 256, 1);
+      info->album = strdup (album);
+    }
+  
+  if ((frame = ID3Tag_FindFrameWithID (tag, ID3FID_YEAR)) != NULL &&
+      (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
+    {
+      char date[256];
+      ID3Field_GetASCII (field, date, 256, 1);
+      info->date = strdup (date);
+    }
+  
+  if ((frame = ID3Tag_FindFrameWithID (tag, ID3FID_CONTENTTYPE)) != NULL &&
+      (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
+    {
+      char genre[256];
+      ID3Field_GetASCII (field, genre, 256, 1);
+      info->genre = strdup (genre);
+    }
+  
+  ID3Tag_Delete (tag);
   
   if (in_threshhold > 0)
     info->audio_in = get_mp3_audio_in (info, in_threshhold);
   if (out_threshhold > 0)
-    info->audio_out = get_mp3_audio_out (info, &mp3, out_threshhold);
+    info->audio_out = get_mp3_audio_out (info, frames, out_threshhold);
   
   return info;
 }
