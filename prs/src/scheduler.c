@@ -180,7 +180,6 @@ scheduler_switch_templates (scheduler *s)
 			return;
 		}
 		if (t) {
-			s->prev_event_end_time = s->last_event_end_time = t->start_time;
 			scheduler_push_template (s, t, 1);
 			return;
 		}
@@ -195,10 +194,11 @@ scheduler_switch_templates (scheduler *s)
 		start_time = prev_template_end_time;
 	t = get_playlist_template (s->db, start_time);
 	
-	if (t && handle_overlap != HANDLE_OVERLAP_IGNORE)
-		start_time = t->start_time;
+	t->start_time = start_time;
+
 	if (start_time < s->prev_event_start_time)
 		start_time = s->prev_event_start_time;
+
 	start_delta = start_time-s->prev_event_start_time-fade;
 
 	/* If the new template starts before the end of the last event in the scheduler, schedule a fade event */
@@ -262,7 +262,6 @@ url_manager (void *data)
 		usleep ((unsigned int) start_delay*1000000);
 	
 	cur_time = mixer_get_time (i->m);
-	mixer_automation_stop (i->a);
 	
 	/* If we're archiving, delete the file */
 
@@ -281,21 +280,16 @@ url_manager (void *data)
 		ch->key = i->end_time;
 		mixer_add_channel (i->m, ch);
 		mixer_patch_channel_all (i->m, i->url);
-		mixer_automation_stop (i->a);
 		mixer_fade_all (i->m, 0, 1);
 		mixer_fade_channel (i->m, i->url, 1, 1);
+		mixer_set_default_level (i->m, .0001);
 	}
 	while (cur_time < i->end_time-i->end_fade) {
 		ch = mixer_get_channel (i->m, i->url);
 		if (!ch) {
-
-			/* Turn automation on */
-
-			if (!i->a->running) {
-				mixer_fade_all (i->m, 1.0, 1);
-				mixer_automation_start (i->a);
-			}
-
+			mixer_fade_all (i->m, 1.0, 1);
+			mixer_set_default_level (i->m, 1.0);
+			
 			/* Try to create the URL channel */
 
 			ch = url_mixer_channel_new (i->url, i->url,
@@ -314,8 +308,8 @@ url_manager (void *data)
 			ch = NULL;
 		usleep (retry_sleep_delay);
 		if (ch && mixer_get_channel (i->m, i->url)) {
-			mixer_automation_stop (i->a);
 			mixer_fade_all (i->m, 0, 1);
+			mixer_set_default_level (i->m, .0001);
 			mixer_fade_channel (i->m, i->url, 1, 1);
 		}
 		cur_time = mixer_get_time (i->m);
@@ -323,10 +317,7 @@ url_manager (void *data)
 	
 	/* Ensure mixer automation is running when we leave */
 
-	if (!i->a->running)
-		mixer_automation_stop (i->a);
-	mixer_automation_set_start_time (i->a, i->end_time-i->end_fade);
-	mixer_automation_start (i->a);
+        mixer_set_default_level (i->m, 1.0);
 	
         /* Free stuff to exit */
 
@@ -607,7 +598,7 @@ scheduler_main_thread (void *data)
 			current = scheduler_schedule_next_event (s);
 		}
 		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler sleeping for %lf seconds\n", current-target);
-		sleep (current-target);
+		sleep ((unsigned int) (current-target));
 		target = current;
 	}
 }
