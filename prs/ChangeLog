@@ -1,3 +1,7 @@
+2002-12-12  Marc Mulcahy  <marc@plbb.net>
+
+	* src/shoutmixeroutput.c (shout_thread): Eliminated use of shout_sync since the mixer does it's own syncronization now.
+	
 2002-12-11  Marc Mulcahy  <marc@plbb.net>
 
 	* php/urlevent.php php/addevents.php: Added support for URL events.

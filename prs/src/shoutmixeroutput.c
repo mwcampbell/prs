@@ -165,7 +165,6 @@ shout_thread (void *data)
 		bytes_read = read (i->encoder_output_fd, buffer, 1024);
 		if (bytes_read > 0) {
 			shout_send (i->shout, buffer, bytes_read);
-			shout_sync (i->shout);
 		}
 	}
 	fprintf (stderr, "Shout thread exiting...\n");
