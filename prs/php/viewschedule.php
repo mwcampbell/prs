@@ -48,8 +48,8 @@ html_start ($title);
 	while ($cur_time < $end_date) {
 		$daylight = date ("I", $cur_time);
 		$query = "select schedule.template_id, template_name, repeat_events,
-          handle_overlap, artist_exclude, recording_exclude, start_time,
-          length, repetition, fallback_id,
+          handle_overlap, artist_exclude, recording_exclude, time_slot_id,
+          start_time, length, repetition, fallback_id,
           end_prefade from playlist_template, schedule
           where playlist_template.template_id = schedule.template_id and
           ((repetition = 0 and start_time <= $cur_time and start_time+length > $cur_time) or
@@ -68,6 +68,10 @@ html_start ($title);
 		mysql_free_result ($res);
 		$start_time = strftime ($date_template, $start_time);
 		$end_time = strftime ($date_template, $end_time);
+		if (!$length == 0) {
+			$cur_time += 60;
+			continue;
+		}
 ?>
 <tr>
 <form name="modify_timeslot" action="updatetimeslot.php" method="post">
@@ -79,11 +83,25 @@ html_start ($title);
 <input type="text" name="end_time" id="end_time" length="30" value="<? echo $end_time; ?>">
 </td> 
 <td>
-<select name="repetition" id="repetition" value="<? echo $repetition; ?>">
-<option value="0">One Time Only</option>
-<option value="3600">Hourly</option>
-<option value="86400">Daily</option>
-<option value="604800">Weekly</option>
+<select name="repetition" id="repetition">
+<?
+	        echo "<option value=\"0\"";
+		if ($repetition == 0)
+			echo " selected";
+		echo ">One Time Only</option>\n";
+		echo "<option value=\"3600\"";
+		if ($repetition == 3600)
+			echo " selected";
+		echo ">Hourly</option>\n";
+		echo "<option value=\"86400\"";
+		if ($repetition == 86400)
+			echo " selected";
+		echo ">Daily</option>\n";
+		echo "<option value=\"604800\"";
+		if ($repetition == 604800)
+			echo " selected";
+		echo ">Weekly</option>\n";
+?>
 </select>
 </td>
 <td>
@@ -110,8 +128,6 @@ html_start ($title);
 </form>
 </td>
 <?
-	  if ($length == 0)
-		  break;
 	  $cur_time += $length;
 }
 ?>

@@ -1,3 +1,11 @@
+2003-04-10  Marc Mulcahy  <marc@plbb.net>
+
+	* src/multibandaudiocompressor.c src/multibandaudiocompressor.h
+	src/prs_config.c: Implemented new multiband compressor.
+
+	* src/prs.c (prs_start): Prescheduling now set to five minutes.
+	
+
 2003-04-06  Matt Campbell  <mattcampbell@pobox.com>
 
 	* TODO: Updated the to-do list.
