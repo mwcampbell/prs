@@ -62,7 +62,6 @@ scheduler_schedule_next_event (scheduler *s);
 void
 scheduler_start (scheduler *s,
 		 double preschedule);
-indent-region
 void
 scheduler_reset (scheduler *s);
 
