@@ -134,7 +134,7 @@ url_mixer_channel_free_data (MixerChannel *ch)
 }
 
 
-static void
+static int
 url_mixer_channel_get_data (MixerChannel *ch)
 {
 	channel_info *i;

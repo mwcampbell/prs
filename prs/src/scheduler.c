@@ -299,8 +299,11 @@ scheduler_schedule_next_event (scheduler *s)
 	scheduler_switch_templates (s);
 	if (s->template_stack)
 		stack_entry = (template_stack_entry *) s->template_stack->data;
-	else
-		stack_entry = NULL;
+	else {
+		pthread_mutex_unlock (&(s->mut));
+		return s->last_event_end_time;
+	}
+	
 	e = list_get_item (stack_entry->t->events, stack_entry->event_number-1);
 	anchor = list_get_item (stack_entry->t->events, e->anchor_event_number-1);
   
@@ -380,11 +383,10 @@ scheduler_schedule_next_event (scheduler *s)
 
 		ae->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
 		ae->level = e->level;
-		e->start_time -= r->audio_in;
-		if (e->start_time < stack_entry->t->start_time)
-			e->start_time = stack_entry->t->start_time;
-		else
+		if (e->start_time-r->audio_in >= stack_entry->t->start_time) {
+			e->start_time -= r->audio_in;
 			ae->delta_time -= r->audio_in;
+		}
 		ae->length = r->audio_out;
 		e->end_time = e->start_time+r->audio_out;
 		recording_free (r);
