@@ -180,7 +180,7 @@ mixer_main_thread (void *data)
 		slice_spent = (end.tv_sec-start.tv_sec)*1000000+
 			(end.tv_usec-start.tv_usec);
 		wait_time += slice_length-slice_spent;
-		
+
 		/* Sync every hour */
 
 		if (!(end.tv_sec%3600)) {
@@ -192,10 +192,6 @@ mixer_main_thread (void *data)
 
 		if (wait_time > 0)
 			usleep (wait_time);
-		else if (wait_time < -1000000) {
-			debug_printf (DEBUG_FLAGS_MIXER, "Mixer has fallen more than 1 second behind.\n");
-			wait_time = 0;
-		}
 		start = end;
 	}
 	mixer_lock (m);
