@@ -155,10 +155,6 @@ scheduler_switch_templates (scheduler *s)
 		ae->length = e->t->end_prefade;
 		ae->level = 0;
 		mixer_automation_add_event (s->a, ae);
-		ae = automation_event_new ();
-		ae->type = AUTOMATION_EVENT_TYPE_DELETE_ALL;
-		ae->delta_time = e->t->end_prefade;
-		mixer_automation_add_event (s->a, ae);
 		if (start_time < e->t->end_time)
 			mixer_automation_set_start_time (s->a, start_time);
 		s->prev_event_start_time = start_time;
@@ -451,15 +447,7 @@ scheduler_schedule_next_event (scheduler *s)
 					ae->length = i->end_fade;
 					ae->level = 0;
 					mixer_automation_add_event (s->a, ae);
-					ae = automation_event_new ();
 				}
-				ae->type = AUTOMATION_EVENT_TYPE_DELETE_ALL;
-				if (i->end_fade > 0)
-					ae->delta_time = i->end_fade;
-				else
-					ae->delta_time = i->end_time-i->start_time;
-				ae->length = 0;
-				mixer_automation_add_event (s->a, ae);
 				ae = NULL;
 				break;
 			}
