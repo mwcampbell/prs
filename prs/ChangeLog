@@ -1,5 +1,14 @@
 2003-01-15  Marc Mulcahy  <marc@plbb.net>
 
+	* src/mixerautomation.c (mixer_automation_start): If the event at the
+	top of the stack has already passed, reset the last event time to the
+	current time so all future events are properly timed in relation to
+	the one at the top of the stack.
+	(mixer_automation_next_event): If the automation is running, use
+	last_event_time+current_event->delta_time as the new last_event_time
+	rather than the current mixer time.  This gets rid of the automation
+	drift problem.
+
 	* src/scheduler.c (scheduler_main_thread): Fix prescheduling bug.
 
 2003-01-13  Marc Mulcahy <marc@plbb.net>
