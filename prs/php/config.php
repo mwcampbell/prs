@@ -1,3 +1,3 @@
 <?
-$STATIONS = array ("bigplanet" => "/usr/local/etc/prs.conf");
+$STATIONS = array ("bigplanet" => "/home/marc/prs/src/prs.conf");
 ?>

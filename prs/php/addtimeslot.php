@@ -12,7 +12,7 @@ if ($start_date && $length) {
 	
 	/* Convert length of seconds */
 
-	($length_hours, $length_minutes, $length_seconds) = explode (":", $length, 3);
+	list ($length_hours, $length_minutes, $length_seconds) = explode (":", $length, 3);
 	$length = $length_hours*3600+$length_minutes*60+$length_seconds;
 
 	$daylight = date ("I", $start_date);
