@@ -4,6 +4,7 @@
 #include <malloc.h>
 #include <unistd.h>
 #include <signal.h>
+#include "debug.h"
 #include "scheduler.h"
 #include "db.h"
 #include "fileinfo.h"
@@ -49,6 +50,7 @@ scheduler_push_template (scheduler *s,
 	e->length = list_length (t->events);
 	e->p = recording_picker_new (s->db, t->artist_exclude, t->recording_exclude);
 	s->template_stack = list_prepend (s->template_stack, e);
+	debug_printf (DEBUG_FLAGS_SCHEDULER, "Pushing template %s on the scheduler stack\n", t->name);
 }
 
 
@@ -60,9 +62,12 @@ scheduler_pop_template (scheduler *s)
 
 	if (!s)
 		return;
-	if (!s->template_stack)
+	if (!s->template_stack) {
+		debug_printf (DEBUG_FLAGS_SCHEDULER, "No templates to pop off scheduler stack\n");
 		return;
+		}
 	e = (template_stack_entry *) s->template_stack->data;
+	debug_printf (DEBUG_FLAGS_SCHEDULER, "Popping template %s off scheduler's stack\n", e->t->name);
 	playlist_template_destroy (e->t);
 	recording_picker_destroy (e->p);
 	free (e);
@@ -86,6 +91,7 @@ scheduler_new (MixerAutomation *a, Database *db, double cur_time)
 	s->running = 0;
 	s->preschedule = 0.0;
 	pthread_mutex_init (&(s->mut), NULL);
+	debug_printf (DEBUG_FLAGS_SCHEDULER, "Creating scheduler object");
 	return s;
 }
 
@@ -104,6 +110,7 @@ scheduler_destroy (scheduler *s)
 	pthread_mutex_unlock (&(s->mut));
 		list_free (s->template_stack);
 	free (s);
+debug_printf (DEBUG_FLAGS_SCHEDULER, "Destroying scheduler object\n");
 }
 
 
@@ -280,6 +287,7 @@ scheduler_schedule_next_event (scheduler *s)
 	else
 		stack_entry = NULL;
 	if (!stack_entry || s->prev_event_end_time >= stack_entry->t->end_time) {
+		debug_printf (DEBUG_FLAGS_SCHEDULER, "Switching templates\n");
 		scheduler_switch_templates (s);
 		if (s->template_stack)
 			stack_entry = (template_stack_entry *) s->template_stack->data;
@@ -332,10 +340,14 @@ scheduler_schedule_next_event (scheduler *s)
 		if (*e->detail5)
 			categories = string_list_prepend (categories, e->detail5);
 
-		if (e->type == EVENT_TYPE_SIMPLE_RANDOM)
+		if (e->type == EVENT_TYPE_SIMPLE_RANDOM) {
+			debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduling simple random event\n");
 			r = recording_picker_select (stack_entry->p, categories, -1);
-		else
+		}
+		else {
+			debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduling random event\n");
 			r = recording_picker_select (stack_entry->p, categories, e->start_time);
+		}
 
 		/* Free the list of categories */
 
@@ -347,6 +359,7 @@ scheduler_schedule_next_event (scheduler *s)
 
 		if (!r)
 		{
+			debug_printf (DEBUG_FLAGS_SCHEDULER, "Recording selection failed\n");
 			automation_event_destroy (ae);
 			ae = NULL;
 			break;
@@ -363,6 +376,7 @@ scheduler_schedule_next_event (scheduler *s)
 		break;
 	case EVENT_TYPE_FADE:
     
+		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduling fade on channel %s\n", e->detail1);
 		ae->type = AUTOMATION_EVENT_TYPE_FADE_CHANNEL;
 		ae->level = e->level;
 		ae->length = atof (e->detail1);
@@ -372,6 +386,7 @@ scheduler_schedule_next_event (scheduler *s)
 
 	case EVENT_TYPE_PATH:
 
+		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduling path event %s\n", e->detail1);
 		info = file_info_new (e->detail1, 1000, 2000);
 		ae->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
 		ae->detail1 = strdup (e->detail1);
@@ -461,6 +476,7 @@ scheduler_schedule_next_event (scheduler *s)
 		t->start_time = stack_entry->t->start_time;
 		t->end_time = stack_entry->t->end_time;
 		scheduler_pop_template (s);
+		debug_printf (DEBUG_FLAGS_SCHEDULER, "Recording wouldn't fit, switching to fallback templae\n");
 		scheduler_push_template (s, t, 1);
 		pthread_mutex_unlock (&(s->mut));
 		return scheduler_schedule_next_event (s);
@@ -468,8 +484,6 @@ scheduler_schedule_next_event (scheduler *s)
 	    		
 	if (ae) {
 		
-		/* Ensure end_time is within the template */
-
 		mixer_automation_add_event (s->a, ae);
 		s->prev_event_start_time = e->start_time;
 		s->prev_event_end_time = e->end_time;
@@ -523,6 +537,7 @@ scheduler_main_thread (void *data)
 	pthread_mutex_lock (&(s->mut));
 	current = target = s->prev_event_end_time;
 	pthread_mutex_unlock (&(s->mut));
+	debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler main thread started\n");
 	while (1) {
 		pthread_mutex_lock (&(s->mut));
 		if (!s->running) {
@@ -534,6 +549,7 @@ scheduler_main_thread (void *data)
 		while (current < target) {
 			current = scheduler_schedule_next_event (s);
 		}
+		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler main thread sleeping for %lf seconds\n", (double) (current-target+s->preschedule)*.9);
 		usleep ((current-target+s->preschedule)*900000);
 		target = current;
 	}
@@ -550,6 +566,7 @@ scheduler_start (scheduler *s,
 	pthread_mutex_lock (&(s->mut));
 	if (s->running)
 	{
+		debug_printf (DEBUG_FLAGS_SCHEDULER, "Starting scheduler\n");
 		pthread_mutex_unlock (&(s->mut));
 		return;
 	}

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <signal.h>
+#include "debug.h"
 #include "mixerautomation.h"
 #include "db.h"
 #include "vorbismixerchannel.h"
@@ -73,6 +74,7 @@ mixer_automation_new (mixer *m, Database *db)
 	a->automation_thread = 0;
 	a->running = 0;
 	pthread_mutex_init (&(a->mut), NULL);
+	debug_printf (DEBUG_FLAGS_AUTOMATION, "Automation object created.\n");
 	return a;
 }
 
@@ -93,6 +95,7 @@ mixer_automation_destroy (MixerAutomation *a)
 		automation_event_destroy ((AutomationEvent *) tmp->data);
 	}
 	free (a);
+	debug_printf (DEBUG_FLAGS_AUTOMATION, "Automation object destroyed.\n");
 }
 
 
@@ -113,6 +116,7 @@ mixer_automation_add_event (MixerAutomation *a,
 			mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
 	a->events = list_append (a->events, e);
 	pthread_mutex_unlock (&(a->mut));
+	debug_printf (DEBUG_FLAGS_AUTOMATION, "Added automation eventK\n");
 }
 
 
@@ -132,6 +136,7 @@ mixer_automation_next_event (MixerAutomation *a)
 	else
 	{
 		pthread_mutex_unlock (&(a->mut));
+		debug_printf (DEBUG_FLAGS_AUTOMATION, "mixer_Automation_next_event called with no events on stack.\n");
 		return;
 	}
     
@@ -140,12 +145,16 @@ mixer_automation_next_event (MixerAutomation *a)
 	switch (e->type)
 	{
 	case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
-		if (strcmp (e->detail1 + strlen (e->detail1) - 4, ".mp3") == 0)
+		if (strcmp (e->detail1 + strlen (e->detail1) - 4, ".mp3") == 0) {
+			debug_printf (DEBUG_FLAGS_AUTOMATION, "Adding mp3 channel %s\n", e->detail1);
 			ch = mp3_mixer_channel_new (e->channel_name, e->detail1,
 						    a->m->latency);
-		else
+		}
+		else {
+			debug_printf (DEBUG_FLAGS_AUTOMATION, "Adding vorbis channel %s\n", e->detail1);
 			ch = vorbis_mixer_channel_new (e->channel_name, e->detail1,
 						       a->m->latency);
+		}
 		if (ch) {
 			ch->level = e->level;
 			
@@ -158,7 +167,7 @@ mixer_automation_next_event (MixerAutomation *a)
 		mixer_fade_channel (a->m, e->channel_name, e->level, atof (e->detail1));
 		break;
 	case AUTOMATION_EVENT_TYPE_FADE_ALL:
-mixer_fade_all (a->m, e->level, e->length);
+		mixer_fade_all (a->m, e->level, e->length);
 		break;
 	case AUTOMATION_EVENT_TYPE_DELETE_ALL:
 		mixer_delete_all_channels (a->m);
@@ -230,6 +239,7 @@ mixer_automation_main_thread (void *data)
 	pthread_mutex_lock (&(a->mut));
 	a->automation_thread = 0;
 	pthread_mutex_unlock (&(a->mut));
+	debug_printf (DEBUG_FLAGS_AUTOMATION, "Automation thread exitting.\n");
 }
 
 
@@ -239,12 +249,15 @@ mixer_automation_start (MixerAutomation *a)
 {
 	AutomationEvent *e;
   
-	if (!a)
+	if (!a) {
+		debug_printf (DEBUG_FLAGS_AUTOMATION, "mixer_automation_start called with null automation pointer\n");
 		return -1;
+	}
 	pthread_mutex_lock (&(a->mut));
 	if (a->running)
 	{
 		pthread_mutex_unlock (&(a->mut));
+		debug_printf (DEBUG_FLAGS_AUTOMATION, "mixer_automation-start called on a running automation object\n");
 		return -1;
 	}
 	a->running = 1;
@@ -266,18 +279,23 @@ mixer_automation_stop (MixerAutomation *a)
 {
 	pthread_t thread;
   
-	if (!a)
+	if (!a) {
+		debug_printf (DEBUG_FLAGS_AUTOMATION, "mixer_automation_stop called with null automation pointer\n");
 		return -1;
+	}
 	pthread_mutex_lock (&(a->mut));
 	if (!a->running) {
 		pthread_mutex_unlock (&(a->mut));
-		return 0;
+		debug_printf (DEBUG_FLAGS_AUTOMATION, "mixer_automation_stop called with already stopped automation object\n");
+		return -1;
 	}
 	mixer_reset_notification_time (a->m, mixer_get_time (a->m));
 	a->running = 0;
 	thread = a->automation_thread;
 	pthread_mutex_unlock (&(a->mut));
+	debug_printf (DEBUG_FLAGS_AUTOMATION, "mixer_automation_stop Joining automation thread\n");
 	pthread_join (thread, NULL);
+	debug_printf (DEBUG_FLAGS_AUTOMATION, "mixer_automation_stop done Joining automation thread\n");
 	return 0;
 }
 
@@ -290,9 +308,13 @@ mixer_automation_set_start_time (MixerAutomation *a,
 	AutomationEvent *e;
 	list *tmp;
 	double cur_time = a->last_event_time;
+	time_t ct = (time_t) start_time;
 	
-	if (!a)
+	debug_printf (DEBUG_FLAGS_AUTOMATION, "Resetting automation start time to %s", ctime (&ct));
+	if (!a) {
+		debug_printf (DEBUG_FLAGS_AUTOMATION, "mixer_automation_set_start_time called with null automation object\n");
 		return;
+	}
 	pthread_mutex_lock (&(a->mut));
 	tmp = a->events;
 	while (tmp) {
@@ -300,6 +322,7 @@ mixer_automation_set_start_time (MixerAutomation *a,
 		AutomationEvent *e = tmp->data;
 		cur_time += e->delta_time;
 		if (cur_time < start_time) {
+			debug_printf (DEBUG_FLAGS_AUTOMATION, "Removing event %lf seconds before start time\n", start_time-cur_time);
 			automation_event_destroy (e);
 			a->events = list_delete_item (a->events, tmp);
 		}
