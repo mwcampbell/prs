@@ -1,3 +1,7 @@
+2003-01-16  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixerchannel.c (mixer_channel_get_data): Make thread safe.
+
 2003-01-16  Matt Campbell  <mattcampbell@pobox.com>
 
 	* AUTHORS: Added my name and email address.

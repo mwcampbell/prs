@@ -168,6 +168,7 @@ mixer_channel_get_data (MixerChannel *ch)
 {
 	int rv;
 
+	pthread_mutex_lock (&(ch->mutex));
 	rv = ch->get_data (ch);
 	if (rv < ch->chunk_size && ch->data_reader_thread == 0)
 		ch->data_end_reached = 1;
@@ -175,6 +176,7 @@ mixer_channel_get_data (MixerChannel *ch)
 	if (ch->input >= ch->buffer_end)
 		ch->input = ch->buffer;
 	ch->space_left -= rv;
+	pthread_mutex_unlock (&(ch->mutex));
 	return rv;
 }
 
