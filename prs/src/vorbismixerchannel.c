@@ -110,7 +110,7 @@ vorbis_mixer_channel_new (const char *name,
   
 	/* Open the file */
 
-	i->fp = fopen (location, "r+b");
+	i->fp = fopen (location, "rb");
 	if (!(i->fp)) {
 		free (i->vf);
 		free (i);
