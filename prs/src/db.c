@@ -515,7 +515,7 @@ playlist_template_query_cb (void *udata, int cols, char **row, char **names)
 
 	if (cols > 6) {
 		t->start_time = atof (row[6]);
-		t->end_time = atof (row[7]);
+		t->end_time = t->start_time + atof (row[7]);
 		t->repetition = atof (row[8]);
 		t->fallback_id = atoi (row[9]);
 		t->end_prefade = atof(row[10]);;
@@ -573,7 +573,7 @@ get_playlist_template (Database *db, double cur_time)
 			      "no template found\n");
 		return NULL;
 	}
-	assert (list_length (data.l) == 1);
+	assert (list_length (data.l) >= 1);
 	t = data.l->data;
 	list_free (data.l);
 	t->events = get_playlist_events_from_template (db, t->id);
