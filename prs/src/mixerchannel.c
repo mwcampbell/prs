@@ -133,16 +133,17 @@ mixer_channel_destroy (MixerChannel *ch)
 		pthread_join (ch->data_reader_thread, NULL);
 	}
 
-	if (ch->name)
-		free (ch->name);
-	if (ch->location)
-		free (ch->location);
 	if (ch->free_data)
 		ch->free_data (ch);
 	else {
 		if (ch->data)
 			free (ch->data);
 	}
+
+	if (ch->name)
+		free (ch->name);
+	if (ch->location)
+		free (ch->location);
 
 	/* Free the buffer */
 
