@@ -148,12 +148,8 @@ mixer_automation_next_event (MixerAutomation *a)
 				       a->m->latency);
       ch->level = e->level;
 
-      fprintf (stderr, "Predicted time %lf\n", a->last_event_time+e->delta_time);
-      fprintf (stderr, "Adding channel %s at %lf.\n", ch->name, mixer_get_time (a->m));
       mixer_add_channel (a->m, ch);
-      fprintf (stderr, "Mixer patch channel %s at %lf\n", ch->name, mixer_get_time (a->m));
       mixer_patch_channel_all (a->m, e->channel_name);
-      fprintf (stderr, "Mixer enable channel %s at at %lf\n", ch->name, mixer_get_time (a->m));
       mixer_enable_channel (a->m, e->channel_name, 1);
       break;
     case AUTOMATION_EVENT_TYPE_FADE_CHANNEL:
@@ -315,7 +311,6 @@ mixer_automation_get_last_event_end (MixerAutomation *a)
   pthread_mutex_lock (&(a->mut));
   rv = event_start_time = event_end_time = a->last_event_time;
   lt = rv;
-  fprintf (stderr, "LastEvent: %s", ctime (&lt));
   for (tmp = a->events; tmp; tmp = tmp->next)
     {
       AutomationEvent *e = (AutomationEvent *) tmp->data;
@@ -327,7 +322,6 @@ mixer_automation_get_last_event_end (MixerAutomation *a)
       et = event_end_time;
       if (event_end_time > rv)
 	rv = event_end_time;
-      fprintf (stderr, "   %s   %s   %lf", ctime (&st), ctime (&et), e->delta_time);
     }
   pthread_mutex_unlock (&(a->mut));
   return rv;

@@ -1,4 +1,8 @@
-2002-12-03 Marc Mulcahy <marc@plbb.net>
+2002-12-03  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixerautomation.c: Removed fprintf debug statements.
+
+	* src/scheduler.c: Removed fprintf debug statements.
 
 	* php/addevents.php: Fixed typo.
 	

@@ -224,7 +224,6 @@ scheduler_schedule_next_event (scheduler *s)
 	}
 	if (ae)
 	{
-		fprintf (stderr, "Scheduling event at %lf\n", mixer_get_time (s->a->m));
 			 mixer_automation_add_event (s->a, ae);
 		s->prev_event_start_time = e->start_time;
 		s->prev_event_end_time = e->end_time;
