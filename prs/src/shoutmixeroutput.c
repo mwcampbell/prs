@@ -82,25 +82,24 @@ start_encoder (MixerOutput *o)
       char sample_rate_arg[128];
       char bitrate_arg[128];
       
-      sprintf (sample_rate_arg, "-s %lf", (double) o->rate/1000);
+      sprintf (sample_rate_arg, "-s%lf", (double) o->rate/1000);
       sprintf (bitrate_arg, "-b%d", i->shout_connection->bitrate);
       close (0);
       dup (encoder_input[0]);
       close (encoder_input[1]);
       
       close (1);
-      close (2);
+      //      close (2);
       dup (encoder_output[1]);
       close (encoder_output[0]);
       execlp ("lame",
 	      "lame",
 	      "-r",
 	      sample_rate_arg,
+	      bitrate_arg,
 	      "-x",
 	      "-a",
 	      "-mm",
-	      bitrate_arg,
-	      "-q0",
 	      "-",
 	      "-",
 	    NULL);

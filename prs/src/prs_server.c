@@ -223,7 +223,7 @@ int main (void)
 			    5,
 			    1);
   mixer_bus_add_filter (b, f);
-#define OUTPUT_GAIN 1 
+#define OUTPUT_GAIN 1.5 
 #define ATTACK_TIME .01
 #define RELEASE_TIME 3
   f = multiband_audio_compressor_new (44100, 2, 44100*2*MIXER_LATENCY);
@@ -244,7 +244,7 @@ int main (void)
      ATTACK_TIME,
      RELEASE_TIME,
      1,
-     OUTPUT_GAIN*10);
+     OUTPUT_GAIN*7);
   multiband_audio_compressor_add_band
     (f,
      600,
@@ -277,9 +277,11 @@ int main (void)
   mixer_patch_bus (m, "air", "soundcard");
   
   
+#if 0
   ch = vorbis_mixer_channel_new ("test", "test.ogg");
   mixer_add_channel (m, ch);
   mixer_patch_channel_all (m, "test");
+#endif
   printf ("Running as pid %d.\n", getpid ());
   a = mixer_automation_new (m);
   mixer_start (m);
