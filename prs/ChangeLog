@@ -1,3 +1,7 @@
+2002-11-20  Marc Mulcahy  <marc@plbb.net>
+
+	* configure.in: Fixed mysql Autoconf support (I think).
+
 2002-11-19  Marc Mulcahy  <marc@plbb.net>
 
 	* configure.in: Fix for MySQL build on RedHat.

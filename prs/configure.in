@@ -25,12 +25,6 @@ XML_CFLAGS=`xml2-config --cflags`
 CFLAGS="$CFLAGS $XML_CFLAGS"
 AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
 
-dnl MySQL configuration
-MYSQL_LIBS=`mysql_config --libs`
-if test $MYSQL_LIBS == x ; then
-  AC_CHECK_LIB(mysqlclient, mysql_init, MYSQL_LIBS="-lmysqlclient")
-fi
-LIBS="$LIBS $MYSQL_LIBS"
 AC_CHECK_LIB(shout, shout_open, LIBS="$LIBS -lshout")
 AC_CHECK_LIB(curl, curl_easy_init, LIBS="$LIBS -lcurl")
 
@@ -38,6 +32,13 @@ dnl Ensure C++ support gets linked in for id3lib
 LIBS="$LIBS -lstdc++"
 AC_CHECK_LIB(id3, ID3Tag_New, LIBS="$LIBS -lid3")
 
+dnl MySQL configuration
+
+MYSQL_LIBS=`mysql_config --libs`
+if test "x$MYSQL_LIBS" = x ; then
+  AC_CHECK_LIB(mysqlclient, mysql_init, MYSQL_LIBS="-lmysqlclient")
+fi
+LIBS="$LIBS $MYSQL_LIBS"
 
 dnl --------------------------------------------------
 dnl Do substitutions
