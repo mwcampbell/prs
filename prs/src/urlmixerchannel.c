@@ -148,7 +148,7 @@ url_mixer_channel_get_data (MixerChannel *ch)
 	remainder = ch->buffer_size;
 	while (remainder > 0) {
 		rv = read (i->decoder_output_fd, tmp, remainder*sizeof(short));
-		if (rv < 0) {
+		if (rv == 0) {
 			ch->data_end_reached = 1;
 			break;
 		}
