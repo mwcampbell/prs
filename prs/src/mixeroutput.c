@@ -51,9 +51,7 @@ mixer_output_add_output (MixerOutput *o,
 
   while (length--)
     {
-      *tmp += *tmp2;
-      tmp++;
-      tmp2++;
+      *tmp++ += *tmp2++;
     }
 }
 

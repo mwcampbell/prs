@@ -12,6 +12,9 @@ typedef struct _mixer mixer;
 struct _mixer {
   pthread_t thread;
   pthread_mutex_t mutex;
+
+  /* Flag indicating whether mixer is running */
+
   int running;
   
   double time;
@@ -50,6 +53,11 @@ mixer_sync_time (mixer *m);
 void
 mixer_insert_event (mixer *m,
 		    MixerEvent *e);
+void
+mixer_fade_channel (mixer *m,
+		    const char *channel_name,
+		    double fade_destination,
+		    double fade_time);
 
 
 #endif

@@ -16,6 +16,16 @@ struct _MixerChannel {
   int rate;
   int channels;
 
+  /* Level and fading parameters */
+
+  double level;
+  double fade;
+  double fade_destination;
+
+  /* end of data indicator */
+
+  int data_end_reached;
+
   void *data;
 
   /* List of outputs to which this channel is patched */

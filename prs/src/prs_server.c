@@ -92,8 +92,8 @@ playlist_main_thread (void *data)
 
 	      time_to_wait = process_playlist_event ((PlaylistEvent *) tmp->data,
 						     p, m, mixer_time);	      
-	      if (time_to_wait > 10)
-		usleep ((int)(time_to_wait-10)*1000000);
+	      if (time_to_wait > 1)
+		usleep ((int)(time_to_wait-1)*1000000);
 	      if (time_to_wait >= 0)
 		{
 		  mixer_time += time_to_wait;

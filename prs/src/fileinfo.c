@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <vorbis/vorbisfile.h>
 #include "fileinfo.h"
@@ -103,7 +104,7 @@ get_vorbis_audio_out (OggVorbis_File *vf,
 	break;
       ptr--;
       }
-  audio_out = seek_time + (ptr-(short *)buffer)/vi->rate/vi->channels;
+  audio_out = seek_time + (double) (ptr-(short *)buffer)/vi->rate/vi->channels;
   free (buffer);
   return audio_out;
 }

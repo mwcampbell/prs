@@ -22,9 +22,8 @@ mixer_find_channel (mixer *m,
     return NULL;
   for (tmp = m->channels; tmp; tmp = tmp->next)
     {
-      MixerChannel *ch;
+      MixerChannel *ch = (MixerChannel *) tmp->data;
 
-      ch = (MixerChannel *) tmp->data;
       if (!strcmp (channel_name, ch->name))
 	break;
     }
@@ -44,9 +43,8 @@ mixer_find_output (mixer *m,
 
   for (tmp = m->outputs; tmp; tmp = tmp->next)
     {
-      MixerOutput *o;
+      MixerOutput *o = (MixerOutput *) tmp->data;
 
-      o = (MixerOutput *) tmp->data;
       if (!strcmp (output_name, o->name))
 	break;
     }
@@ -103,21 +101,16 @@ mixer_main_thread (void *data)
   
   if (!m)
     {
-      printf ("Main mixer thread died!\n");
+      fprintf (stderr, "Main mixer thread died!\n");
       return NULL;
     }
+
   tmp_buffer_size = 48000*2*sizeof(short)*MIXER_LATENCY;
   tmp_buffer = malloc (tmp_buffer_size);
   
-  while (1)
+  while (m->running)
     {
       pthread_mutex_lock (&m->mutex);
-      if (!m->running)
-	{
-	  printf ("Killing mixer thread.\n");
-	  pthread_mutex_unlock (&m->mutex);
-	  break;
-	}
       if (m->time > 86400)
 	m->time -= 86400;
       mixer_do_events (m);
@@ -131,11 +124,25 @@ mixer_main_thread (void *data)
       for (tmp = m->outputs; tmp; tmp = tmp->next)
 	{
 	  MixerOutput *o = (MixerOutput *) tmp->data;
+
 	  mixer_output_reset_output (o);
 	}
-      for (tmp = m->channels; tmp; tmp = tmp->next)
+      tmp = m->channels;
+      while (tmp)
 	{
 	  MixerChannel *ch = (MixerChannel *) tmp->data;
+	  list *next = tmp->next;
+	  
+	  if (ch->data_end_reached)
+	    {
+	    
+	      /* Get rid of this channel */
+
+	      m->channels = list_delete_item (m->channels, tmp);
+	      mixer_channel_destroy (ch);
+	      tmp = next;
+	      continue;
+	    }
 	  tmp_buffer_length = mixer_channel_get_data (ch,
 						      tmp_buffer,
 						      ch->rate*ch->channels*MIXER_LATENCY);
@@ -144,11 +151,12 @@ mixer_main_thread (void *data)
 	    MixerOutput *o = (MixerOutput *) tmp2->data;
 	    mixer_output_add_output (o, tmp_buffer, tmp_buffer_length);
 	  }
+	tmp = next;
 	}
     for (tmp = m->outputs; tmp; tmp = tmp->next)
       {
-      MixerOutput *o = (MixerOutput *) tmp->data;
-      mixer_output_post_output (o);
+	MixerOutput *o = (MixerOutput *) tmp->data;
+	mixer_output_post_output (o);
       }
     m->time += MIXER_LATENCY;
     pthread_mutex_unlock (&m->mutex);
@@ -185,7 +193,9 @@ mixer_start (mixer *m)
 {
   if (!m)
     return -1;
-  if (m->running || m->thread)
+  /* If we're already running, don't try to start again */
+
+  if (m->thread)
     return -1;
   
   /* Create mixer main thread */
@@ -209,6 +219,9 @@ mixer_stop (mixer *m)
     return -1;
   if (!m->running)
     return -1;
+
+  /* This could be incredibly broken */
+
   pthread_mutex_lock (&m->mutex);
   m->running = 0;
   m->thread = NULL;
@@ -366,6 +379,7 @@ mixer_insert_event (mixer *m,
   for (tmp = m->events; tmp; tmp = tmp->next)
    {
      MixerEvent *e = (MixerEvent *) tmp->data;
+
      if (new_event->time < e->time)
        break;
    }
@@ -382,3 +396,28 @@ mixer_insert_event (mixer *m,
   pthread_mutex_unlock (&m->mutex);
 }
 
+
+
+void
+mixer_fade_channel (mixer *m,
+		    const char *channel_name,
+		    double fade_destination,
+		    double fade_time)
+{
+  MixerChannel *ch;
+  double fade_distance;
+ 
+  if (!m)
+    return;
+
+  ch = mixer_find_channel (m, channel_name);
+  
+  if (!ch)
+    return;
+
+  pthread_mutex_lock (&m->mutex);
+  fade_distance = fade_destination-(ch->level);
+  ch->fade = (fade_distance/fade_time)/ch->rate;
+  ch->fade_destination = fade_destination;
+  pthread_mutex_unlock (&m->mutex);
+}

@@ -1,3 +1,14 @@
+2002-07-12  Marc Mulcahy <marc.mulcahy@sun.com>
+
+	* src/fileinfo.c: Fixed rounding errors in finding audio out queue points.
+
+2002-07-12  Marc Mulcahy <marc@plbb.net>
+
+	* src/mixerchannel.c src/mixerchannel.h src/vorbismixerchannel.c
+	src/mixer.c src/mixer.h: Added mixer channel level and fading support.
+	Added an end of data flag so we can appropriately dispose of dead
+	channels.
+
 2002-07-09  Marc Mulcahy <marc@plbb.net
 
 	* prs_db_builder.c: An entry in the database is now updated when the

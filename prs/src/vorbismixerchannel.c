@@ -34,7 +34,12 @@ vorbis_mixer_channel_get_data (MixerChannel *ch,
       tmp += rv/sizeof(short);
   }
   if (remainder)
-    return size-remainder;
+    {
+      /* We've reached the end of the data */
+
+      ch->data_end_reached = 1;
+      return size-remainder;
+    }
   else
     return size;
 }
@@ -95,6 +100,21 @@ vorbis_mixer_channel_new (const char *name,
   vi = ov_info (i->vf, -1);
   ch->rate = vi->rate;
   ch->channels = vi->channels;
+
+
+  /* Set level and fading parameters */
+
+  ch->fade = 0.0;
+  ch->level = 1.0;
+  ch->fade_destination = 1.0;
+
+  /* Set the end of data flag to 0 */
+
+  ch->data_end_reached = 0;
+
+  /* Default is patched to no outputs */
+
   ch->outputs = NULL;
+
   return ch;
 }
