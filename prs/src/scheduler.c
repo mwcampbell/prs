@@ -382,7 +382,7 @@ scheduler_schedule_next_event (scheduler *s)
 		e->end_time = e->start_time+info->audio_out;
 		file_info_free (info);
 		break;
-		case EVENT_TYPE_URL:
+	case EVENT_TYPE_URL:
 
 			i = malloc (sizeof(url_manager_info));
 			i->url = strdup (e->detail1);
@@ -480,25 +480,30 @@ scheduler_schedule_next_event (scheduler *s)
 		s->prev_event_start_time = s->prev_event_end_time = s->last_event_end_time = s->last_event_end_time+s->preschedule;
 		e->start_time = e->end_time = -1;
 	}
-	stack_entry->event_number++;
-	if (stack_entry->event_number > stack_entry->length) {
-		if (stack_entry->t->repeat_events)
-			stack_entry->event_number = 1;
- 		else {
-			if (stack_entry->t->fallback_id == -1) {
-				s->prev_event_end_time = s->last_event_end_time = stack_entry->t->end_time;
-				t = NULL;
-			}
+	if (e->end_time < stack_entry->t->end_time) {
+
+		/* More stuff to schedule */
+
+		stack_entry->event_number++;
+		if (stack_entry->event_number > stack_entry->length) {
+			if (stack_entry->t->repeat_events)
+				stack_entry->event_number = 1;
 			else {
-				t = get_playlist_template_by_id (s->db, stack_entry->t->fallback_id);
-				t->start_time = stack_entry->t->start_time;
-				t->end_time = stack_entry->t->end_time;
-				t->fallback_id = -1;
-				t->end_prefade = stack_entry->t->end_prefade;
+				if (stack_entry->t->fallback_id == -1) {
+					s->prev_event_end_time = s->last_event_end_time = stack_entry->t->end_time;
+					t = NULL;
+				}
+				else {
+					t = get_playlist_template_by_id (s->db, stack_entry->t->fallback_id);
+					t->start_time = stack_entry->t->start_time;
+					t->end_time = stack_entry->t->end_time;
+					t->fallback_id = -1;
+					t->end_prefade = stack_entry->t->end_prefade;
+				}
+				scheduler_pop_template (s);
+				if (t)
+					scheduler_push_template (s, t, 1);
 			}
-			scheduler_pop_template (s);
-			if (t)
-				scheduler_push_template (s, t, 1);
 		}
 	}
 	rv = s->prev_event_start_time;
