@@ -29,10 +29,6 @@ typedef struct {
 	double y1[2];
 	double x2[2];
 	double y2[2];
-	double x3[2];
-	double y3[2];
-	double x4[2];
-	double y4[2];
   
 	/* Processing state variables */
 
@@ -67,7 +63,8 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 		while (iptr < buffer_end)
 		{
 			double in, out;
-
+			long new_val;
+			
 			in = *iptr;
 			out =
 				b->a1[0]*in +
@@ -77,13 +74,18 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 				b->b1[1]*b->y1[1];
 			if (out < -32768)
 				out = -32768;
-			if (out > 32767)
+			else if (out > 32767)
 				out = 32767;
 			b->x1[1] = b->x1[0];
 			b->x1[0] = in;
 			b->y1[1] = b->y1[0];
 			b->y1[0] = out;
-			(*iptr++) -= out;
+			new_val = (*iptr)-out;
+			if (new_val > 32767)
+				new_val = 32767;
+			else if (new_val < -32768)
+				new_val = -32768;
+			*iptr++ = new_val;
 			*optr++ = out*b->volume;
 			if (f->channels == 2)
 			{
@@ -94,16 +96,21 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 					b->a1[2]*b->x2[1] -
 					b->b1[0]*b->y2[0] -
 					b->b1[1]*b->y2[1];
-				if (out < -32768)
-					out = -32768;
 				if (out > 32767)
 					out = 32767;
+				else if (out < -32768)
+					out = -32768;
 				b->x2[1] = b->x2[0];
 				b->x2[0] = in;
 				b->y2[1] = b->y2[0];
 				b->y2[0] = out;
+				new_val = (*iptr)-out;
+				if (new_val > 32767)
+					new_val = 32767;
+				else if (new_val < -32768)
+					new_val = -32768;
+				*iptr++ = new_val;
 				*optr++ = out*b->volume;
-				(*iptr++) -= out;
 			}
 		}
 		buffer_end = f->buffer+f->buffer_size;
@@ -217,20 +224,11 @@ multiband_audio_compressor_add_band (AudioFilter *f,
 	/* Setup low-pass filter */
 
 	c = 1.0/tan(PI*freq/f->rate);
-	b->a1[0] = 1.0/(1.0+sqrt(2)*c+c*c);
-	b->a1[1] = 2.0*b->a1[0];
-	b->a1[2] = b->a1[0];
-	b->b1[0] = 2.0*(1.0-c*c)*b->a1[0];
-	b->b1[1] = (1.0-sqrt(2.0)*c+c*c)*b->a1[0];
-
-	/* Setup high-pass filter */
-
-	c = tan (PI*freq/f->rate);
-	b->a2[0] = 1/(1.0+sqrt(2)*c+c*c);
-	b->a2[1] = -2.0*b->a2[0];
-	b->a2[2] = b->a2[0];
-	b->b2[0] = 2*(c*c-1.0)*b->a2[0];
-	b->b2[1] = (1.0-sqrt(2.0)*c+c*c)*b->a2[0];
+	b->a1[0] = b->a2[0] = 1.0/(1.0+sqrt(2)*c+c*c);
+	b->a1[1] = b->a2[1] = 2.0*b->a1[0];
+	b->a1[2] = b->a2[2] = b->a1[0];
+	b->b1[0] = b->b2[0] = 2.0*(1.0-c*c)*b->a1[0];
+	b->b1[1] = b->b2[1] = (1.0-sqrt(2.0)*c+c*c)*b->a1[0];
 
 	/* Initialize filters */
 
@@ -238,18 +236,10 @@ multiband_audio_compressor_add_band (AudioFilter *f,
 	b->x1[1] = 0.0;
 	b->x2[0] = 0.0;
 	b->x2[1] = 0.0;
-	b->x3[0] = 0.0;
-	b->x3[1] = 0.0;
-	b->x4[0] = 0.0;
-	b->x4[1] = 0.0;
 	b->y1[0] = 0.0;
 	b->y1[1] = 0.0;
 	b->y2[0] = 0.0;
 	b->y2[1] = 0.0;
-	b->y3[0] = 0.0;
-	b->y3[1] = 0.0;
-	b->y4[0] = 0.0;
-	b->y4[1] = 0.0;
 
 	/* Setup compressor threshhold */
 

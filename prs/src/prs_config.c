@@ -158,8 +158,8 @@ multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 			release_time = atof (xmlGetProp(cur, "release_time"));
 			pre_process_gain = atof (xmlGetProp(cur, "pre_process_gain"));
 			output_gain = atof (xmlGetProp(cur, "output_gain"));
-			if (freq > b->rate/2)
-				freq = b->rate/2;
+			if (freq >= (b->rate/2)*.9)
+				freq = (b->rate/2)*.9;
 			multiband_audio_compressor_add_band (f,
 							     freq,
 							     threshhold,
