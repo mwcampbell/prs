@@ -12,9 +12,6 @@ prs_db_builder_SOURCES = \
 	debug.c \
 	prs_db_builder.c
 
-prs_server_LDADD = \
-	-lefence
-
 prs_server_SOURCES = \
 	fileinfo.c \
 	vorbisfileinfo.c \
