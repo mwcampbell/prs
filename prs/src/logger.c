@@ -174,8 +174,14 @@ live365_log_file (void *data)
 	CURL *url;
 	struct HttpPost *post = NULL;
 	struct HttpPost *end = NULL;
-	
+	char *filename = NULL;
+
 	logger_data_complete (d);
+
+	/* Create mock file name for "least popular tracks" feature */
+
+	asprintf (&filename, "%s - %s - %s", d->name, d->artist, d->album);
+	
 	url = curl_easy_init ();
 	curl_easy_setopt (url, CURLOPT_URL,
 			  "http://asong.live365.com/cgi-bin/add_song.cgi");
@@ -208,12 +214,17 @@ live365_log_file (void *data)
 		      CURLFORM_COPYNAME, "seconds",
 		      CURLFORM_COPYCONTENTS, d->length,
 		      CURLFORM_END);
+	curl_formadd (&post, &end,
+		      CURLFORM_COPYNAME, "fileName",
+		      CURLFORM_COPYCONTENTS, filename,
+		      CURLFORM_END);
 	curl_easy_setopt (url, CURLOPT_HTTPPOST, post);
 	curl_easy_perform (url);
 	curl_easy_cleanup (url);
 	curl_formfree (post);
 	logger_data_destroy (d);
-	pthread_exit (NULL);
+	if (filename)
+		free (filename);
 }
 
 
