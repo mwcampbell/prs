@@ -183,7 +183,7 @@ mixer_main_thread (void *data)
 
 		/* Sync every hour */
 
-		if (!end.tv_sec%3600) {
+		if (!(end.tv_sec%3600)) {
 			double cur_time = end.tv_sec+(double)end.tv_usec/1000000;
 			mixer_lock (m);
 			m->cur_time = cur_time;
