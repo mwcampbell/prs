@@ -353,7 +353,7 @@ scheduler_schedule_next_event (scheduler *s)
 
 		info = file_info_new (e->detail1, 1000, 2000);
 		ae->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
-		ae->detail1 = strdup (r->path);
+		ae->detail1 = strdup (e->detail1);
 		ae->level = e->level;
 		e->start_time -= info->audio_in;
 		ae->delta_time -= info->audio_in;

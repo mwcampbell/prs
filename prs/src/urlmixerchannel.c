@@ -45,6 +45,7 @@ typedef struct {
 	int destroyed;
 	int bytes_sent;
 	int decoder_connected;
+	int bad_blocks;
 
 	/* Decoder process ID and input and output fds */
 
@@ -152,12 +153,17 @@ url_mixer_channel_get_data (MixerChannel *ch)
 			ch->data_end_reached = 1;
 			break;
 		}
-		if (rv < 0)
+		if (rv < 0) {
+			i->bad_blocks++;
 			rv = 0;
+			break;
+		}
 		remainder -= rv/sizeof(short);
 		tmp += rv/sizeof(short);
 	}
 	if (remainder) {
+		if (i->bad_blocks > 10)
+			ch->data_end_reached = 1;
 		ch->buffer_length = ch->buffer_size-remainder;
 	}
 	else
@@ -256,7 +262,8 @@ start_mp3_decoder (channel_info *i)
 	signal (SIGPIPE, broken_pipe_handler);
 	
 	i->decoder_connected = 1;
-	
+	i->bad_blocks = 0;
+
 	return 0;
 }
 
