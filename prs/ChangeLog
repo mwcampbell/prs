@@ -1,3 +1,7 @@
+2002-08-03  Marc Mulcahy <marc@plbb.net>
+
+	* src/mixerautomation.c: Made thread-safe.
+
 2002-08-03  Marc Mulcay <marc@plbb.net>
 
 	* src/global_data.c src/global_data.h src/ossmixerchannel.c

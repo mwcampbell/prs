@@ -47,6 +47,7 @@ mixer_automation_new (mixer *m)
   a->last_event_time = mixer_get_time (m);
   a->automation_thread = 0;
   a->running = 0;
+  pthread_mutex_init (&(a->mut), NULL);
   return a;
 }
 
@@ -58,14 +59,14 @@ mixer_automation_destroy (MixerAutomation *a)
   list *tmp;
   if (!a)
     return;
-  for (tmp = a->events; tmp; tmp = tmp->next)
-    {
-      automation_event_destroy ((AutomationEvent *) tmp->data);
-    }
   if (a->automation_thread > 0)
     {
       a->running = 0;
       pthread_join ((a->automation_thread), NULL);
+    }
+  for (tmp = a->events; tmp; tmp = tmp->next)
+    {
+      automation_event_destroy ((AutomationEvent *) tmp->data);
     }
   free (a);
 }
@@ -80,10 +81,12 @@ mixer_automation_add_event (MixerAutomation *a,
     return -1;
   if (!e)
     return -1;
+  pthread_mutex_lock (&(a->mut));
   if (!a->events)
       if (a->running)
 	mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
   a->events = list_append (a->events, e);
+  pthread_mutex_unlock (&(a->mut));
 }
 
 
@@ -96,11 +99,15 @@ mixer_automation_next_event (MixerAutomation *a)
   
   if (!a)
     return;
+  pthread_mutex_lock (&(a->mut));
   if (a->events)
     e = (AutomationEvent *) a->events->data;
   else
-    return;
-
+    {
+      pthread_mutex_unlock (&(a->mut));
+      return;
+    }
+  
   /* Do event */
 
   switch (e->type)
@@ -127,6 +134,7 @@ mixer_automation_next_event (MixerAutomation *a)
   automation_event_destroy (e);
   a->events = list_delete_item (a->events, a->events);
   a->last_event_time = mixer_get_time (a->m);
+  pthread_mutex_unlock (&(a->mut));
 }
 
 
@@ -139,7 +147,6 @@ mixer_automation_main_thread (void *data)
   while (1)
     {
 
-
       /* Wait time defaults to wait for like thirty years in the case where
        * we have no event in the queue
        */
@@ -147,11 +154,11 @@ mixer_automation_main_thread (void *data)
       double wait_time = (double) (0x7ffffff);
       AutomationEvent *e;
 
+      pthread_mutex_lock (&(a->mut));
       if (a->events)
 	e = (AutomationEvent *) a->events->data;
       else
 	e = NULL;
-
 
       /* If there's an event at the top of the queue, set the mixer wait
        * notification to notify us when it's time has been reached
@@ -162,22 +169,28 @@ mixer_automation_main_thread (void *data)
 	  wait_time = a->last_event_time+e->delta_time;
 	}
       
-
       /* If the automation isn't running, bail */
 
       if (!a->running)
-	break;
-
-
+	{
+	  pthread_mutex_unlock (&(a->mut));
+	  break;
+	}
+      
       /* Wait for the mixer to notify us that the specified time has been reached */
 
+      pthread_mutex_unlock (&(a->mut));
       mixer_wait_for_notification (a->m, wait_time);
 
+	  /* If someone turned automation off while we were waiting, bail now */
 
-      /* If someone turned automation off while we were waiting, bail now */
-
+      pthread_mutex_lock (&(a->mut));
       if (!a->running)
-	break;
+	{
+	  pthread_mutex_unlock (&(a->mut));
+	  break;
+	}
+      pthread_mutex_unlock (&(a->mut));
       mixer_automation_next_event (a);
     }
   a->automation_thread = 0;
@@ -192,8 +205,12 @@ mixer_automation_start (MixerAutomation *a)
   
   if (!a)
     return -1;
+  pthread_mutex_lock (&(a->mut));
   if (a->running)
-    return -1;
+    {
+      pthread_mutex_unlock (&(a->mut));
+      return -1;
+    }
   a->running = 1;
   pthread_create (&(a->automation_thread), NULL, mixer_automation_main_thread, (void *) a);
   if (a->events)
@@ -202,6 +219,7 @@ mixer_automation_start (MixerAutomation *a)
       if (a->last_event_time+e->delta_time < mixer_get_time (a->m))
 	mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
       }
+  pthread_mutex_unlock (&(a->mut));
   return 0;
 }
 
@@ -210,11 +228,16 @@ mixer_automation_start (MixerAutomation *a)
 int
 mixer_automation_stop (MixerAutomation *a)
 {
+  pthread_t thread;
+  
   if (!a)
     return -1;
+  pthread_mutex_lock (&(a->mut));
   mixer_reset_notification_time (a->m, mixer_get_time (a->m));
   a->running = 0;
-  pthread_join ((a->automation_thread), NULL);
+  thread = a->automation_thread;
+  pthread_mutex_unlock (&(a->mut));
+  pthread_join (thread, NULL);
   return 0;
 }
 
@@ -228,6 +251,7 @@ mixer_automation_set_start_time (MixerAutomation *a,
 
   if (!a)
     return;
+  pthread_mutex_lock (&(a->mut));
   a->last_event_time = start_time;
   if (a->events)
     e = (AutomationEvent *) a->events->data;
@@ -235,6 +259,7 @@ mixer_automation_set_start_time (MixerAutomation *a,
     e = NULL;
   if (e)
     mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
+  pthread_mutex_unlock (&(a->mut));
 }
 
 
@@ -248,6 +273,7 @@ mixer_automation_get_last_event_end (MixerAutomation *a)
   if (!a)
     return -1.0;
 
+  pthread_mutex_lock (&(a->mut));
   rv = event_start_time = event_end_time = a->last_event_time;
   for (tmp = a->events; tmp; tmp = tmp->next)
     {
@@ -257,7 +283,6 @@ mixer_automation_get_last_event_end (MixerAutomation *a)
       if (event_end_time > rv)
 	rv = event_end_time;
     }
+  pthread_mutex_unlock (&(a->mut));
   return rv;
 }
-
-  
