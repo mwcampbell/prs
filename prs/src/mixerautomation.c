@@ -178,7 +178,7 @@ mixer_automation_next_event (MixerAutomation *a)
 			
 			mixer_patch_channel_all (a->m, e->channel_name);
 			mixer_enable_channel (a->m, e->channel_name, 1);
-		if (a->l)
+			if (a->l && a->logger_enabled)
 			logger_log_file (a->l, ch->location);
 		}
 		break;
@@ -402,5 +402,18 @@ mixer_automation_add_logger (MixerAutomation *a,
 		return;
 	pthread_mutex_lock (&(a->mut));
 	a->l = l;
+	a->logger_enabled = 1;
+	pthread_mutex_unlock (&(a->mut));
+}
+
+
+void
+mixer_automation_enable_logger (MixerAutomation *a,
+				int enabled)
+{
+	if (!a)
+		return;
+	pthread_mutex_lock (&(a->mut));
+	a->logger_enabled = enabled;
 	pthread_mutex_unlock (&(a->mut));
 }

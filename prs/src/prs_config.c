@@ -437,9 +437,11 @@ logger_config (xmlNodePtr cur)
 	xmlChar *username = xmlGetProp (cur, "username");
 	xmlChar *password = xmlGetProp (cur, "password");
 	xmlChar *type_string = xmlGetProp (cur, "type");
-
+	xmlChar *log_file_name = xmlGetProp (cur, "log_file_name");
+	
 	if (!xmlStrcmp (type_string, "live365")) {
-		l = logger_new (LOGGER_TYPE_LIVE365, NULL,
+		l = logger_new (LOGGER_TYPE_LIVE365,
+				log_file_name, NULL,
 				   username, password);
 	}
 	if (username)
@@ -448,6 +450,8 @@ logger_config (xmlNodePtr cur)
 		xmlFree (password);
 	if (type_string)
 		xmlFree (type_string);
+	if (log_file_name)
+		xmlFree (log_file_name);
 	return l;
 }
 

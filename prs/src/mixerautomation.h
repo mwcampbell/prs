@@ -73,6 +73,7 @@ typedef struct {
 	pthread_t automation_thread;
 	double last_event_time;
 	list *events;
+	int logger_enabled;
 	logger *l;
 } MixerAutomation;
 
@@ -99,6 +100,10 @@ mixer_automation_get_last_event_end (MixerAutomation *a);
 void
 mixer_automation_add_logger (MixerAutomation *a,
 			     logger *l);
+void
+mixer_automation_enable_logger (MixerAutomation *a,
+				int enabled);
+
 
 
 

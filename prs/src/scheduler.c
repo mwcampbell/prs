@@ -284,10 +284,13 @@ url_manager (void *data)
 		mixer_patch_channel_all (i->m, i->url);
 		mixer_fade_all (i->m, 0, 1);
 		mixer_fade_channel (i->m, i->url, 1, 1);
+		mixer_automation_enable_logger (i->a, 0);
 	}
+
 	while (cur_time < i->end_time-i->end_fade) {
 		ch = mixer_get_channel (i->m, i->url);
 		if (!ch) {
+			mixer_automation_enable_logger (i->a, 1);
 			mixer_fade_all (i->m, 1.0, 1);
 			mixer_set_default_level (i->m, 1.0);
 			
@@ -309,11 +312,12 @@ url_manager (void *data)
 			ch = NULL;
 		usleep (retry_sleep_delay);
 		if (ch && mixer_get_channel (i->m, i->url)) {
-		  if (ch->level < 1.0) {
-		    mixer_fade_all (i->m, 0, 1);
-		    mixer_set_default_level (i->m, .0001);
-		    mixer_fade_channel (i->m, i->url, 1, 1);
-		  }
+			if (ch->level < 1.0) {
+				mixer_fade_all (i->m, 0, 1);
+				mixer_set_default_level (i->m, .0001);
+				mixer_fade_channel (i->m, i->url, 1, 1);
+				mixer_automation_enable_logger (i->a, 0);
+			}
 		}
 		cur_time = mixer_get_time (i->m);
 	}
@@ -321,6 +325,7 @@ url_manager (void *data)
 	/* Ensure mixer automation is running when we leave */
 
         mixer_set_default_level (i->m, 1.0);
+	mixer_automation_enable_logger (i->a, 1);
 	
         /* Free stuff to exit */
 

@@ -32,12 +32,19 @@
 
 logger *
 logger_new (const LOGGER_TYPE type,
+	    const char *log_file_name,
 	    const char *url,
 	    const char *username,
 	    const char *password)
 {
 	logger *l = malloc (sizeof(logger));
 
+	if (log_file_name) {
+		l->log_file = fopen (log_file_name, "w");
+		fprintf (l->log_file, "<log>\n");
+	}
+	else
+		l->log_file = NULL;
 	l->type = type;
 	if (url)
 		l->url = strdup (url);
@@ -66,14 +73,16 @@ logger_destroy (logger *l)
 		free (l->username);
 	if (l->password)
 		free (l->password);
+	if (l->log_file) {
+		fprintf (l->log_file, "</log>\n");
+		fclose (l->log_file);
+	}
 	free (l);
 }
 
 
 typedef struct {
-	char *url;
-	char *username;
-	char *password;
+	logger *l;
 	char *path;
 	char *name;
 	char *artist;
@@ -84,25 +93,15 @@ typedef struct {
 
 
 static logger_data *
-logger_data_new (const char *url,
+logger_data_new (logger *l,
+		 const char *url,
 		 const char *username,
 		 const char *password,
 		 const char *path)
 {
 	logger_data *d = malloc (sizeof(logger_data));
 
-	if (url)
-		d->url = strdup (url);
-	else
-		d->url = NULL;
-	if (username)
-		d->username = strdup (username);
-	else
-		d->username = NULL;
-	if (password)
-		d->password = strdup (password);
-	else
-		d->password = NULL;
+	d->l = l;
 	if (path)
 		d->path = strdup (path);
 	else
@@ -120,12 +119,6 @@ logger_data_destroy (logger_data *d)
 {
 	if (!d)
 		return;
-	if (d->url)
-		free (d->url);
-	if (d->username)
-		free (d->username);
-	if (d->password)
-		free (d->password);
 	if (d->path)
 		free (d->path);
 	if (d->name)
@@ -159,7 +152,7 @@ logger_data_complete (logger_data *d)
 		d->artist = strdup (info->artist);
 	if (info->album)
 		d->album = strdup (info->album);
-	length = (int) (info->audio_out-info->audio_in);
+	length = (int) (info->length);
 
 	sprintf (length_string, "%d", length);
 	d->length = strdup (length_string);
@@ -167,18 +160,35 @@ logger_data_complete (logger_data *d)
 }
 
 
-static void *
-live365_log_file (void *data)
+static void
+logger_data_log_entry (logger_data *d)
+{	
+
+	/* Log this entry to the log file */
+
+	if (d->l->log_file) {
+		time_t cur_time = time (NULL);
+
+		fprintf (d->l->log_file, "\t<entry>\n");
+		fprintf (d->l->log_file, "\t\t<time>%ld</time>\n", cur_time);
+		fprintf (d->l->log_file, "\t\t<title>%s</title>\n", d->name);
+		fprintf (d->l->log_file, "\t\t<artist>%s</artist>\n", d->artist);
+		fprintf (d->l->log_file, "\t\t<album>%s</album>\n", d->album);
+		fprintf (d->l->log_file, "\t\t<seconds>%s</seconds>\n", d->length);
+		fprintf (d->l->log_file, "\t</entry>\n");
+	}
+}
+
+
+static void
+live365_log_file (logger_data *d)
 {
-	logger_data *d = (logger_data *) data;
 	CURL *url;
 	struct HttpPost *post = NULL;
 	struct HttpPost *end = NULL;
 	char *filename = NULL;
 
-	logger_data_complete (d);
-
-	/* Create mock file name for "least popular tracks" feature */
+        /* Create mock file name for "least popular tracks" feature */
 
 	asprintf (&filename, "%s - %s - %s", d->name, d->artist, d->album);
 	
@@ -192,11 +202,11 @@ live365_log_file (void *data)
 
 	curl_formadd (&post, &end,
 		      CURLFORM_COPYNAME, "handle",
-		      CURLFORM_COPYCONTENTS, d->username,
+		      CURLFORM_COPYCONTENTS, d->l->username,
 		      CURLFORM_END);
 	curl_formadd (&post, &end,
 		      CURLFORM_COPYNAME, "pass",
-		      CURLFORM_COPYCONTENTS, d->password,
+		      CURLFORM_COPYCONTENTS, d->l->password,
 		      CURLFORM_END);
 	curl_formadd (&post, &end,
 		      CURLFORM_COPYNAME, "title",
@@ -228,6 +238,23 @@ live365_log_file (void *data)
 }
 
 
+static void *
+logger_log_file_thread (void *data)
+{
+	logger_data *d = (logger_data *) data;
+
+	if (!d)
+		return NULL;
+	logger_data_complete (d);
+	logger_data_log_entry (d);
+	switch (d->l->type) {
+	case LOGGER_TYPE_LIVE365:
+		live365_log_file (d);
+		break;
+	}
+}
+
+
 void
 logger_log_file (logger *l,
 		 const char *path)
@@ -237,13 +264,9 @@ logger_log_file (logger *l,
 	
 	if (!l)
 		return;
-	d = logger_data_new (l->url, l->username, l->password, path);
+	d = logger_data_new (l, l->url, l->username, l->password, path);
 
-	switch (l->type) {
-	case LOGGER_TYPE_LIVE365:
-		pthread_create (&id, NULL, live365_log_file, d);
-		pthread_detach (id);
-		break;
-	}
+	pthread_create (&id, NULL, logger_log_file_thread, d);
+	pthread_detach (id);
 	return;
 }

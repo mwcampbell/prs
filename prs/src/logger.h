@@ -34,6 +34,7 @@ typedef enum {
 
 typedef struct {
 	LOGGER_TYPE type;
+	FILE *log_file;
 	char *url;
 	char *username;
 	char *password;
@@ -42,6 +43,7 @@ typedef struct {
 
 logger *
 logger_new (const LOGGER_TYPE type,
+	    const char *log_file_name,
 	    const char *url,
 	    const char *username,
 	    const char *password);
