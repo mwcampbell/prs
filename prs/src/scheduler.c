@@ -547,7 +547,6 @@ scheduler_main_thread (void *data)
 	scheduler *s = (scheduler *) data;
 	double target, current;
   
-	nice (20);
 	pthread_mutex_lock (&(s->mut));
 	current = target = s->prev_event_end_time;
 	pthread_mutex_unlock (&(s->mut));

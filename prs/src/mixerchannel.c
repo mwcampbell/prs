@@ -62,7 +62,7 @@ mixer_channel_new (const int rate,
 	ch->channels = channels;
 	ch->chunk_size = (latency/44100.0)*rate;
 	ch->this_chunk_size = 0;
-	ch->space_left = ch->buffer_size = ch->chunk_size*100;
+	ch->space_left = ch->buffer_size = ch->chunk_size*500;
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "mixer_channel_new: buffer_size = %d\n",
 		      ch->buffer_size);
