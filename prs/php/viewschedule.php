@@ -93,7 +93,7 @@ echo "<option value=\"0\"";
 if ($repetition == 0)
 	echo " selected";
 echo ">One Time Only</option>";
-echo "<option value=\"360\";
+echo "<option value=\"3600\"";
 if ($repetition == 3600)
 	echo " selected";
 echo ">Hourly</option>";
