@@ -47,7 +47,7 @@ prs_new (void)
     }
 
   prs->scheduler = scheduler_new (prs->automation, prs->db,
-				  mixer_get_time (prs->mixer));
+				  mixer_get_time (prs->mixer)+10);
 
   if (prs->scheduler == NULL)
     {
