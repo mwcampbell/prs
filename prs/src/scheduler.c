@@ -424,6 +424,7 @@ scheduler_schedule_next_event (scheduler *s)
 			automation_event_destroy (ae);
 			ae = NULL;
 			e->end_time = e->start_time;
+			e->start_time = s->prev_event_start_time;
 			break;
 		}
       
