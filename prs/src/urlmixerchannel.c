@@ -152,6 +152,8 @@ url_mixer_channel_get_data (MixerChannel *ch)
 			ch->data_end_reached = 1;
 			break;
 		}
+		if (rv < 0)
+			rv = 0;
 		remainder -= rv/sizeof(short);
 		tmp += rv/sizeof(short);
 	}
