@@ -1,3 +1,13 @@
+2002-07-29  Marc Mulcahy <marc.mulcahy@sun.com>
+
+	* src/mixer.c: Made mixer_fade_channel_fade fail if a fade is
+	currently in progress.  This allows mixer_fade_ll to take precidence.
+
+	* src/mixer.c src/db.c: Converted all internal time systems to use
+	standard Unix time format stored in doubles to allow less than one
+	second mixer timing accuracy.  This gets rid of the whole slew of bugs
+	where the mixer crashes on day switch.
+
 2002-07-29  Marc Mulcahy <marc@plbb.net>
 
 	* src/db.c: made template start times inclusive and template end times

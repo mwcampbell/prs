@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <time.h>
 #include <string.h>
 #include <malloc.h>
 #include <libpq-fe.h>
@@ -425,13 +427,20 @@ get_playlist_template_from_result (PGresult *res,
 
 
 PlaylistTemplate *
-get_playlist_template (double time)
+get_playlist_template (double cur_time)
 {
   PlaylistTemplate *t;
   PGresult *res;
   char buffer[1024];
-
-  sprintf (buffer, "select * from playlist_template where start_time <= %lf and end_time > %lf;", time, time);
+  time_t day_start;
+  double time_of_day;
+  
+  time_of_day = (time_t) cur_time%86400;
+  day_start = (time_t) cur_time-time_of_day;
+  time_of_day = cur_time-day_start;
+  
+  sprintf (buffer, "select * from playlist_template where start_time <= %lf and end_time > %lf;", time_of_day, time_of_day);
+  fprintf (stderr, "%s\n", buffer);
   res = PQexec (connection, buffer);
   if (PQntuples (res) != 1)
     {
@@ -440,6 +449,12 @@ get_playlist_template (double time)
     }
   t = get_playlist_template_from_result (res, 0);
   PQclear (res);
+
+  /* Find the start and end times for this instance of the template */
+  
+  t->start_time += day_start;
+  t->end_time += day_start;
+  fprintf (stderr, "Template start time %lf, end time %lf.\n", t->start_time, t->end_time);
   return t;
 }
 

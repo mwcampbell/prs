@@ -137,7 +137,8 @@ static double
 process_playlist_event (PlaylistTemplate *t,
 			int event_number,
 			RecordingPicker *p,
-			mixer *m)
+			mixer *m,
+			double cur_time)
 {
 
   /* Keep track of last event start and end times */
@@ -153,15 +154,17 @@ process_playlist_event (PlaylistTemplate *t,
   
   /* Ensure that last_start_time and last_end_time are initialized */
   
-  if (last_template != t)
+  if (last_template && last_template->id != t->id)
     {
       if (!last_template)
-	last_start_time = last_end_time = mixer_get_time (m);
+	last_start_time = last_end_time = cur_time;
       else
 	last_start_time = last_end_time = t->start_time;
       last_template = t;
     }  
-    
+  else
+    last_start_time = last_end_time = cur_time;
+  
   /* Get the PlaylistEvent from the template */
 
   e = playlist_template_get_event (t, event_number);
@@ -193,15 +196,10 @@ process_playlist_event (PlaylistTemplate *t,
       ? (last_end_time+e->offset)
       : (last_start_time+e->offset);
   
-  /* Ensure start time is within legal limits */
-
-  if (me->start_time >= 86400)
-    me->start_time -= 86400;
-
   /* If the start time isn't within the template start and end times, bail now */
 
   if ((t->start_time != -1.0 && t->end_time != 1.0) &&
-      (me->start_time > t->end_time || me->start_time < t->start_time))
+      (me->start_time > t->end_time))
     {
       free (me);
       return -1.0;
@@ -281,14 +279,9 @@ process_playlist_event (PlaylistTemplate *t,
 
       /* Wrap around at midnight */
 
-      if (me->start_time >= 86400)
-	me->start_time -= 86400;
-      if (me->start_time < 0)
-	me->start_time = 0;
-      if (me->end_time >= 86400)
-	me->end_time -= 86400;
       e->start_time = last_start_time = me->start_time;
       e->end_time = last_end_time = me->end_time;
+      fprintf (stderr, "Inserted event at %lf.\n", me->start_time);
       mixer_insert_event (m, me);
       return me->start_time;
     }
@@ -322,20 +315,16 @@ execute_playlist_template (PlaylistTemplate *t,
 	  start_time = process_playlist_event (t,
 						      i,
 						      p,
-						      m);
+						      m,
+					       cur_time);
 	    
 	  /* If we just queued an event more than 10 seconds in the future,
 	   * wait the difference less ten seconds
 	   */
 
 	  if (start_time > 0 && start_time > cur_time+10)
-	    {
-	      usleep ((start_time-cur_time-10)*1000000);
-	      cur_time = mixer_get_time (m)-10;
-	    }
-
-	  else
-	    cur_time = start_time;
+	    usleep ((start_time-cur_time-10)*1000000);
+	  cur_time = start_time;
 
 	  if (start_time < 0)
 	    break;
@@ -349,8 +338,7 @@ execute_playlist_template (PlaylistTemplate *t,
 	  me->end_time = t->end_time;
 	  me->type = MIXER_EVENT_TYPE_FADE_ALL;
 	  mixer_insert_event (m, me);
-	  cur_time = mixer_get_time (m);
-	  usleep ((t->end_time-cur_time)*1000000);
+	  fprintf (stderr, "Event failed at %ld.\n", i);
 	  cur_time = t->end_time;
 	  me = (MixerEvent *) malloc (sizeof (MixerEvent));
 	  memset (me, 0, sizeof (MixerEvent));
@@ -372,14 +360,16 @@ playlist_main_thread (void *data)
   double cur_time;
   PlaylistTemplate *t;
 
+  cur_time = mixer_get_time (m);  
+
   while (1)
     {
-      cur_time = mixer_get_time (m);  
       t = get_playlist_template (cur_time);
       if (t)
 	{
 	  double new_time = execute_playlist_template (t, m, cur_time);
 	  playlist_template_free (t);
+	  cur_time = new_time;
 	}
       else
       {
@@ -407,12 +397,12 @@ int main (void)
   signal (SIGUSR1, prs_signal_handler);
   connect_to_database ("prs");
   m = mixer_new ();
+  mixer_sync_time (m);
   setup_streams (m);
   o = oss_mixer_output_new ("soundcard",
 			    44100,
 			    2);
   mixer_add_output (m, o);
-  mixer_sync_time (m);
 
   printf ("Running as pid %d.\n", getpid ());
   pthread_create (&playlist_thread, NULL, playlist_main_thread, m);

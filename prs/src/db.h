@@ -88,7 +88,7 @@ void
 playlist_template_free (PlaylistTemplate *t);
 
 PlaylistTemplate *
-get_playlist_template (double time);
+get_playlist_template (double cur_time);
 
 
 

@@ -115,8 +115,6 @@ mixer_main_thread (void *data)
 	  mixer_unlock (m);
 	  break;
 	}
-      if (m->cur_time > 86400)
-	m->cur_time -= 86400;
       mixer_do_events (m);
       if (!m->outputs)
 	{
@@ -193,7 +191,8 @@ mixer_new (void)
 
   pthread_mutex_init (&(m->mutex), NULL);
 
-  m->cur_time = 0.0;
+  tzset ();
+  m->cur_time = (double) time (NULL)+timezone+daylight*3600;
   m->channels = m->outputs = m->events = NULL;
 
   m->running = 0;
@@ -514,19 +513,19 @@ mixer_get_time (mixer *m)
 void
 mixer_sync_time (mixer *m)
 {
-  time_t cur_time;
-  struct tm *tp;
-  double mixer_time;
-  
+  time_t cur_time = time (NULL);
+
   if (!m)
     return;
 
-  cur_time = time (NULL);
-  tp = localtime (&cur_time);
+  /* Wait for time to change */
 
-  mixer_time = tp->tm_hour*3600+tp->tm_min*60+tp->tm_sec;
+  while (cur_time == time (NULL));
+
+  tzset ();
+  cur_time = time (NULL)-timezone+daylight*3600;
   mixer_lock (m);
-  m->cur_time = mixer_time;
+  m->cur_time = cur_time;
   mixer_unlock (m);
 }
 
@@ -584,6 +583,11 @@ mixer_fade_channel (mixer *m,
     return;
 
   mixer_lock (m);
+  if (ch->fade != 0.0)
+    {
+      mixer_unlock (m);
+      return;
+    }
   fade_distance = fade_destination-(ch->level);
   ch->fade = (fade_distance/fade_time)/ch->rate;
   ch->fade_destination = fade_destination;
