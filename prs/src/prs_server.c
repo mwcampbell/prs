@@ -237,8 +237,10 @@ main (int argc, char *argv[])
 	  close (1);
 	  close (2);
 	  open ("/dev/null", O_RDONLY);
-	  open ("prs.log", O_WRONLY | O_CREAT, 0644);
-	  open ("prs.err", O_WRONLY | O_CREAT, 0644);
+	  open ("prs.log", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	  open ("prs.err", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	  setvbuf (stdout, NULL, _IONBF, 0);
+	  setvbuf (stderr, NULL, _IONBF, 0);
 	  debug_printf (DEBUG_FLAGS_TELNET, "Forked child process and set up logging.\n");
 	  break;
 	case -1:

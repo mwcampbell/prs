@@ -1,3 +1,5 @@
+#include <assert.h>
+#include "debug.h"
 #include "mixeroutput.h"
 
 
@@ -5,20 +7,19 @@
 void
 mixer_output_destroy (MixerOutput *o)
 {
-  if (!o)
-    return;
-  if (o->name)
-    free (o->name);
-  if (o->buffer)
-    free (o->buffer);
-  if (o->free_data)
-    o->free_data (o);
-  else
-    {
-      if (o->data)
-	free (o->data);
-    }
-  free (o);
+	assert (o != NULL);
+	debug_printf (DEBUG_FLAGS_MIXER, "mixer_output_destroy called\n");
+	if (o->name)
+		free (o->name);
+	if (o->buffer)
+		free (o->buffer);
+	if (o->free_data)
+		o->free_data (o);
+	else {
+		if (o->data)
+			free (o->data);
+	}
+	free (o);
 }
 
 
@@ -27,33 +28,34 @@ void
 mixer_output_alloc_buffer (MixerOutput *o,
 			   const int latency)
 {
-  if (!o)
-    return;
-  o->buffer_size = latency/(88200/(o->rate*o->channels));
-  o->buffer = (short *) malloc (o->buffer_size*sizeof(short));
+	assert (o != NULL);
+	assert (latency > 0);
+	o->buffer_size = latency/(88200/(o->rate*o->channels));
+	debug_printf (DEBUG_FLAGS_MIXER,
+		      "mixer_output_alloc_buffer: buffer_size = %d\n",
+		      o->buffer_size);
+	o->buffer = (short *) malloc (o->buffer_size*sizeof(short));
+	assert (o->buffer != NULL);
 }
 
 
 
 int
 mixer_output_add_data (MixerOutput *o,
-			 short *buffer,
-			 int length)
+		       short *buffer,
+		       int length)
 {
-  short *tmp, *tmp2;
+	short *tmp, *tmp2;
   
-  if (!o)
-    return 0;
-  if (!o->buffer)
-    return 0;
+	assert (o != NULL);
+	assert (o->buffer != NULL);
+	assert (buffer != NULL);
+	assert (length >= 0);
+	tmp = o->buffer;
+	tmp2 = buffer;
 
-  tmp = o->buffer;
-  tmp2 = buffer;
-
-  while (length--)
-    {
-      *tmp++ += *tmp2++;
-    }
+	while (length--)
+		*tmp++ += *tmp2++;
 }
 
 
@@ -61,11 +63,9 @@ mixer_output_add_data (MixerOutput *o,
 void
 mixer_output_post_data (MixerOutput *o)
 {
-  if (!o)
-    return;
-  if (!o->post_data)
-    return;
-  o->post_data (o);
+	assert (o != NULL);
+	assert (o->post_data != NULL);
+	o->post_data (o);
 }
 
 
@@ -73,12 +73,7 @@ mixer_output_post_data (MixerOutput *o)
 void
 mixer_output_reset_data (MixerOutput *o)
 {
-  if (!o)
-    return;
-  if (!o->buffer)
-    return;
-  memset (o->buffer, 0, (o->buffer_size)*sizeof(short));
+	assert (o != NULL);
+	assert (o->buffer != NULL);
+	memset (o->buffer, 0, (o->buffer_size)*sizeof(short));
 }
-
-
-

@@ -6,6 +6,7 @@
 
 
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,8 +17,6 @@
 void *
 list_get_item (list *l, int item)
 {
-	if (item < 0)
-		return NULL;
 	while (item-- && l)
 		l = l->next;
 	if (l)
@@ -39,7 +38,6 @@ list_free (list *l)
 		free (tmp);
 		tmp = next;
 	}
-	return;
 }
 
 
@@ -50,6 +48,7 @@ list_append (list *l, void *data)
 	list *tmp = l; 
 	list *new_item = (list *) malloc (sizeof(list));
 
+	assert (new_item != NULL);
 	while (tmp && tmp->next)
 		tmp = tmp->next;
 
@@ -75,6 +74,7 @@ list_prepend (list *l, void *data)
 	list *tmp = l;
 	list *new_item = (list *) malloc (sizeof(list));
 
+	assert (new_item != NULL);
 	if (l)
 		l->prev = new_item;
 	new_item->next = l;
@@ -91,8 +91,8 @@ list_insert_before (list *l,
 {
 	list *new_item = (list *) malloc (sizeof (list));
 
-	if (!l)
-		return;
+	assert (l != NULL);
+	assert (new_item != NULL);
 	new_item->prev = l->prev;
 	if (l->prev)
 		l->prev->next = new_item;
@@ -110,8 +110,8 @@ list_insert_after (list *l,
 {
 	list *new_item = (list *) malloc (sizeof (list));
 
-	if (!l)
-		return;
+	assert (l != NULL);
+	assert (new_item != NULL);
 	new_item->prev = l;
 	new_item->next = l->next;
 	if (l->next)
@@ -127,8 +127,8 @@ list *
 list_delete_item (list *l,
 		  list *item)
 {
-	if (!l || !item)
-		return NULL;
+	assert (l != NULL);
+	assert (item != NULL);
 	if (item->prev)
 		item->prev->next = item->next;
 	else
@@ -163,8 +163,8 @@ list_copy (list *l)
 	list *tmp;
 	list *new_item = NULL, *prev = NULL;
   
-	if (!l)
-		return NULL;
+	assert (l != NULL);
+	assert (new_item != NULL);
 	for (tmp = l; tmp; tmp = tmp->next)
 	{
 		new_item = (list *) malloc (sizeof(list));
@@ -238,8 +238,7 @@ string_list_to_array (list *l)
 	int i;
 	char **array;
 
-	if (!l)
-		return NULL;
+	assert (l != NULL);
 	i = list_length (l);
 	array = malloc ((i+1)*sizeof(char *));
 	i = 0;

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <math.h>
 #include <malloc.h>
@@ -50,7 +51,13 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 	list *tmp;
 	int first_band = 1;
 	band *b;
-  
+
+	assert (f != NULL);
+	assert (input != NULL);
+	assert (input_length >= 0);
+	assert (output != NULL);
+	assert (output_length >= 0);
+
 	for (tmp = (list *) f->data; tmp; tmp = tmp->next)
 	{
 		b = (band *) tmp->data;

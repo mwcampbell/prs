@@ -9,6 +9,7 @@ prs_db_builder_SOURCES = \
 	mp3decoder.c \
 	mp3header.c \
 	list.c	\
+	debug.c \
 	prs_db_builder.c
 
 prs_server_SOURCES = \

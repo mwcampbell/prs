@@ -1,3 +1,5 @@
+#include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -9,6 +11,7 @@
 #include <pthread.h>
 #include <sys/soundcard.h>
 #include <shout/shout.h>
+#include "debug.h"
 #include "shoutmixeroutput.h"
 #include "list.h"
 
@@ -137,10 +140,10 @@ shout_mixer_output_free_data (MixerOutput *o)
 {
 	shout_info *i;
 
-	if (!o)
-		return;
-	if (!o->data)
-		return;
+	assert (o != NULL);
+	assert (o->data != NULL);
+	debug_printf (DEBUG_FLAGS_MIXER,
+		      "shout_mixer_output_free_data called\n");
 	i = (shout_info *) o->data;
 
 	if (i->shout)
@@ -156,13 +159,21 @@ shout_mixer_output_free_data (MixerOutput *o)
 static void *
 shout_thread (void *data)
 {
-	MixerOutput *o = (MixerOutput *) data;
-	shout_info *i = (shout_info *) o->data;
+	MixerOutput *o = NULL;
+	shout_info *i = NULL;
 	char buffer[1024];
 	int bytes_read;
-  
+
+	assert (data != NULL);
+	o = (MixerOutput *) data;
+	i = (shout_info *) o->data;
+
 	while (!i->stream_reset) {
 		bytes_read = read (i->encoder_output_fd, buffer, 1024);
+		if (bytes_read < 0)
+			debug_printf (DEBUG_FLAGS_MIXER,
+				      "read error in shout thread: %s\n",
+				      strerror (errno));
 		if (bytes_read > 0) {
 			shout_send (i->shout, buffer, bytes_read);
 		}
@@ -177,13 +188,16 @@ shout_mixer_output_post_data (MixerOutput *o)
 {
 	shout_info *i;
   
-	if (!o)
-		return;
+	assert (o != NULL);
 	i = (shout_info *) o->data;
 
 	if (i->shout_thread_id == 0)
 		pthread_create (&i->shout_thread_id, NULL, shout_thread, o);
-	write (i->encoder_input_fd, o->buffer, o->buffer_size*sizeof(short));
+	if (write (i->encoder_input_fd, o->buffer,
+		   o->buffer_size*sizeof(short)) < 0)
+		debug_printf (DEBUG_FLAGS_MIXER,
+			      "shout_mixer_output_post_data: write: %s\n",
+			      strerror (errno));
 }
 
 

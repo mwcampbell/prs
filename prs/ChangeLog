@@ -1,5 +1,8 @@
 2002-12-20  Matt Campbell  <mattcampbell@pobox.com>
 
+	* Added debug messages and assertions, improved error handling,
+	and did some other cleaup.
+
 	* php/updatedb.php: Added line breaks in the form.
 
 2002-12-20  Marc Mulcahy  <marc@plbb.net>

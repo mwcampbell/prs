@@ -1,4 +1,6 @@
+#include <assert.h>
 #include <stdio.h>
+#include "debug.h"
 #include "mixerpatchpoint.h"
 
 
@@ -8,9 +10,12 @@ mixer_patch_point_new (MixerChannel *ch,
 		       MixerBus *b,
 		       int latency)
 {
-	MixerPatchPoint *p = (MixerPatchPoint *) malloc (sizeof(MixerPatchPoint));
-	if (!p)
-		return NULL;
+	MixerPatchPoint *p = NULL;
+	debug_printf (DEBUG_FLAGS_MIXER,
+		      "creating patch point from %s to %s, latency=%d\n",
+		      ch->name, b->name, latency);
+	p = (MixerPatchPoint *) malloc (sizeof(MixerPatchPoint));
+	assert (p != NULL);
 
 	p->ch = ch;
 	p->bus = b;
@@ -23,20 +28,23 @@ mixer_patch_point_new (MixerChannel *ch,
 		p->input_buffer = NULL;
 		p->output_buffer = NULL;
 		p->resampler = NULL;
-	}
-	else {
+	} else {
 		p->no_processing = 0;
 
 		/* Allocate buffers */
 
 		p->input_buffer_size = latency/(88200/(ch->rate*ch->channels));
 		p->input_buffer = (SAMPLE *) malloc (p->input_buffer_size*sizeof(SAMPLE));
+		assert (p->input_buffer != NULL);
 		p->output_buffer_size = p->tmp_buffer_size =
 			latency/(88200/(b->rate*b->channels));
 		p->output_buffer = (SAMPLE *) malloc (p->output_buffer_size*sizeof(SAMPLE));
+		assert (p->output_buffer != NULL);
 		p->tmp_buffer = (short *) malloc (p->tmp_buffer_size*sizeof(short));
+		assert (p->tmp_buffer != NULL);
 		if (ch->rate != b->rate) {
 			p->resampler = (res_state *) malloc (sizeof(res_state));
+			assert (p->resampler != NULL);
 			res_init (p->resampler,
 				  (ch->channels < b->channels)
 				  ? ch->channels : b->channels,
@@ -57,8 +65,7 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 	int i, j, resample_channels;
 	SAMPLE *sptr;
 
-	if (!p)
-		return;
+	assert (p != NULL);
 	if (p->no_processing) {
 		mixer_bus_add_data (p->bus, p->ch->buffer, p->ch->buffer_length);
 		return;
@@ -148,6 +155,9 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 void
 mixer_patch_point_destroy (MixerPatchPoint *p)
 {
+	assert (p != NULL);
+	debug_printf (DEBUG_FLAGS_MIXER,
+		      "mixer_patch_point destroy called\n");
 	if (p->resampler) {
 		res_clear (p->resampler);
 		free (p->resampler);

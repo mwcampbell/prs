@@ -1,7 +1,10 @@
+#include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
 #include <vorbis/vorbisfile.h>
+#include "debug.h"
 #include "mixerchannel.h"
 
 
@@ -21,29 +24,28 @@ vorbis_mixer_channel_get_data (MixerChannel *ch)
 	int remainder;
 	short *tmp;
 	int rv;
-  
-	if (!ch)
-		return;
+
+	assert (ch != NULL);
 	tmp = ch->buffer;
 	remainder = ch->buffer_size;
 	i = (vorbis_file_info *) ch->data;
+	assert (ch->data != NULL);
 	while (remainder > 0) {
-		rv = ov_read ((i->vf), (char *)tmp, remainder*sizeof(short), 0, sizeof(short), 1, &(i->section));
+		rv = ov_read (i->vf, (char *) tmp, remainder * sizeof (short),
+			      0, sizeof (short), 1, &(i->section));
 		if (rv <= 0)
 			break;
-		remainder -= rv/sizeof(short);
-		tmp += rv/sizeof(short);
+		remainder -= rv / sizeof (short);
+		tmp += rv / sizeof (short);
 	}
 	if (remainder) {
 
 		/* We've reached the end of the data */
 
 		ch->data_end_reached = 1;
-		ch->buffer_length = ch->buffer_size-remainder;
-	}
-	else
+		ch->buffer_length = ch->buffer_size - remainder;
+	} else
 		ch->buffer_length = ch->buffer_size;
-	return;
 }
 
 
@@ -53,11 +55,12 @@ vorbis_mixer_channel_free_data (MixerChannel *ch)
 {
 	vorbis_file_info *i;
 
-	if (!ch)
-		return;
+	assert (ch != NULL);
+	debug_printf (DEBUG_FLAGS_MIXER,
+		      "vorbis_mixer_channel_free_data called for %s\n",
+		      ch->name);
 	i = (vorbis_file_info *) ch->data;
-	if (!i)
-		return;
+	assert (i != NULL);
 	ov_clear (i->vf);
 	free (i->vf);
 	free (i);
@@ -74,25 +77,38 @@ vorbis_mixer_channel_new (const char *name,
 	vorbis_file_info *i;
 	vorbis_info *vi;
   
+	assert (name != NULL);
+	assert (location != NULL);
+	assert (mixer_latency > 0);
+	debug_printf (DEBUG_FLAGS_MIXER,
+		      "vorbis_mixer_channel_new (\"%s\", \"%s\", %d)\n",
+		      name, location, mixer_latency);
 	i = malloc (sizeof (vorbis_file_info));
+	assert (i != NULL);
 
 	/* Allocate the OggVorbis_file structure */
 
-	i->vf = malloc (sizeof(OggVorbis_File));
+	i->vf = malloc (sizeof (OggVorbis_File));
+	assert (i->vf != NULL);
   
 	/* Open the file */
 
 	i->fp = fopen (location, "rb");
 	if (!(i->fp)) {
+		free (i->vf);
 		free (i);
+		debug_printf (DEBUG_FLAGS_MIXER,
+			      "vorbis_mixer_channel_new: can't open %s: %s\n",
+			      location, strerror (errno));
 		return NULL;
 	}
   
-	ov_open ((i->fp), (i->vf), NULL, 0);
+	ov_open (i->fp, i->vf, NULL, 0);
 
 	/* Get sample rate information from file */
 
 	vi = ov_info (i->vf, -1);
+	assert (vi != NULL);
 	ch = mixer_channel_new (vi->rate,
 				vi->channels,
 				mixer_latency);

@@ -1,5 +1,7 @@
+#include <assert.h>
 #include <stdlib.h>
 #include "db.h"
+#include "debug.h"
 #include "mixer.h"
 #include "mixerautomation.h"
 #include "prs.h"
@@ -10,52 +12,23 @@
 PRS *
 prs_new (void)
 {
-  PRS *prs = (PRS *) malloc (sizeof (PRS));
-
-  if (prs == NULL)
-    return NULL;
-
-  prs->mixer = NULL;
-  prs->automation = NULL;
-  prs->scheduler = NULL;
-  prs->telnet_interface = 0;
-  prs->telnet_port = 0;
-  prs->password = NULL;
-  prs->mixer = mixer_new (2048);
-
-  if (prs->mixer == NULL)
-    {
-      prs_destroy (prs);
-      return NULL;
-    }
-
-  prs->db = db_new ();
-
-  if (prs->db == NULL)
-    {
-      prs_destroy (prs);
-      return NULL;
-    }
-
-  mixer_sync_time (prs->mixer);
-  prs->automation = mixer_automation_new (prs->mixer, prs->db);
-
-  if (prs->automation == NULL)
-    {
-      prs_destroy (prs);
-      return NULL;
-    }
-
-  prs->scheduler = scheduler_new (prs->automation, prs->db,
-				  mixer_get_time (prs->mixer));
-
-  if (prs->scheduler == NULL)
-    {
-      prs_destroy (prs);
-      return NULL;
-    }
-
-  return prs;
+	PRS *prs = NULL;
+	debug_printf (DEBUG_FLAGS_GENERAL, "prs_new called\n");
+	prs = (PRS *) malloc (sizeof (PRS));
+	assert (prs != NULL);
+	prs->mixer = NULL;
+	prs->automation = NULL;
+	prs->scheduler = NULL;
+	prs->telnet_interface = 0;
+	prs->telnet_port = 0;
+	prs->password = NULL;
+	prs->mixer = mixer_new (2048);
+	prs->db = db_new ();
+	mixer_sync_time (prs->mixer);
+	prs->automation = mixer_automation_new (prs->mixer, prs->db);
+	prs->scheduler = scheduler_new (prs->automation, prs->db,
+					mixer_get_time (prs->mixer));
+	return prs;
 }
 
 
@@ -63,11 +36,11 @@ prs_new (void)
 void
 prs_start (PRS *prs)
 {
-  mixer_start (prs->mixer);
-  scheduler_start (prs->scheduler, 10);
-
-  // if (prs->telnet_interface)
-    mixer_automation_start (prs->automation);
+	assert (prs != NULL);
+	debug_printf (DEBUG_FLAGS_GENERAL, "prs_start_called\n");
+	mixer_start (prs->mixer);
+	scheduler_start (prs->scheduler, 10);
+	mixer_automation_start (prs->automation);
 }
 
 
@@ -75,17 +48,17 @@ prs_start (PRS *prs)
 void
 prs_destroy (PRS *prs)
 {
-  if (prs == NULL)
-    return;
-    if (prs->scheduler != NULL)
-    scheduler_destroy (prs->scheduler);
-  if (prs->automation != NULL)
-    mixer_automation_destroy (prs->automation);
-  if (prs->db != NULL)
-    db_close (prs->db);
-  if (prs->mixer != NULL)
-    mixer_destroy (prs->mixer);
-  if (prs->password != NULL)
-    free (prs->password);
-  free (prs);
+	assert (prs != NULL);
+	debug_printf (DEBUG_FLAGS_GENERAL, "prs_destroy called\n");
+	if (prs->scheduler != NULL)
+		scheduler_destroy (prs->scheduler);
+	if (prs->automation != NULL)
+		mixer_automation_destroy (prs->automation);
+	if (prs->db != NULL)
+		db_close (prs->db);
+	if (prs->mixer != NULL)
+		mixer_destroy (prs->mixer);
+	if (prs->password != NULL)
+		free (prs->password);
+	free (prs);
 }

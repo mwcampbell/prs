@@ -1,11 +1,15 @@
+#include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <malloc.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/soundcard.h>
+#include <errno.h>
+#include <string.h>
+#include "debug.h"
 #include "ossmixeroutput.h"
 #include "soundcard.h"
 
@@ -22,11 +26,12 @@ oss_mixer_output_free_data (MixerOutput *o)
 {
 	oss_info *i;
 	int tmp;
-  
-	if (!o)
-		return;
-	if (!o->data)
-		return;
+
+	assert (o != NULL);
+	debug_printf (DEBUG_FLAGS_MIXER,
+		      "oss_mixer_output_free_data called for %s\n",
+		      o->name);
+	assert (o->data != NULL);
 	i = (oss_info *) o->data;
 	if (!soundcard_get_duplex ()) {
 		close (i->fd);
@@ -41,12 +46,14 @@ static void
 oss_mixer_output_post_data (MixerOutput *o)
 {
 	oss_info *i;
-  
-	if (!o)
-		return;
+
+	assert (o != NULL);
 	i = (oss_info *) o->data;
 
-	write (i->fd, o->buffer, o->buffer_size*sizeof(short));
+	if (write (i->fd, o->buffer, o->buffer_size * sizeof (short)) < 0)
+		debug_printf (DEBUG_FLAGS_MIXER,
+			      "oss_mixer_output_post_data: write error: %s\n",
+			      strerror (errno));
 }
 
 
@@ -61,10 +68,16 @@ oss_mixer_output_new (const char *name,
 	oss_info *i;
 	int tmp;
 	int fragment_size;
-  
+
+	assert (name != NULL);
+	debug_printf (DEBUG_FLAGS_MIXER,
+		      "oss_mixer_output_new (\"%s\", %d, %d, %d)\n",
+		      name, rate, channels, latency);
+	assert (rate > 0);
+	assert ((channels == 1) || (channels == 2));
+	assert (latency > 0);
 	i = malloc (sizeof (oss_info));
-	if (!i)
-		return NULL;
+	assert (i != NULL);
 
 	/* Open the sound device */
 
@@ -77,74 +90,55 @@ oss_mixer_output_new (const char *name,
 		}
 		else
 			soundcard_set_duplex (1);
+		if (i->fd < 0) {
+			perror ("sound card open failed");
+			exit (EXIT_FAILURE);
+		}
 		soundcard_set_fd (i->fd);
 		soundcard_set_rate (rate);
 		soundcard_set_channels (channels);
 		
 		/* Setup sound card */
 
-		fragment_size = log(latency*sizeof(short)/8)/log(2);
+		fragment_size = log (latency * sizeof (short) / 8) / log (2);
 		tmp = 0x00080000|fragment_size;
-		if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0)
-		{
-			close (i->fd);
-			free (i);
-			return NULL;
+		if (ioctl (i->fd, SNDCTL_DSP_SETFRAGMENT, &tmp) < 0) {
+			perror ("ioctl on sound card failed");
+			exit (EXIT_FAILURE);
 		}
 		tmp = AFMT_S16_LE;
-		if (ioctl (i->fd, SNDCTL_DSP_SAMPLESIZE, &tmp) < 0)
-		{
-			close (i->fd);
-			free (i);
-			return NULL;
+		if (ioctl (i->fd, SNDCTL_DSP_SAMPLESIZE, &tmp) < 0) {
+			perror ("ioctl on sound card failed");
+			exit (EXIT_FAILURE);
 		}
 		if (channels == 1)
 			tmp = 0;
 		else
 			tmp = 1;
-		if (ioctl (i->fd, SNDCTL_DSP_STEREO, &tmp) < 0)
-		{
-			close (i->fd);
-			free (i);
-			return NULL;
+		if (ioctl (i->fd, SNDCTL_DSP_STEREO, &tmp) < 0) {
+			perror ("ioctl on sound card failed");
+			exit (EXIT_FAILURE);
 		}
 		tmp = rate;
-		if (ioctl (i->fd, SNDCTL_DSP_SPEED, &tmp) < 0)
-		{
-			close (i->fd);
-			free (i);
-			return NULL;
+		if (ioctl (i->fd, SNDCTL_DSP_SPEED, &tmp) < 0) {
+			perror ("ioctl on sound card failed");
+			exit (EXIT_FAILURE);
 		}
-  
-	}
-	if (i->fd < 0)
-	{
-		free (i);
-		return NULL;
 	}
 
 	o = malloc (sizeof (MixerOutput));
-	if (!o)
-	{
-		close (i->fd);
-		free (i);
-		return NULL;
-	}
-  
+	assert (o != NULL);
 	o->name = strdup (name);
 	o->rate = rate;
 	o->channels = channels;
 	o->data = (void *) i;
 	o->enabled = 1;
-  
+
 	/* Overrideable methods */
 
 	o->free_data = oss_mixer_output_free_data;
 	o->post_data = oss_mixer_output_post_data;
 
-	mixer_output_alloc_buffer (o, latency);  
+	mixer_output_alloc_buffer (o, latency);
 	return o;
 }
-
-
-

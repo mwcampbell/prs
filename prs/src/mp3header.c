@@ -1,5 +1,6 @@
 /* Based on mp3.c from libshout.  Modified for PRS by Matt Campbell. */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/file.h>
@@ -103,6 +104,8 @@ int mp3_header_parse(unsigned long head, mp3_header_t *mh)
 
 int mp3_header_read(FILE *fp, mp3_header_t *mh)
 {
+	assert (fp != NULL);
+	assert (mh != NULL);
 	while (1) {
 		unsigned char buf[4];
 		unsigned long head;

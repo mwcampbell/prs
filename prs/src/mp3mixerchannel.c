@@ -1,6 +1,8 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "debug.h"
 #include "mixerchannel.h"
 #include "mp3decoder.h"
 #include "mp3header.h"
@@ -13,16 +15,14 @@ mp3_mixer_channel_get_data (MixerChannel *ch)
 	MP3Decoder *d = NULL;
 	int rv = -1;
   
-	if (!ch)
-		return;
+	assert (ch != NULL);
 	d = (MP3Decoder *) ch->data;
+	assert (d != NULL);
 	rv = mp3_decoder_get_data (d, ch->buffer, ch->buffer_size);
 
 	if (rv <= 0)
 		ch->data_end_reached = 1;
 	ch->buffer_length = rv;
-	
-	return;
 }
 
 
@@ -32,9 +32,12 @@ mp3_mixer_channel_free_data (MixerChannel *ch)
 {
 	MP3Decoder *d = NULL;
 
-	if (!ch)
-		return;
+	assert (ch != NULL);
 	d = (MP3Decoder *) ch->data;
+	assert (d != NULL);
+	debug_printf (DEBUG_FLAGS_MIXER,
+		      "mp3_mixer_channel_free_data called for %s\n",
+		      ch->name);
 	mp3_decoder_destroy (d);
 }
 
@@ -48,19 +51,31 @@ mp3_mixer_channel_new (const char *name, const char *location,
 	MP3Decoder *d = NULL;
 	mp3_header_t mh;
 	FILE *fp;
-  
+
+	assert (name != NULL);
+	assert (location != NULL);
+	assert (mixer_latency > 0);
+	debug_printf (DEBUG_FLAGS_MIXER,
+		      "mp3_mixer_channel_new (\"%s\", \"%s\", %d)\n",
+		      name, location, mixer_latency);
 	fp = fopen (location, "rb");
-	if (!fp)
+	if (!fp) {
+		debug_printf (DEBUG_FLAGS_MIXER,
+			      "mp3_mixer_channel_new: unable to open %s\n",
+			      location);
 		return NULL;
+	}
 	mp3_header_read (fp, &mh);
 	fclose (fp);
-	/* Get sample information from file */
-
-	ch = mixer_channel_new (mh.samplerate,
-						   (mh.mode == 3) ? 1 : 2,
-						   mixer_latency);
-
 	d = mp3_decoder_new (location, 0);
+	if (d == NULL) {
+		debug_printf (DEBUG_FLAGS_MIXER,
+			      "mp3mixerchannel: failed to create decoder\n");
+		return NULL;
+	}
+	ch = mixer_channel_new (mh.samplerate,
+				(mh.mode == 3) ? 1 : 2,
+				mixer_latency);
 	ch->data = (void *) d;
 	ch->name = strdup (name);
 	ch->location = strdup (location);
