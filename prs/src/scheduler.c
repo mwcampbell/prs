@@ -160,7 +160,7 @@ scheduler_switch_templates (scheduler *s)
 		if (e->t->fallback_id != -1) {
 			t = get_playlist_template_by_id (s->db, e->t->fallback_id);
 			t->type = TEMPLATE_TYPE_FALLBACK;
-			t->start_time = e->t->start_time;
+			t->start_time = s->last_event_end_time;
 			t->end_time = e->t->end_time;
 			t->end_prefade = e->t->end_prefade;
 		}
@@ -171,6 +171,7 @@ scheduler_switch_templates (scheduler *s)
 		fade = e->t->end_prefade;
 		scheduler_pop_template (s);
 		if (t) {
+			s->prev_event_end_time = s->last_event_end_time = t->start_time;
 			scheduler_push_template (s, t, 1);
 			return;
 		}
@@ -178,46 +179,54 @@ scheduler_switch_templates (scheduler *s)
 	
 	/* Get the current template */
 	
-	t = get_playlist_template (s->db, s->last_event_end_time);
-
-	/* If there's no template, bail now */
-
-	if (!t)
-		return;
-
-	if (t->start_time < s->prev_event_start_time) {
-		if (prev_template_end_time == -1.0)
-			t->start_time = s->prev_event_start_time;
-		else
-			t->start_time = prev_template_end_time;
-	}
-	
-	if (s->prev_event_end_time >= t->start_time)
-		start_time = t->start_time-fade;
+	if (prev_template_end_time == -1)
+		start_time = s->last_event_end_time;
 	else
-		start_time = mixer_get_time (s->a->m);
-	start_delta = start_time-s->prev_event_start_time;
-	ae = automation_event_new ();
-	ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
-	ae->delta_time = start_delta;
-	ae->length = fade;
-	ae->level = 0;
-	mixer_automation_add_event (s->a, ae);
+		start_time = prev_template_end_time;
+	t = get_playlist_template (s->db, start_time);
+	
+	if (t)
+		start_time = t->start_time;
+	if (start_time < s->prev_event_start_time)
+		start_time = s->prev_event_start_time;
+	start_delta = start_time-s->prev_event_start_time-fade;
+
+	/* If the new template starts before the end of the last event in the scheduler, schedule a fade event */
+
+	if (start_time < s->last_event_end_time) {
+		ae = automation_event_new ();
+		ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
+		ae->delta_time = start_delta;
+		ae->length = fade;
+		ae->level = 0;
+		mixer_automation_add_event (s->a, ae);
+		s->prev_event_start_time = start_time-fade;
+		start_delta = fade;
+	}
+
+	/*
+	 *
+	 * If we're switching from a template, delete all the channels
+	 * associated with it.
+	 *
+	 */
+
 	if (prev_template_id != -1) {
 		ae = automation_event_new ();
 		ae->type = AUTOMATION_EVENT_TYPE_DELETE_CHANNELS;
-		ae->data = prev_template_id;
-		ae->delta_time = fade;
+		ae->data = prev_template_end_time;
+		ae->delta_time = start_delta;
 		mixer_automation_add_event (s->a, ae);
+		s->prev_event_start_time = start_time;
 	}
-	if (start_time != t->start_time-fade)
-		mixer_automation_set_start_time (s->a, start_time);
-	s->prev_event_start_time = start_time;
-	s->last_event_end_time = s->prev_event_end_time = start_time+fade;
+	s->last_event_end_time = s->prev_event_end_time = start_time;
 
 	/* Set new template */
 
-	scheduler_push_template (s, t, 1);
+	if (t) {
+		t->start_time = start_time;
+		scheduler_push_template (s, t, 1);
+	}
 }
 
 
@@ -250,7 +259,7 @@ url_manager (void *data)
 				    i->m->latency);
 			
 	if (ch) {
-		ch->level = 0;
+		ch->level = .001;
 		ch->enabled = 1;
 		mixer_add_channel (i->m, ch);
 		mixer_patch_channel_all (i->m, i->url);
@@ -331,8 +340,9 @@ scheduler_schedule_next_event (scheduler *s)
 	if (s->template_stack)
 		stack_entry = (template_stack_entry *) s->template_stack->data;
 	else {
+		s->prev_event_end_time = s->last_event_end_time = s->last_event_end_time+s->preschedule;
 		pthread_mutex_unlock (&(s->mut));
-		return s->last_event_end_time+s->preschedule;
+		return s->prev_event_end_time;
 	}
 	
 	e = list_get_item (stack_entry->t->events, stack_entry->event_number-1);
@@ -365,8 +375,7 @@ scheduler_schedule_next_event (scheduler *s)
 	ae->channel_name = strdup (channel_name);
 	ae->delta_time = e->start_time-s->prev_event_start_time;
   
-	switch (e->type)
-	{
+	switch (e->type) {
 	case EVENT_TYPE_SIMPLE_RANDOM:
 	case EVENT_TYPE_RANDOM:
 
@@ -400,17 +409,17 @@ scheduler_schedule_next_event (scheduler *s)
 		 * there is no event, so just return the current time
 		 */
 
-		if (!r)
-		{
+		if (!r) {
 			debug_printf (DEBUG_FLAGS_SCHEDULER, "Recording selection failed\n");
 			automation_event_destroy (ae);
 			ae = NULL;
+			e->end_time = e->start_time;
 			break;
 		}
       
 		/* Add the channel to the mixer */
 
-		mixer_add_file (s->a->m, ae->channel_name, r->path, stack_entry->t->id);
+		mixer_add_file (s->a->m, ae->channel_name, r->path, stack_entry->t->end_time);
 
 		ae->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
 		ae->level = e->level;
@@ -437,16 +446,25 @@ scheduler_schedule_next_event (scheduler *s)
 		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduling path event %s\n", e->detail1);
 		info = file_info_new (e->detail1, 1000, 2000);
 
+		/* If it's not found, do the right thing */
 
-		/* Add channel to the mixer */
+		if (!info) {
+			automation_event_destroy (ae);
+			ae = NULL;
+			e->end_time = e->start_time;
+		}
+
+                /* Add channel to the mixer */
 
 		mixer_add_file (s->a->m, ae->channel_name, e->detail1, stack_entry->t->id);
 
 		ae->type = AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL;
 		ae->detail1 = strdup (e->detail1);
 		ae->level = e->level;
-		e->start_time -= info->audio_in;
-		ae->delta_time -= info->audio_in;
+		if (e->start_time-info->audio_in > stack_entry->t->start_time) {
+			e->start_time -= info->audio_in;
+			ae->delta_time -= info->audio_in;
+		}
 		ae->length = info->audio_out;
 		e->end_time = e->start_time+info->audio_out;
 		file_info_free (info);
@@ -524,7 +542,6 @@ scheduler_schedule_next_event (scheduler *s)
 			}
 		}
 		else {
-			s->prev_event_end_time = s->last_event_end_time = stack_entry->t->end_time;
 			scheduler_switch_templates (s);
 		}
 	}
@@ -553,11 +570,11 @@ scheduler_main_thread (void *data)
 		}
 		target += s->preschedule;
 		pthread_mutex_unlock (&(s->mut));
-		while (current < target+s->preschedule) {
+		while (current <= target) {
 			current = scheduler_schedule_next_event (s);
 		}
-		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler sleeping for %lf seconds\n", current-target-s->preschedule);
-		sleep (current-target-s->preschedule);
+		debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduler sleeping for %lf seconds\n", current-target);
+		sleep (current-target);
 		target = current;
 	}
 }

@@ -24,15 +24,14 @@
 
 #define _GNU_SOURCE
 #include <unistd.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <fcntl.h>
+#include <sys/wait.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <curl/curl.h>
 #include "list.h"
 #include "mixer.h"
@@ -107,21 +106,28 @@ static void
 channel_info_destroy (channel_info *i)
 {
 	list *tmp, *next;
-	char buffer[1024];
-	
+	pthread_t transfer_thread;
+	int decoder_fd;
+
 	if (!i)
 		return;
 
 	/* Wait for curl to exit */
 
+	i->destroyed = 1;
+	if (i->decoder_connected) {
+		if (i->decoder_pid != -1) {
+			kill (i->decoder_pid, SIGTERM);
+		}
+	}
 	pthread_mutex_lock (&(i->mutex));
 	i->destroyed = 1;
+	transfer_thread = i->transfer_thread;
 	pthread_mutex_unlock (&(i->mutex));
-	if (i->decoder_connected)
-		while (read (i->decoder_output_fd, buffer, 1024) > 0);
-	if (i->transfer_thread > 0)
-		pthread_join (&(i->transfer_thread), NULL);
+	if (transfer_thread > 0)
+		pthread_join (transfer_thread, NULL);
 	
+	pthread_mutex_lock (&(i->mutex));
 	if (i->url)
 		free (i->url);
 	if (i->transfer_url)
@@ -132,10 +138,6 @@ channel_info_destroy (channel_info *i)
 		close (i->decoder_output_fd);
 	if (i->archive_file_fd != -1)
 		close (i->archive_file_fd);
-	if (i->decoder_pid != -1) {
-		kill (i->decoder_pid, SIGTERM);
-		waitpid (i->decoder_pid, NULL, 0);
-	}
 
 	/* Remove from our list of url channels */
 
@@ -247,7 +249,6 @@ start_mp3_decoder (channel_info *i)
 	pipe (input);
 	pipe (output);
 	fcntl (output[0], F_SETFL, O_NONBLOCK);
-//	fcntl (input[1], F_SETFL, O_NONBLOCK);
 	
 	pid = fork ();
 	if (pid == 0) {
@@ -276,19 +277,20 @@ start_mp3_decoder (channel_info *i)
 	
 		execvp (prog_name, args_array);
 	}
+	/* ignore broken pipe  and SIGCHLD*/
+
+	signal (SIGPIPE, SIG_IGN);
+	signal (SIGCHLD, SIG_IGN);
+	
 	i->decoder_pid = pid;
-	close (input[0]);
-	close (output[1]);
 	i->decoder_input_fd = input[1];
 	i->decoder_output_fd = output[0];
-
-	/* handle broken pipe */
-
-	signal (SIGPIPE, broken_pipe_handler);
-	
 	i->decoder_connected = 1;
 	i->bad_blocks = 0;
 
+	close (output[1]);
+	close (input[0]);
+	
 	return 0;
 }
 
@@ -356,23 +358,11 @@ curl_write_func (void *ptr,
 	channel_info *i = (channel_info *) data;
 	char *buf = (char *) ptr;
 	int bytes_to_process = mem*size;
-	int decoder_input_fd;
-	int archive_file_fd;
-	int connected;
-	int destroyed;
 	int bytes_sent;
-	channel_type type;
 	
 	pthread_mutex_lock (&(i->mutex));
-	connected = i->connected;
-	destroyed = i->destroyed;
-	decoder_input_fd = i->decoder_input_fd;
-	archive_file_fd = i->archive_file_fd;
-	type = i->type;
-	bytes_sent = i->bytes_sent;
-	pthread_mutex_unlock (&(i->mutex));
-	
-        if (destroyed) {
+	if (i->destroyed) {
+		pthread_mutex_unlock (&(i->mutex));
 		return 0;
 	}
 	
@@ -381,7 +371,7 @@ curl_write_func (void *ptr,
 	 * if we're connected
 	 */
 
-	if (!connected) {
+	if (!i->connected) {
 
 		/* If this is any ICY header, process it */
 
@@ -391,39 +381,41 @@ curl_write_func (void *ptr,
 			if (buf) 
 				bytes_to_process -= (buf-(char *)ptr);
 			if (!buf || bytes_to_process <= 0) {
+				pthread_mutex_unlock (&(i->mutex));
 				return mem*size;
 			}
 		}
 
 		/* Do any special per type processing of the initial block */
 
-		if (type == CHANNEL_TYPE_MP3) {
+		if (i->type == CHANNEL_TYPE_MP3) {
 			char *rv = mp3_process_first_block (i,
 							    buf,
 							    bytes_to_process);
 			if (!rv) {
+				pthread_mutex_unlock (&(i->mutex));
 				return mem*size;
 			}
 			buf = rv;
 			bytes_to_process = (mem*size)-(buf-(char *)ptr);
-			pthread_mutex_lock (&(i->mutex));
-			connected = i->connected = 1;
+			i->connected = 1;
 			i->bytes_sent = 0;
-			pthread_mutex_unlock (&(i->mutex));
 			start_mp3_decoder (i);
 		}
 	}
 	
-	if (archive_file_fd != -1)
-		write (archive_file_fd, (void *) buf, bytes_to_process);
-	if (i->decoder_connected)
-		write (decoder_input_fd, (void *) buf, bytes_to_process);
-	pthread_mutex_lock (&(i->mutex));
-	if (i->destroyed)
-		close (i->decoder_input_fd);
-	if (connected)
-		bytes_sent += mem*size;
-	if (i->bytes_sent <= 4096 && bytes_sent > 4096 && connected) {
+	if (i->archive_file_fd != -1 && bytes_to_process > 0)
+		write (i->archive_file_fd, (void *) buf, bytes_to_process);
+	if (i->decoder_connected && bytes_to_process > 0) {
+		int rv = write (i->decoder_input_fd, (void *) buf, bytes_to_process);
+ 		if (rv <= 0) {
+			if (errno == EPIPE)
+				size = 0;
+		}
+	}
+	if (i->connected)
+		bytes_sent = bytes_sent +  mem*size;
+	if (i->bytes_sent <= 4096 && bytes_sent > 4096 && i->connected) {
 		pthread_cond_broadcast (&(i->cond));
 		if (i->archive_file_name) {
 			i->archive_file_fd = open (i->archive_file_name, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
@@ -456,6 +448,7 @@ curl_transfer_thread_func (void *data)
 	curl_easy_setopt (url, CURLOPT_MAXREDIRS, 5);
 	curl_easy_perform (url);
 	curl_easy_cleanup (url);
+	fprintf (stderr, "Transfer thread complete.\n");
 	pthread_mutex_lock (&(i->mutex));
 	if (i->connected) {
 		if (i->ch && !i->destroyed) {
