@@ -46,67 +46,6 @@ typedef struct {
 } connection_data_blob;
 
 
-static void *
-speex_connection_handler (void *data)
-{
-	int sock;
-	PRS *prs;
-	char *prompt = "Speex interface coming soon.\n";
-
-	prs = ((connection_data_blob *) data)->prs;
-	sock = ((connection_data_blob *) data)->sock;
-	free (data);
-	write (sock, prompt, strlen (prompt));
-	close (sock);
-}
-
-
-static void *
-speex_connection_listener (void *data)
-{
-	struct sockaddr_in sa;
-	int sa_length = sizeof (sa);
-	int listen_sock = -1, new_sock = -1;
-	int reuse_addr = 1;
-	
-	/* Setup socket to listen */
-
-	memset (&sa, 0, sizeof (sa));
-	sa.sin_family = AF_INET;
-	sa.sin_port = htons (12000);
-	listen_sock = socket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-	if (listen_sock < 0) {
-		debug_printf (DEBUG_FLAGS_GENERAL, "Unable to bind to socket for speex connections.\n");
-		return 0;
-	}
-
-	if (setsockopt (listen_sock, SOL_SOCKET, SO_REUSEADDR, &reuse_addr,
-		      sizeof (reuse_addr)) < 0) {
-		debug_printf (DEBUG_FLAGS_GENERAL, "Can't set up socket options.\n");
-		return 0;
-	}
-
-	if (bind (listen_sock, (struct sockaddr *) &sa, sizeof (sa)) < 0) {
-		debug_printf (DEBUG_FLAGS_GENERAL, "Error binding to socket.\n");
-		return;
-	}
-
-      if (listen (listen_sock, 1) < 0) {
-	      debug_printf (DEBUG_FLAGS_GENERAL, "error attempting to listen on socket.\n");
-	      return;
-      }
-
-      while ((new_sock = accept (listen_sock, (struct sockaddr *) &sa,
-				 &sa_length)) >= 0) {
-	      pthread_t thread;
-	      connection_data_blob *b = (connection_data_blob *) malloc (sizeof(connection_data_blob));
-	      b->prs = (PRS *) data;
-	      b->sock = new_sock;
-	      pthread_create (&thread, NULL, speex_connection_handler, b);
-      }
-}
-
 PRS *
 prs_new (void)
 {
@@ -140,7 +79,6 @@ prs_start (PRS *prs)
 	mixer_start (prs->mixer);
 	scheduler_start (prs->scheduler, 300);
 	mixer_automation_start (prs->automation);
-	pthread_create (&(prs->speex_connection_thread), NULL, speex_connection_listener, prs);
 }
 
 

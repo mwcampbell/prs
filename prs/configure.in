@@ -28,7 +28,6 @@ CFLAGS="$CFLAGS $XML_CFLAGS"
 AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
 AC_CHECK_LIB(shout, shout_open, LIBS="$LIBS -lshout")
 AC_CHECK_LIB(curl, curl_easy_init, LIBS="$LIBS -lcurl")
-AC_CHECK_LIB(speex, speex_decoder_init, LIBS="$LIBS -lspeex")
 
 dnl Ensure C++ support gets linked in for id3lib
 LIBS="$LIBS -lstdc++"
