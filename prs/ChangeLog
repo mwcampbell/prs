@@ -1,3 +1,7 @@
+2002-11-30  Matt Campbell  <mattcampbell@pobox.com>
+
+	* Checked in an unfinished Web interface written in PHP.
+
 2002-11-25  Marc Mulcahy  <marc@plbb.net>
 
 	* src/urlmixerchannel.c (url_mixer_channel_new): Fix stupidity.
