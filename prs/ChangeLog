@@ -1,4 +1,9 @@
-2002-08-22  Marc Mulcahy <marc.mulcahy@sun.com>
+2002-10-08  Marc Mulcahy <marc@plbb.net>
+
+	* src/prs_server.c: Updated CVS to reflect what's on the air on Big
+	Planet.
+
+2002-08-22  Marc Mulcahy <marc@plbb.net>
 
 	* src/multibandaudiocompressor.c src/multibandaudiocompressor.h:
 	Initial implementation of multiband compressor.

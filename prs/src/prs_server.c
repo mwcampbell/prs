@@ -230,21 +230,21 @@ int main (void)
   multiband_audio_compressor_add_band
     (f,
      100,
-     -40,
-     4,
+     -30,
+     3,
      ATTACK_TIME,
      RELEASE_TIME,
      1,
-     OUTPUT_GAIN*10); 
+     OUTPUT_GAIN*7); 
   multiband_audio_compressor_add_band
     (f,
      400,
-     -40,
-     4,
+     -30,
+     3,
      ATTACK_TIME,
      RELEASE_TIME,
      1,
-     OUTPUT_GAIN*31); 
+     OUTPUT_GAIN*7); 
   multiband_audio_compressor_add_band
     (f,
      2500,
@@ -276,9 +276,6 @@ int main (void)
   mixer_add_output (m, o);
   mixer_patch_bus (m, "air", "soundcard");
   
-  o = file_mixer_output_new ("test.pcm", 44100, 2);
-  mixer_add_output (m, o);
-  mixer_patch_bus (m, "air", "test.pcm");
   
 #if 0
   ch = vorbis_mixer_channel_new ("test", "test.ogg");
