@@ -108,6 +108,73 @@ scheduler_destroy (scheduler *s)
 
 
 
+static void
+scheduler_switch_templates (scheduler *s)
+{
+	PlaylistTemplate *t;
+	template_stack_entry *e;
+	double start_time;
+
+	if (!s)
+		return;
+
+	/* What's on the top of the stack */
+
+	if (s->template_stack)
+		e = (template_stack_entry *) s->template_stack->data;
+	else
+		e = NULL;
+
+	/* Get the current template */
+	
+	if (e) {
+		AutomationEvent *ae = automation_event_new ();
+		double start_delta = e->t->end_time-e->t->end_prefade-s->prev_event_start_time;
+		if (e->t->end_prefade > 0) {
+			ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
+			ae->delta_time = start_delta;
+			ae->length = e->t->end_prefade;
+			ae->level = 0;
+			mixer_automation_add_event (s->a, ae);
+			start_delta = e->t->end_prefade;
+			ae = automation_event_new ();
+		}
+		ae->type = AUTOMATION_EVENT_TYPE_DELETE_ALL;
+		ae->delta_time = start_delta;
+		ae->length = 0;
+		mixer_automation_add_event (s->a, ae);
+		s->last_event_end_time = s->prev_event_start_time = s->prev_event_end_time = e->t->end_time;
+		scheduler_pop_template (s);
+		if (s->template_stack)
+			return;
+	}
+
+	t = get_playlist_template (s->db, s->last_event_end_time);
+
+	if (!t && !e) {
+		s->last_event_end_time += s->preschedule;
+		s->prev_event_start_time = s->prev_event_end_time = s->last_event_end_time;
+	}
+	if (t && !s->template_stack) {
+
+		/* Set new template */
+
+		if (!e) {
+			start_time = mixer_get_time (s->a->m);
+			if (t->start_time > start_time)
+				start_time = t->start_time;
+			s->last_event_end_time = s->prev_event_end_time = s->prev_event_start_time = start_time;
+			mixer_automation_set_start_time (s->a, start_time);
+		}
+		else {
+			s->last_event_end_time = s->prev_event_end_time = s->prev_event_start_time = t->start_time;
+		}
+		scheduler_push_template (s, t, 1);
+	}
+}
+
+
+
 static void *
 url_manager (void *data)
 {
@@ -123,16 +190,12 @@ url_manager (void *data)
 
 	start_delay = i->start_time;
 	start_delay -= mixer_get_time (i->m);
-	if (start_delay < 0)
-		start_delay = 0;
 	if (start_delay > 0)
 		usleep ((unsigned int) start_delay*1000000);
 	
-
 	cur_time = mixer_get_time (i->m);
 	mixer_automation_stop (i->a);
-
-
+	
 	/* Try an initial attempt */
 
 	ch = url_mixer_channel_new (i->url, i->url,
@@ -183,9 +246,8 @@ url_manager (void *data)
 	
 	/* Ensure mixer automation is running when we leave */
 
-	cur_time = i->end_time-i->end_fade;
 	mixer_automation_stop (i->a);
-	mixer_automation_flush (i->a, cur_time);
+	mixer_automation_set_start_time (i->a, i->end_time-i->end_fade);
 	mixer_automation_start (i->a);
 	
         /* Free stuff to exit */
@@ -196,7 +258,6 @@ url_manager (void *data)
 		free (i->archive_file_name);
 	free (i);
 }
-
 
 
 
@@ -214,60 +275,21 @@ scheduler_schedule_next_event (scheduler *s)
 	url_manager_info *i;
 	pthread_t url_manager_thread;
 	
-	if (!s)
-		return;
 	pthread_mutex_lock (&(s->mut));
-
-	/* Get the current template */
-	
-	t = get_playlist_template (s->db, s->last_event_end_time);
 	if (s->template_stack)
 		stack_entry = (template_stack_entry *) s->template_stack->data;
-	else {
-
-		double start_time;
-		if (!t) {
-			s->last_event_end_time += s->preschedule;
-			s->prev_event_start_time = s->prev_event_end_time = s->last_event_end_time;
+	else
+		stack_entry = NULL;
+	if (!stack_entry || s->prev_event_end_time >= stack_entry->t->end_time) {
+		scheduler_switch_templates (s);
+		if (s->template_stack)
+			stack_entry = (template_stack_entry *) s->template_stack->data;
+		else {
 			pthread_mutex_unlock (&(s->mut));
 			return s->prev_event_end_time;
 		}
-		start_time = s->last_event_end_time;
-		if (t->start_time > start_time)
-			start_time = t->start_time;
-		s->prev_event_end_time = s->last_event_end_time = start_time;
-		scheduler_push_template (s, t, 1);
-		stack_entry = (template_stack_entry *) s->template_stack->data;
 	}
-	
-	if (t && (t->id != stack_entry->t->id && t->fallback_id != stack_entry->t->id) &&
-		(t->start_time == stack_entry->t->start_time &&
-		 t->end_time == stack_entry->t->end_time)) {
 
-		/* Forceable immediate template change */
-
-		double cur_time = mixer_get_time (s->a->m);
-		AutomationEvent *ae = automation_event_new ();
-		ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
-		ae->delta_time = 0;
-		ae->length = 2;
-		ae->level = 0;
-		mixer_automation_stop (s->a);
-		mixer_automation_flush (s->a, -1);
-		mixer_automation_add_event (s->a, ae);
-		ae = automation_event_new ();
-		ae->type = AUTOMATION_EVENT_TYPE_DELETE_ALL;
-		ae->delta_time = 2;
-		ae->length = 0;
-		mixer_automation_add_event (s->a, ae);
-		mixer_automation_set_start_time (s->a, cur_time);
-		mixer_automation_start (s->a);
-		s->last_event_end_time = s->prev_event_start_time = s->prev_event_end_time = cur_time;
-		scheduler_pop_template (s);
-		scheduler_push_template (s, t, 1);
-		stack_entry = (template_stack_entry *) s->template_stack->data;
-	}
-	
 	e = list_get_item (stack_entry->t->events, stack_entry->event_number-1);
 	anchor = list_get_item (stack_entry->t->events, e->anchor_event_number-1);
   
@@ -366,10 +388,12 @@ scheduler_schedule_next_event (scheduler *s)
 			i = malloc (sizeof(url_manager_info));
 			i->url = strdup (e->detail1);
 			i->archive_file_name = strdup (e->detail3);
-			e->start_time = i->start_time = e->start_time;
+			i->start_time = e->start_time;
 			i->end_time = i->start_time+atof (e->detail2);
 			if (i->end_time > stack_entry->t->end_time)
 				i->end_time = stack_entry->t->end_time;
+			e->start_time = i->start_time;
+			e->end_time = i->end_time;
 			i->retry_delay = 1;
 			i->end_fade = stack_entry->t->end_prefade;
 			i->m = s->a->m;
@@ -378,26 +402,58 @@ scheduler_schedule_next_event (scheduler *s)
 		
 			/* Switch to fallback template and schedule backup program */
 
+			if (stack_entry->t->fallback_id == -1) {
+				s->prev_event_start_time = e->start_time;
+				s->last_event_end_time = s->prev_event_end_time = i->end_time;
+				
+                                /* Schedule end fade */
+
+				if (i->end_fade > 0) {
+					ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
+					ae->delta_time = i->end_time-i->start_time-i->end_fade;
+					ae->length = i->end_fade;
+					ae->level = 0;
+					mixer_automation_add_event (s->a, ae);
+					ae = automation_event_new ();
+				}
+				ae->type = AUTOMATION_EVENT_TYPE_DELETE_ALL;
+				if (i->end_fade > 0)
+					ae->delta_time = i->end_fade;
+				else
+					ae->delta_time = i->end_time-i->start_time;
+				ae->length = 0;
+				mixer_automation_add_event (s->a, ae);
+				ae = NULL;
+				break;
+			}
 			t = get_playlist_template_by_id (s->db, stack_entry->t->fallback_id);
-			t->start_time = i->start_time+i->retry_delay;
-			t->end_time = i->end_time;
-			t->end_prefade = stack_entry->t->end_prefade;
-			t->fallback_id = -1;
-			pthread_mutex_unlock (&(s->mut));
-			scheduler_pop_template (s);
-			scheduler_push_template (s, t, 1);
 
 			/* Reset scheduling stuff */
 
-			s->prev_event_start_time = mixer_automation_get_last_event_end (s->a);
-			s->last_event_end_time = s->prev_event_end_time = e->start_time;
+			s->prev_event_start_time = s->last_event_end_time = s->prev_event_end_time = e->start_time;
+			stack_entry->event_number++;
+			if (stack_entry->event_number > stack_entry->length && !stack_entry->t->repeat_events) {
+				t->start_time = stack_entry->t->start_time;
+				t->end_time = stack_entry->t->end_time;
+				scheduler_pop_template (s);
+			}
+			else {
+				if (stack_entry->event_number > stack_entry->length)
+					stack_entry->event_number = 1;
+				t->start_time = i->start_time+i->retry_delay;
+				t->end_time = i->end_time;
+			}
+			t->end_prefade = stack_entry->t->end_prefade;
+			t->fallback_id = -1;
+			scheduler_push_template (s, t, 1);
+			pthread_mutex_unlock (&(s->mut));
 			return scheduler_schedule_next_event (s);
 			break;
 	}
   
-	/* If the start time of the event falls outside this template, go to a new one */
+	/* If the end time of the event falls outside this template, switch to the fallback */
 
-	if (e->end_time > stack_entry->t->end_time && stack_entry->t->fallback_id != -1) {
+	if (e->end_time > stack_entry->t->end_time && stack_entry->t->fallback_id != -1 && stack_entry->t->repeat_events) {
 		if (ae)
 			automation_event_destroy (ae);
 		t = get_playlist_template_by_id (s->db, stack_entry->t->fallback_id);
@@ -411,54 +467,40 @@ scheduler_schedule_next_event (scheduler *s)
 		return scheduler_schedule_next_event (s);
 	}
 	    		
-	else if (e->start_time > stack_entry->t->end_time) {
-		if (ae)
-			automation_event_destroy (ae);
+	if (ae) {
+		
+		/* Ensure end_time is within the template */
 
-		/* Schedule the fade if desired*/
-
-		if (stack_entry->t->end_prefade > 0) {
-			ae = automation_event_new ();
-			ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
-			ae->level = 0;
-			ae->length = stack_entry->t->end_prefade;
-			ae->delta_time = stack_entry->t->end_time-s->prev_event_start_time-stack_entry->t->end_prefade;
-			mixer_automation_add_event (s->a, ae);
-			ae = automation_event_new ();
-			ae->type = AUTOMATION_EVENT_TYPE_DELETE_ALL;
-			ae->delta_time = stack_entry->t->end_prefade;
-			ae->length = 0;
-			mixer_automation_add_event (s->a, ae);
-			s->prev_event_start_time = stack_entry->t->end_time-stack_entry->t->end_prefade;
-			s->prev_event_end_time = s->last_event_end_time = stack_entry->t->end_time;
-			scheduler_pop_template (s);
-		}
-		else {
-		s->prev_event_start_time = e->start_time;
-		s->prev_event_end_time = s->last_event_end_time = e->start_time;
-		scheduler_pop_template (s);
-		return scheduler_schedule_next_event (s);
-		}
-
-		pthread_mutex_unlock (&(s->mut));
-		return scheduler_schedule_next_event (s);
-	}
-	if (ae)
-	{
-			 mixer_automation_add_event (s->a, ae);
+		mixer_automation_add_event (s->a, ae);
 		s->prev_event_start_time = e->start_time;
 		s->prev_event_end_time = e->end_time;
 		if (e->end_time > s->last_event_end_time)
 			s->last_event_end_time = e->end_time;
 	}  
-	else
+	else {
+		s->prev_event_start_time = s->prev_event_end_time = s->last_event_end_time = s->last_event_end_time+s->preschedule;
 		e->start_time = e->end_time = -1;
+	}
 	stack_entry->event_number++;
 	if (stack_entry->event_number > stack_entry->length) {
 		if (stack_entry->t->repeat_events)
 			stack_entry->event_number = 1;
-		else
+ 		else {
+			if (stack_entry->t->fallback_id == -1) {
+				s->prev_event_end_time = s->last_event_end_time = stack_entry->t->end_time;
+				t = NULL;
+			}
+			else {
+				t = get_playlist_template_by_id (s->db, stack_entry->t->fallback_id);
+				t->start_time = stack_entry->t->start_time;
+				t->end_time = stack_entry->t->end_time;
+				t->fallback_id = -1;
+				t->end_prefade = stack_entry->t->end_prefade;
+			}
 			scheduler_pop_template (s);
+		if (t)
+			scheduler_push_template (s, t, 1);
+		}
 	}
 	rv = s->prev_event_start_time;
 	pthread_mutex_unlock (&(s->mut));

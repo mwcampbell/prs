@@ -158,7 +158,7 @@ mixer_automation_next_event (MixerAutomation *a)
 		mixer_fade_channel (a->m, e->channel_name, e->level, atof (e->detail1));
 		break;
 	case AUTOMATION_EVENT_TYPE_FADE_ALL:
-		mixer_fade_all (a->m, e->level, e->length);
+mixer_fade_all (a->m, e->level, e->length);
 		break;
 	case AUTOMATION_EVENT_TYPE_DELETE_ALL:
 		mixer_delete_all_channels (a->m);
@@ -269,6 +269,10 @@ mixer_automation_stop (MixerAutomation *a)
 	if (!a)
 		return -1;
 	pthread_mutex_lock (&(a->mut));
+	if (!a->running) {
+		pthread_mutex_unlock (&(a->mut));
+		return 0;
+	}
 	mixer_reset_notification_time (a->m, mixer_get_time (a->m));
 	a->running = 0;
 	thread = a->automation_thread;
@@ -284,17 +288,33 @@ mixer_automation_set_start_time (MixerAutomation *a,
 				 double start_time)
 {
 	AutomationEvent *e;
-
+	list *tmp;
+	double cur_time = a->last_event_time;
+	
 	if (!a)
 		return;
 	pthread_mutex_lock (&(a->mut));
-	a->last_event_time = start_time;
-	if (a->events)
+	tmp = a->events;
+	while (tmp) {
+		list *next = tmp->next;
+		AutomationEvent *e = tmp->data;
+		cur_time += e->delta_time;
+		if (cur_time < start_time) {
+			automation_event_destroy (e);
+			a->events = list_delete_item (a->events, tmp);
+		}
+		else
+			break;
+		tmp = next;
+	}
+	if (a->events) {
 		e = (AutomationEvent *) a->events->data;
+		e->delta_time -= start_time-a->last_event_time;
+		mixer_reset_notification_time (a->m, start_time+e->delta_time);
+	}
 	else
-		e = NULL;
-	if (e)
-		mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
+		mixer_reset_notification_time (a->m, -1l);
+	a->last_event_time = start_time;
 	pthread_mutex_unlock (&(a->mut));
 }
 
@@ -327,32 +347,4 @@ mixer_automation_get_last_event_end (MixerAutomation *a)
 	}
 	pthread_mutex_unlock (&(a->mut));
 	return rv;
-}
-
-
-
-void
-mixer_automation_flush (MixerAutomation *a,
-			double timestamp)
-{
-	list *tmp;
-	double cur_time = a->last_event_time;
-	
-	if (!a)
-		return;
-	pthread_mutex_lock (&(a->mut));
-	tmp = a->events;
-	while (tmp) {
-		list *next = tmp->next;
-		AutomationEvent *e = tmp->data;
-		cur_time += e->delta_time;
-		if (timestamp == -1 || cur_time < timestamp) {
-			automation_event_destroy (e);
-			a->events = list_delete_item (a->events, tmp);
-		}
-		else
-			break;
-		tmp = next;
-	}
-	pthread_mutex_unlock (&(a->mut));
 }

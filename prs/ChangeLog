@@ -1,3 +1,10 @@
+2002-12-16  Marc Mulcahy  <marc@plbb.net>
+
+	* src/scheduler.c: Horribly broken, I hope I made a run at fixing this.
+
+	* src/mixerautomation.ch: Removed mixer_automation_flush and made it
+	part of mixer_automastion_set_start_time.
+	
 2002-12-15  Marc Mulcahy  <marc@plbb.net>
 
 	* src/db.c (get_playlist_event_from_result): Fix path events.
