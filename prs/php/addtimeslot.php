@@ -53,16 +53,17 @@ else {
 <div>
 <label for="template_id">Select playlist template</label>
 <select name="template_id" id="template_id" value="0">
-<? display_template_list () ?>
+<? display_template_list (-1) ?>
 </select>
 </div>
 <div>
 <label for="fallback_id">Select fallback playlist template</label>
 <select name="fallback_id" id="fallback_id" value="-1">
-<? display_template_list () ?>
+<? display_template_list (-1) ?>
 </select>
 </div>
 <div>
+<label for="end_prefade">Fade time at end of template:</label>
 <input type="text" name="end_prefade" id="end_prefade">
 </div>
 <div>
