@@ -484,6 +484,7 @@ create_playlist_tables (Database *db)
       template_id int primary key auto_increment,
       template_name varchar (100),
       repeat_events int,
+      handle_overlap int,
       artist_exclude double,
       recording_exclude double)";
 	char *create_schedule_query =
@@ -559,8 +560,9 @@ get_playlist_template_from_result (Database *db,
 	t->id = atoi (row[0]);
 	t->name = strdup (row[1]);
 	t->repeat_events = atoi (row[2]);
-	t->artist_exclude = atof (row[3]);
-	t->recording_exclude = atof (row[4]);
+	t->handle_overlap = atoi (row[3]);
+	t->artist_exclude = atof (row[4]);
+	t->recording_exclude = atof (row[5]);
 	t->type = TEMPLATE_TYPE_STANDARD;
 	t->events = get_playlist_events_from_template (db, t->id);
 	t->db = db;
@@ -591,7 +593,7 @@ get_playlist_template (Database *db, double cur_time)
 	int daylight;
 	double repetition;
 	char *schedule_query =
-    "select schedule.template_id, template_name, repeat_events,
+    "select schedule.template_id, template_name, repeat_events, handle_overlap,
     artist_exclude, recording_exclude, start_time,
     length, repetition, fallback_id,
     end_prefade from playlist_template, schedule
@@ -617,9 +619,9 @@ get_playlist_template (Database *db, double cur_time)
 		return NULL;
 	}
 	t = get_playlist_template_from_result (db, row);
-	t->start_time = atof (row[5]);
-	t->end_time = atof (row[6]);
-	repetition = atof (row[7]);
+	t->start_time = atof (row[6]);
+	t->end_time = atof (row[7]);
+	repetition = atof (row[8]);
 
 	if (repetition != 0) {
 		
@@ -656,7 +658,7 @@ get_playlist_template_by_id (Database *db, int id)
 		      "get_playlist_template_by_id: id=%d\n", id);
 
 	db_lock (db);
-	sprintf (buffer, "select template_id, template_name, repeat_events, artist_exclude, recording_exclude from playlist_template where template_id = %d", id);
+	sprintf (buffer, "select template_id, template_name, repeat_events, handle_overlap, artist_exclude, recording_exclude from playlist_template where template_id = %d", id);
 	res = db_query (db, buffer);
 	if (mysql_num_rows (res) != 1 ||
 	    (row = mysql_fetch_row (res)) == NULL)

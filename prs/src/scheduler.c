@@ -150,6 +150,7 @@ scheduler_switch_templates (scheduler *s)
 	int prev_template_id = -1;
 	double prev_template_end_time = -1.0;
 	double fade = 0.0;
+	handle_overlap_type handle_overlap;
 	AutomationEvent *ae;
 	
 	if (!s)
@@ -158,7 +159,8 @@ scheduler_switch_templates (scheduler *s)
 	if (s->template_stack) {
 		PlaylistTemplate *t;
 		e = (template_stack_entry *) s->template_stack->data;
-		if (e->t->fallback_id != -1) {
+		if (e->t->handle_overlap == HANDLE_OVERLAP_FALLBACK &&
+		    e->t->fallback_id != -1) {
 			t = get_playlist_template_by_id (s->db, e->t->fallback_id);
 			t->type = TEMPLATE_TYPE_FALLBACK;
 			t->start_time = s->last_event_end_time;
@@ -170,6 +172,7 @@ scheduler_switch_templates (scheduler *s)
 		prev_template_id = e->t->id;
 		prev_template_end_time = e->t->end_time;
 		fade = e->t->end_prefade;
+		handle_overlap = e->t->handle_overlap;
 		scheduler_pop_template (s);
 		if (s->template_stack) {
 			debug_printf (DEBUG_FLAGS_SCHEDULER, "Template underneath.\n");
@@ -184,13 +187,14 @@ scheduler_switch_templates (scheduler *s)
 	
 	/* Get the current template */
 	
-	if (prev_template_end_time == -1)
+	if (prev_template_end_time == -1 ||
+	    handle_overlap == HANDLE_OVERLAP_IGNORE)
 		start_time = s->last_event_end_time;
 	else
 		start_time = prev_template_end_time;
 	t = get_playlist_template (s->db, start_time);
 	
-	if (t)
+	if (t && handle_overlap != HANDLE_OVERLAP_IGNORE)
 		start_time = t->start_time;
 	if (start_time < s->prev_event_start_time)
 		start_time = s->prev_event_start_time;
@@ -198,7 +202,8 @@ scheduler_switch_templates (scheduler *s)
 
 	/* If the new template starts before the end of the last event in the scheduler, schedule a fade event */
 
-	if (fade != 0) {
+	if (handle_overlap == HANDLE_OVERLAP_FADE &&
+	    fade != 0) {
 		ae = automation_event_new ();
 		ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
 		ae->delta_time = start_delta;
@@ -216,7 +221,8 @@ scheduler_switch_templates (scheduler *s)
 	 *
 	 */
 
-	if (prev_template_id != -1) {
+	if (prev_template_id != -1 &&
+	    handle_overlap != HANDLE_OVERLAP_IGNORE) {
 		ae = automation_event_new ();
 		ae->type = AUTOMATION_EVENT_TYPE_DELETE_CHANNELS;
 		ae->data = prev_template_end_time;
@@ -518,9 +524,16 @@ scheduler_schedule_next_event (scheduler *s)
 		break;
 	}
   
-	/* If the end time of the event falls outside this template, switch to the fallback */
+	/*
+	 *
+	 * If event won't fit and we're set to switch to fallbCk or to
+	 * discard it, delete the automation event and switch templates
+	 *
+	 */
 
-	if (ae && e->end_time > stack_entry->t->end_time && stack_entry->t->fallback_id != -1) {
+	if (ae && e->end_time > stack_entry->t->end_time &&
+	    (stack_entry->t->handle_overlap == HANDLE_OVERLAP_FALLBACK ||
+	     stack_entry->t->handle_overlap == HANDLE_OVERLAP_DISCARD)) {
 		automation_event_destroy (ae);
 		ae = NULL;
 		scheduler_switch_templates (s);

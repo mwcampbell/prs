@@ -118,6 +118,14 @@ typedef enum {
 } playlist_template_type;
 
 
+typedef enum {
+	HANDLE_OVERLAP_DISCARD,
+	HANDLE_OVERLAP_FALLBACK,
+	HANDLE_OVERLAP_FADE,
+	HANDLE_OVERLAP_IGNORE
+} handle_overlap_type;
+
+
 typedef struct _PlaylistTemplate PlaylistTemplate;
 struct _PlaylistTemplate {
 	int id;
@@ -126,6 +134,7 @@ struct _PlaylistTemplate {
 	double start_time;
 	double end_time;
 	int repeat_events;
+	handle_overlap_type handle_overlap;
 	double artist_exclude;
 	double recording_exclude;
 	list *events;

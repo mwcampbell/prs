@@ -130,7 +130,7 @@ mixer_channel_destroy (MixerChannel *ch)
 
 	if (ch->data_reader_thread > 0) {
 		ch->data_end_reached = 1;
-		pthread_join ((&ch->data_reader_thread), NULL);
+		pthread_join (ch->data_reader_thread, NULL);
 	}
 
 	if (ch->name)

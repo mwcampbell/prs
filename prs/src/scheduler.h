@@ -57,6 +57,8 @@ scheduler_schedule_next_event (scheduler *s);
 void
 scheduler_start (scheduler *s,
 		 double preschedule);
+void
+scheduler_reset (scheduler *s);
 
 
 
