@@ -77,7 +77,7 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 	/* Compute number of samples in the input */
 
 	pthread_mutex_lock (&(ch->mutex));
-	input_position = input;
+	input_position = ch->input;
 	output_position = ch->output;
 	space_left = ch->space_left;
 	level = ch->level;
@@ -85,19 +85,18 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 	fade_destination = ch->fade_destination;
 	pthread_mutex_unlock (&(ch->mutex));
 	
-	if (input_position >= output_position  && space_left > 0)
+	if (input_position > output_position)
 		input_samples = input_position-output_position;
-	else
+	else if (space_left != ch->buffer_size)
 		input_samples = ch->buffer_end-output_position;
+	else
+		input_samples = 0;
 	input_samples /= ch->channels;
 	if (input_samples >= ch->chunk_size)
 		input_samples = ch->chunk_size;
-	else if ((input_samples > 0 && space_left != ch->buffer_size) ||
-		 (ch->data_reader_thread == -1 && input_samples == 0)) {
+	else if (space_left != ch->buffer_size) {
 		ch->data_end_reached = 1;
 	}
-	else if (input_samples == 0)
-		return;
 	assert (p != NULL);
 
 	if (level != 1.0 || fade != 1.0) {
