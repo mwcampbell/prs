@@ -39,6 +39,7 @@ automation_event_destroy (AutomationEvent *e);
 typedef struct {
   mixer *m;
 
+  pthread_mutex_t mut;
   int running;
   pthread_t automation_thread;
   double last_event_time;
