@@ -114,7 +114,9 @@ channel_info_destroy (channel_info *i)
 
 	pthread_mutex_lock (&(i->mutex));
 	i->destroyed = 1;
-
+	pthread_mutex_unlock (&(i->mutex));
+	pthread_join (&(i->transfer_thread));
+	
 	if (i->url)
 		free (i->url);
 	if (i->transfer_url)
@@ -129,9 +131,6 @@ channel_info_destroy (channel_info *i)
 		kill (i->decoder_pid, SIGTERM);
 		waitpid (i->decoder_pid, NULL, 0);
 	}
-	if (i->transfer_thread != -1)
-		pthread_cond_wait (&(i->cond), &(i->mutex));
-	pthread_mutex_unlock (&(i->mutex));
 
 	/* Remove from our list of url channels */
 
@@ -174,6 +173,7 @@ url_mixer_channel_get_data (MixerChannel *ch)
 	while (remainder > 0) {
 		rv = read (i->decoder_output_fd, tmp, remainder*sizeof(short));
 		if (rv == 0) {
+			ch->data_end_reached = 1;
 			break;
 		}
 		if (rv < 0) {
@@ -239,6 +239,7 @@ start_mp3_decoder (channel_info *i)
 	pipe (input);
 	pipe (output);
 	fcntl (output[0], F_SETFL, O_NONBLOCK);
+	fcntl (input[1], F_SETFL, O_NONBLOCK);
 	
 	pid = fork ();
 	if (pid == 0) {
@@ -306,7 +307,7 @@ mp3_process_first_block (channel_info *i,
 			mp3_header_parse (ulong_header, &mh);
 			if (mh.syncword == 0X0FFF &&
 			    mh.version > 0 && mh.layer > 0 &&
-			    mh.samplerate > 0) {
+			    mh.bitrate > 0 && mh.samplerate > 0) {
 				rv = buf;
 				break;
 			}

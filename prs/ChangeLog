@@ -1,5 +1,10 @@
 2003-01-16  Marc Mulcahy  <marc@plbb.net>
 
+	* src/urlmixerchannel.c: More attempts to get this thing to work.
+	
+	* src/mixer.c (mixer_main_thread): Don't set data_end_reached in the
+	mixer main thread.
+
 	* src/prs_server.c (add_file): Add a key of -1 to channels added
 	interactively.
 

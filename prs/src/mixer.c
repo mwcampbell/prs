@@ -152,8 +152,6 @@ mixer_main_thread (void *data)
 			}
 			if (ch->data_reader_thread == 0) {
 				int rv = mixer_channel_get_data (ch);
-				if (rv < ch->chunk_size)
-					ch->data_end_reached = 1;
 			}
 			mixer_channel_process_levels (ch);
 			for (tmp2 = ch->patchpoints; tmp2; tmp2 = tmp2->next) {
