@@ -635,8 +635,8 @@ get_playlist_template (Database *db, double cur_time)
 	}
 	t->end_time += t->start_time;
 	
-	t->fallback_id = atoi (row[8]);
-	t->end_prefade = atof(row[9]);;
+	t->fallback_id = atoi (row[9]);
+	t->end_prefade = atof(row[10]);;
 	mysql_free_result (res);
 	db_unlock (db);
   
