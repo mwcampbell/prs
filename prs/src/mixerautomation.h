@@ -74,7 +74,7 @@ typedef struct {
 	double last_event_time;
 	list *events;
 	int logger_enabled;
-	logger *l;
+	list *loggers;
 } MixerAutomation;
 
 

@@ -78,7 +78,7 @@ mixer_automation_new (mixer *m, Database *db)
 	a->last_event_time = mixer_get_time (m);
 	a->automation_thread = 0;
 	a->running = 0;
-	a->l = NULL;
+	a->loggers = NULL;
 	pthread_mutex_init (&(a->mut), NULL);
 	debug_printf (DEBUG_FLAGS_AUTOMATION, "Automation object created.\n");
 	return a;
@@ -90,8 +90,8 @@ void
 mixer_automation_destroy (MixerAutomation *a)
 {
 	list *tmp;
-	if (!a)
-		return;
+	logger *l;
+		if (!a)		return;
 	if (a->automation_thread > 0) {
 		mixer_reset_notification_time (a->m, mixer_get_time (a->m));
 		a->running = 0;
@@ -101,8 +101,12 @@ mixer_automation_destroy (MixerAutomation *a)
 	{
 		automation_event_destroy ((AutomationEvent *) tmp->data);
 	}
-	if (a->l)
-		logger_destroy (a->l);
+	for (tmp = a->loggers; tmp; tmp = tmp->next) {
+		l = (logger *) tmp->data;
+		logger_destroy (l);
+	}
+	if (a->loggers)
+		list_free (a->loggers);
 	free (a);
 	debug_printf (DEBUG_FLAGS_AUTOMATION, "Automation object destroyed.\n");
 }
@@ -147,6 +151,8 @@ mixer_automation_next_event (MixerAutomation *a)
 	AutomationEvent *e;
 	MixerChannel *ch;      
 	double mixer_time;
+	list *tmp;
+	logger *l;
 
 	if (!a)
 		return;
@@ -173,8 +179,10 @@ mixer_automation_next_event (MixerAutomation *a)
 			
 			mixer_patch_channel_all (a->m, e->channel_name);
 			mixer_enable_channel (a->m, e->channel_name, 1);
-			if (a->l && a->logger_enabled)
-			logger_log_file (a->l, ch->location);
+			for (tmp = a->loggers; tmp; tmp = tmp->next) {
+				l = (logger *) tmp->data;
+				logger_log_file (l, ch->location);
+			}
 		}
 		break;
 	case AUTOMATION_EVENT_TYPE_FADE_CHANNEL:
@@ -396,7 +404,7 @@ mixer_automation_add_logger (MixerAutomation *a,
 	if (!a || !l)
 		return;
 	pthread_mutex_lock (&(a->mut));
-	a->l = l;
+	a->loggers = list_append (a->loggers, l);
 	a->logger_enabled = 1;
 	pthread_mutex_unlock (&(a->mut));
 }
