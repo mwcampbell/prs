@@ -1,3 +1,17 @@
+2002-07-14  Marc Mulcahy <marc@plbb.net>
+
+	* src/mixerevent.h: Changed tim to start_time and added an end_time
+	field to support fades.
+
+	* prs_server.c: Re-factored playlist generation to support fades and
+	events which aren't sequential
+
+2002-07-13  Marc Mulcahy <marc@plbb.net>
+
+	* src/mixerchannel.h src/vorbismixerchannel.c src/mixer.c: Added an
+	enabled flag so mixer channels can be enabled and disabled (in the
+	case of files this means paused and unpaused.
+
 2002-07-12  Marc Mulcahy <marc.mulcahy@sun.com>
 
 	* src/fileinfo.c: Fixed rounding errors in finding audio out queue points.

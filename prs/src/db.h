@@ -93,7 +93,7 @@ get_playlist_template (double time);
 
 /*
  *
- * laylist events
+ * Playlist events
  *
  */
 
@@ -103,14 +103,17 @@ typedef struct _PlaylistEvent PlaylistEvent;
 
 typedef enum {
   EVENT_TYPE_SIMPLE_RANDOM,
-  EVENT_TYPE_RANDOM
+  EVENT_TYPE_RANDOM,
+  EVENT_TYPE_PATH,
+  EVENT_TYPE_FADE_CHANNEL
 } playlist_event_type;
 
 struct _PlaylistEvent {
   int template_id;
   int number;
   playlist_event_type type;
-  int relative_to_end;
+  char *channel_name;
+  int anchor;
   double offset;
   char *detail1;
   char *detail2;

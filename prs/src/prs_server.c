@@ -12,19 +12,42 @@
 
 static double
 process_playlist_event (PlaylistEvent *e,
+			PlaylistTemplate *t,
 			RecordingPicker *p,
-			mixer *m,
-			double cur_time)
+			mixer *m)
 {
+
+  /* Keep track of last event start and end times */
+
+  static double last_start_time = -1.0, last_end_time = -1.0;
+
   Recording *r;
   list *categories;
   MixerEvent *me;
-  double rv;
   
+  /* Create the mixer event */
+
+  me = (MixerEvent *) malloc (sizeof (MixerEvent));
+
+  /* Compute the start time of this event */
+
+  if (last_start_time = -1.0)
+    last_start_time = mixer_get_time (m);
+
+  me->start_time = last_start_time = 
+    (e->anchor ? last_end_time : last_start_time)+e->offset;
+
+  /* Set the channel name */
+  
+  me->channel_name = strdup (e->channel_name);
+
   switch (e->type)
     {
     case EVENT_TYPE_SIMPLE_RANDOM:
     case EVENT_TYPE_RANDOM:
+
+      /* The five details are category names, so make a list of them */
+
       if (*e->detail1)
 	categories = string_list_prepend (NULL, e->detail1);
       if (*e->detail2)
@@ -35,32 +58,101 @@ process_playlist_event (PlaylistEvent *e,
 	categories = string_list_prepend (categories, e->detail4);
       if (*e->detail5)
 	categories = string_list_prepend (categories, e->detail5);
+
       if (e->type == EVENT_TYPE_SIMPLE_RANDOM)
 	r = recording_picker_select (p, categories, -1);
       else
-	r = recording_picker_select (p, categories, cur_time);
+	r = recording_picker_select (p, categories, me->start_time);
 
-      /* if the recording selection failed, return -1 */
+      /* Free the list of categories */
+
+      list_free (categories);
+
+      /* if the recording selection failed, the event has a zero length since
+       * there is no event, so just return the current time
+       */
 
       if (!r)
 	{
-	  rv = -1.0;
+	  free (me);
+	  me = NULL;
 	  break;
-	  }
+	}
       
-      /* Create the mixer event */
-
-      me = (MixerEvent *) malloc (sizeof (MixerEvent));
       me->type = MIXER_EVENT_TYPE_ADD_CHANNEL;
-      me->detail1 = strdup (r->name);
-      me->detail2 = strdup (r->path);
-      me->time = cur_time-r->audio_in;
-      mixer_insert_event (m, me);
-      rv = r->audio_out-r->audio_in;
+      me->detail1 = strdup (r->path);
+      me->level = 1.0;
+
+      me->end_time = me->start_time+(r->audio_out-r->audio_in);
       recording_free (r);
       break;
+    case EVENT_TYPE_FADE_CHANNEL:
+    
+      me->type = MIXER_EVENT_TYPE_FADE_CHANNEL;
+      me->level = atof (e->detail1);
+      me->end_time = me->start_time + atof (e->detail2);
+      break;
     }
-  return rv;
+  
+  if (me)
+    {
+
+      /* Wrap around at midnight */
+
+      if (me->end_time > 86400)
+	me->end_time -= 86400;
+      last_end_time = me->end_time;
+      mixer_insert_event (m, me);
+      return me->start_time;
+    }
+  else
+    return last_start_time;
+}
+
+
+
+static double
+execute_playlist_template (PlaylistTemplate *t,
+			   mixer *m,
+			   double time)
+{
+  list *events, *tmp;
+  RecordingPicker *p;
+	        
+  if (!t)
+    return;
+
+  events = get_playlist_events_from_template (t);
+  p = recording_picker_new (t->artist_exclude, t->recording_exclude);
+  do
+    {
+      for (tmp = events; tmp; tmp = tmp->next)
+	{
+	  double start_time = process_playlist_event ((PlaylistEvent *) tmp->data,
+						      t, p, m);
+	    
+	  /* If we just queued an event more than 10 seconds in the future,
+	   * wait the difference less ten seconds
+	   */
+
+	  if (start_time > time+10)
+	    {
+	      usleep (start_time-time-10);
+	      time = mixer_get_time (m);
+	    }
+
+	  /* An end_time of -1 means don't worry about the end time, otherwise
+	   * if the current time is past the end time of this template, stop
+	   */
+
+	  if (time > t->end_time || time < t->start_time)
+	    break;
+	}
+    }
+  while (t->repeat_events && time > t->start_time && time < t->end_time);
+  playlist_event_list_free (events);
+  recording_picker_free (p);
+  return time;
 }
 
 
@@ -69,45 +161,22 @@ static void *
 playlist_main_thread (void *data)
 {
   mixer *m = (mixer *) data;
-  double mixer_time = mixer_get_time (m);
+  double time = mixer_get_time (m);
+  PlaylistTemplate *t;
   
   while (1)
     {
-      PlaylistTemplate *t = get_playlist_template (mixer_time);
-      list *events, *tmp;
-      RecordingPicker *p;
-	        
-      if (!t)
-	{
-	  break;
-	}
-      events = get_playlist_events_from_template (t);
-      p = recording_picker_new (t->artist_exclude, t->recording_exclude);
-      do
-	{
-	  for (tmp = events; tmp; tmp = tmp->next)
-	    {
-	      double time_to_wait;
+      t = get_playlist_template (time);
+      if (t)
+	time = execute_playlist_template (t, m, time);
+    else
+      {
 
+	/* Wait ten seconds, then re-sync wih the mixer and try again */
 
-	      time_to_wait = process_playlist_event ((PlaylistEvent *) tmp->data,
-						     p, m, mixer_time);	      
-	      if (time_to_wait > 1)
-		usleep ((int)(time_to_wait-1)*1000000);
-	      if (time_to_wait >= 0)
-		{
-		  mixer_time += time_to_wait;
-		  if (mixer_time > 86400)
-		    mixer_time -= 86400;
-		}
-	      if (mixer_time > t->end_time || mixer_time < t->start_time)
-		break;
-	    }
-	  }
-      while (t->repeat_events && mixer_time > t->start_time && mixer_time < t->end_time);
-      playlist_template_free (t);
-      playlist_event_list_free (events);
-      recording_picker_free (p);
+	usleep (10000000);
+	time = mixer_get_time (m);
+      }
     }
   return 0;
 }

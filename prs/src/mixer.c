@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <malloc.h>
 #include "mixer.h"
+#include "mixerevent.h"
 #include "mixerchannel.h"
 #include "vorbismixerchannel.h"
 #include "mixeroutput.h"
@@ -68,7 +69,7 @@ mixer_do_events (mixer *m)
   e = (MixerEvent *) m->events->data;
   if (!e)
     return;
-  if (e->time <= m->time)
+  if (e->start_time <= m->time)
     {
       MixerChannel *ch;
       
@@ -77,13 +78,14 @@ mixer_do_events (mixer *m)
       switch (e->type)
 	{
 	  case MIXER_EVENT_TYPE_ADD_CHANNEL:
-	    ch = vorbis_mixer_channel_new (e->detail1, e->detail2);
+	    ch = vorbis_mixer_channel_new (e->channel_name, e->detail1);
 	    pthread_mutex_unlock (&m->mutex);
 	    mixer_add_channel (m, ch);
 	    mixer_patch_channel_all (m, e->detail1);
 	    pthread_mutex_lock (&m->mutex);
 	    break;
 	}
+      mixer_event_free (e);
       m->events = list_delete_item (m->events, m->events);
     }
   return;
@@ -133,6 +135,16 @@ mixer_main_thread (void *data)
 	  MixerChannel *ch = (MixerChannel *) tmp->data;
 	  list *next = tmp->next;
 	  
+	  /* If this channel is disabled, skip it */
+
+	  if (!ch->enabled)
+	    {
+	      tmp = next;
+	      continue;
+	    }
+	  
+	  /* If this channel has no more data, kill it */
+
 	  if (ch->data_end_reached)
 	    {
 	    
@@ -182,7 +194,7 @@ mixer_new (void)
   m->channels = m->outputs = m->events = NULL;
 
   m->running = 0;
-  m->thread = NULL;
+  m->thread = 0;
   return m;
 }
 
@@ -224,7 +236,7 @@ mixer_stop (mixer *m)
 
   pthread_mutex_lock (&m->mutex);
   m->running = 0;
-  m->thread = NULL;
+  m->thread = 0;
   pthread_mutex_unlock (&m->mutex);
   return 0;
 }
@@ -380,7 +392,7 @@ mixer_insert_event (mixer *m,
    {
      MixerEvent *e = (MixerEvent *) tmp->data;
 
-     if (new_event->time < e->time)
+     if (new_event->start_time < e->start_time)
        break;
    }
   if (tmp)

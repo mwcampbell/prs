@@ -285,8 +285,9 @@ create_playlist_tables (list *read_only_users,
       template_id int references playlist_template,
       event_number int,
       event_type varchar (20),
-      relative_to_end int,
+      event_anchor int,
       event_offset float,
+      event_channel_name varchar (100),
       detail1 varchar (64),
       detail2 varchar (64),
       detail3 varchar (64),
@@ -363,6 +364,9 @@ playlist_event_free (PlaylistEvent *e)
 {
   if (!e)
     return;
+  if (e->channel_name)
+    if (e->channel_name)
+      free (e->channel_name);
   if (e->detail1)
     free (e->detail1);
   if (e->detail2)
@@ -410,14 +414,15 @@ get_playlist_event_from_result (PGresult *res,
   else if (!strcmp (type, "random"))
     e->type = EVENT_TYPE_RANDOM;
   
-  e->relative_to_end = atoi (PQgetvalue (res, row, 3));
+  e->anchor = atoi (PQgetvalue (res, row, 3));
   e->offset = atof (PQgetvalue (res, row, 4));
-  e->detail1 = strdup (PQgetvalue (res, row, 5));
-  e->detail2 = strdup (PQgetvalue (res, row, 6));
-  e->detail3 = strdup (PQgetvalue (res, row, 7));
-  e->detail4 = strdup (PQgetvalue (res, row, 8));
-  e->detail5 = strdup (PQgetvalue (res, row, 9));
-  return e;
+  e->channel_name = strdup (PQgetvalue (res, row, 5));
+  e->detail1 = strdup (PQgetvalue (res, row, 6));
+  e->detail2 = strdup (PQgetvalue (res, row, 7));
+  e->detail3 = strdup (PQgetvalue (res, row, 8));
+  e->detail4 = strdup (PQgetvalue (res, row, 9));
+  e->detail5 = strdup (PQgetvalue (res, row, 10));
+   return e;
 }
 
 

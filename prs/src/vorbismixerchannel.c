@@ -92,6 +92,10 @@ vorbis_mixer_channel_new (const char *name,
   ch->data = (void *) i;
   ch->name = strdup (name);
   ch->location = strdup (location);
+  ch->enabled = 1;
+
+  /* Set overrideable methods */
+
   ch->get_data = vorbis_mixer_channel_get_data;
   ch->free_data = vorbis_mixer_channel_free_data;
 
@@ -100,7 +104,6 @@ vorbis_mixer_channel_new (const char *name,
   vi = ov_info (i->vf, -1);
   ch->rate = vi->rate;
   ch->channels = vi->channels;
-
 
   /* Set level and fading parameters */
 

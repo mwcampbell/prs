@@ -10,6 +10,7 @@ prs_server_SOURCES = \
 	db.c \
 	list.c \
 	mixer.c \
+	mixerevent.c \
 	mixeroutput.c \
 	ossmixeroutput.c \
 	shoutmixeroutput.c \

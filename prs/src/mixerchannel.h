@@ -10,6 +10,7 @@ typedef struct _MixerChannel MixerChannel;
 struct _MixerChannel {
   char *name;
   char *location;
+  int enabled;
   
   /* Sample information */
 
