@@ -116,7 +116,17 @@ mixer_automation_add_event (MixerAutomation *a,
 			mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
 	a->events = list_append (a->events, e);
 	pthread_mutex_unlock (&(a->mut));
-	debug_printf (DEBUG_FLAGS_AUTOMATION, "Added automation eventK\n");
+	switch (e->type) {
+	case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
+			debug_printf (DEBUG_FLAGS_AUTOMATION, "Add channel event added %s\n", e->channel_name);
+			break;
+	case AUTOMATION_EVENT_TYPE_FADE_CHANNEL:
+		debug_printf (DEBUG_FLAGS_AUTOMATION, "fade channel event added %s\n", e->channel_name);
+		break;
+	case AUTOMATION_EVENT_TYPE_FADE_ALL:
+		debug_printf (DEBUG_FLAGS_AUTOMATION, "fade all event added.\n");
+		break;
+	}
 }
 
 
@@ -139,6 +149,9 @@ mixer_automation_next_event (MixerAutomation *a)
 		debug_printf (DEBUG_FLAGS_AUTOMATION, "mixer_Automation_next_event called with no events on stack.\n");
 		return;
 	}
+
+	mixer_time = mixer_get_time (a->m);
+	debug_printf (DEBUG_FLAGS_AUTOMATION, "Executing automation event, lag is %lf\n", a->last_event_time+e->delta_time-mixer_time);
     
 	/* Do event */
 
