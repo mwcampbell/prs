@@ -1,3 +1,8 @@
+2002-11-10  Matt Campbell  <mattcampbell@pobox.com>
+
+	* src/mixerpatchpoint.c: Fixed resampling code so it correctly
+	handles the case when the channel is mono and the bus is stereo.
+
 2002-11-09  Marc Mulcahy <marc@plbb.net>
 
 	* Checked in initial resampling support.
