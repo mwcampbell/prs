@@ -179,7 +179,7 @@ scheduler_switch_templates (scheduler *s)
 		ae->length = e->t->end_prefade;
 		ae->level = 0;
 		mixer_automation_add_event (s->a, ae);
-		if (start_time < e->t->end_time)
+		if (start_time < e->t->end_time-e->t->end_prefade)
 			mixer_automation_set_start_time (s->a, start_time);
 		s->prev_event_start_time = start_time;
 		s->last_event_end_time = s->prev_event_end_time = start_time+e->t->end_prefade;
