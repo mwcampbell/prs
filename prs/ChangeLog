@@ -9,6 +9,7 @@
 	(scheduler_schedule_next_event): Automation events with deltas of less
 	than 0 no longer throw the automation object and scheduler object out
 	of sync.
+	(url_manager): Fix fading out at end of url relay.
 
 	* src/scheduler.h: Adde scheduled_delete_time and scheduled_delete_key
 	member variables to schedule mixer channels to be deleted.

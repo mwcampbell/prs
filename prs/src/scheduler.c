@@ -328,7 +328,7 @@ url_manager (void *data)
 
         mixer_set_default_level (i->m, 1.0);
 	mixer_automation_enable_logger (i->a, 1);
-	mixer_fade_channel (i->m, i->url, 0, 1);
+	mixer_fade_channel (i->m, i->url, 0, i->end_fade);
 	
         /* Free stuff to exit */
 
