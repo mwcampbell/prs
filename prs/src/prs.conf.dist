@@ -1,0 +1,72 @@
+<prs_config>
+<stream_config>
+	<stream name="test"
+	rate="44100"
+	channels="2"
+	title="My Personal Radio Station"
+	format="mp3"
+	bitrate="56"
+	stereo="1"
+	host="localhost"
+	port="8000"
+	protocol="xaudiocast"
+	mount="/test"
+	user="source"
+	password="changeme"/>
+</stream_config>
+<mixer_config>
+	<output name = "soundcard"
+	type="oss"
+	rate="44100"
+	channels="2"/>
+	<bus name = "air"
+	rate="44100"
+	channels="2">
+		<audiocompressor
+		threshhold="-20"
+		ratio="2"
+		attack_time=".01"
+		release_time="5"
+		output_gain="2"/>
+	<multibandaudiocompressor>
+	<band freq="100"
+	threshhold="-40"
+	ratio="2"
+	attack_time=".01"
+	release_time="5"
+	pre_process_gain="1"
+	output_gain="10"/>
+	<band freq="500"
+	threshhold="-30"
+	ratio="3"
+	attack_time=".01"
+	release_time="5"
+	pre_process_gain="1"
+	output_gain="10"/>
+	<band freq="6000"
+	threshhold="-20"
+	ratio="2"
+	attack_time=".01"
+	release_time="5"
+	pre_process_gain="1"
+	output_gain="3"/>
+	<band freq="15000"
+	threshhold="-20"
+	ratio="2"
+	attack_time=".01"
+	release_time="5"
+	pre_process_gain="1"
+	output_gain="6"/>
+	</multibandaudiocompressor>
+	</bus>
+	<channel name="soundcard"
+	type="oss"
+	rate="44100"
+	channels="2"/>
+	<patch channel="soundcard" bus="air"/>
+	<patch bus="air" output="test"/>
+	<patch bus="air" output="soundcard"/>
+</mixer_config>
+<telnet port="4777" password="changem"/>
+<db host="host" user="user" password="pass" name="name"/>
+</prs_config>

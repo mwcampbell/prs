@@ -1,5 +1,8 @@
 2002-11-20  Marc Mulcahy  <marc@plbb.net>
 
+	* src/prs.conf.dist: Renamed configuration file and made it generic.
+	it now contains examples of all possible setup options.
+
 	* src/vorbisfileinfo.c (process_vorbis_comments): Support both all
 	upper and all lowercase Vorbis tag field names.
 	
