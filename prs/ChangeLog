@@ -1,3 +1,8 @@
+2002-12-01  Matt Campbell  <mattcampbell@pobox.com>
+
+	* src/mp3fileinfo.c: Fixed capitalization error that prevented PRS
+	from working with id3lib 3.8.x.
+
 2002-11-30  Matt Campbell  <mattcampbell@pobox.com>
 
 	* Checked in an unfinished Web interface written in PHP.
