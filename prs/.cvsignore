@@ -1,0 +1,7 @@
+aclocal.m4
+Makefile
+Makefile.in
+config.log
+config.status
+configure
+libtool
