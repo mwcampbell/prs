@@ -288,8 +288,6 @@ url_manager (void *data)
 
 			if (!i->a->running) {
 				mixer_fade_all (i->m, 1.0, 1);
-				mixer_automation_set_start_time (i->a,
-								 mixer_get_time (i->a->m));
 				mixer_automation_start (i->a);
 			}
 
@@ -520,9 +518,10 @@ scheduler_schedule_next_event (scheduler *s)
 			if (stack_entry->event_number > stack_entry->length && !stack_entry->t->repeat_events) {
 				scheduler_pop_template (s);
 			}
-			else if (stack_entry->event_number > stack_entry->length)
+			else if (stack_entry->event_number > stack_entry->length) {
 				stack_entry->event_number = 1;
-			stack_entry->t->fallback_id = -1;
+				stack_entry->t->fallback_id = -1;
+			}
 			s->prev_event_end_time = s->last_event_end_time = i->start_time;
 			scheduler_push_template (s, t, 1);
 			stack_entry = NULL;
