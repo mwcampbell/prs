@@ -132,17 +132,24 @@ process_vorbis_comments (OggVorbis_File *vf,
     if (!value)
       continue;
     value++;
-    if (!strncmp (*comment_strings, "TITLE", 5))
-      info->name = strdup (value);
-    else if (!strncmp(*comment_strings, "GENRE", 5))
+    if (
+	    !strncmp (*comment_strings, "title", 5) ||
+	    !strncmp (*comment_strings, "TITLE", 5))
+	    info->name = strdup (value);
+    else if (!strncmp(*comment_strings, "genre", 5) ||
+	!strncmp(*comment_strings, "GENRE", 5))
       info->genre = strdup (value);
-    else if (!strncmp (*comment_strings, "ARTIST", 6))
+    else if (!strncmp (*comment_strings, "artist", 6) ||
+	     !strncmp (*comment_strings, "ARTIST", 6))
       info->artist = strdup (value);
-    else if (!strncmp(*comment_strings, "DATE", 4))
-      info->date = strdup (value);
-    else if (!strncmp (*comment_strings, "TRACKNUMBER", 11))
-      info->track_number = strdup (value);
-    else if (!strncmp (*comment_strings, "ALBUM", 5))
+    else if (!strncmp(*comment_strings, "date", 4) ||
+	    !strncmp(*comment_strings, "DATE", 4))
+	    info->date = strdup (value);
+    else if (!strncmp (*comment_strings, "tracknumber", 11) ||
+	    !strncmp (*comment_strings, "TRACKNUMBER", 11))
+	    info->track_number = strdup (value);
+    else if (!strncmp (*comment_strings, "album", 5) ||
+	     !strncmp (*comment_strings, "ALBUM", 5))
       info->album = strdup (value);
    }
 }
