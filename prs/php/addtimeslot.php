@@ -3,22 +3,23 @@ require_once ("common.php");
 check_user ();
 db_connect ();
 
-if ($start_date && $end_date) {
+if ($start_date && $length) {
 	$start_date = strtotime ($start_date);
-	$end_date = strtotime ($end_date);
-	if ($start_date == -1 || $end_date == -1) {
+	if ($start_date == -1) {
 		html_error ("Start or end date out of range.\n");
 		exit ();
 	}
-	$query = "select * from schedule where start_time <= $start_date and end_time > $start_date";
-	$res = db_query ($query);
-	if (mysql_numrows ($res) > 0) {
-		html_error ("Error-- time slot conflicts with existing time slot");
-		html_end ();
-		exit ();
-	}
+	
+	/* Convert length of seconds */
 
-	$query = "insert into schedule (start_time, end_time, template_id, fallback_id, end_prefade) values ($start_date, $end_date, $template_id, $fallback_id, $end_prefade)";
+	($length_hours, $length_minutes, $length_seconds) = explode (":", $length, 3);
+	$length = $length_hours*3600+$length_minutes*60+$length_seconds;
+
+	$daylight = date ("I", $start_date);
+	$query = "insert into schedule (start_time, length, repetition,
+        daylight, template_id, fallback_id, end_prefade) values
+        ($start_date, $length, $repetition,
+        $daylight, $template_id, $fallback_id, $end_prefade)";
 	db_query ($query);
 	html_start ("Schedule updated");
 	echo "<a href = \"schedule.php\">Back to Schedule Administration</a>\n";
@@ -36,8 +37,17 @@ else {
 <input type="text" name="start_date" id="start_date">
 </div>
 <div>
-<label for="end_time">Enter end date:</label>
-<input type="text" name="end_date" id="end_date">
+<label for="length">Enter length (hh:mm:ss):</label>
+<input type="text" name="length" id="length">
+</div>
+<div>
+<label for="repetition">Repetition:</label>
+<select name="repetition" id="repetition" value="0">
+<option value="0">One Time Only</option>
+<option value="3600">Hourly</option>
+<option value="86400">Daily</option>
+<option value="604800">Weekly</option>
+</select>
 </div>
 <div>
 <label for="template_id">Select playlist template</label>

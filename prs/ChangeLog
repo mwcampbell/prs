@@ -1,3 +1,17 @@
+2003-01-10  Marc Mulcahy  <marc@plbb.net>
+
+	* php/addtimeslot.php: Update web interface to suppor tadding
+	recurring time slots.  Does not yet support editting recurring time
+	slots.
+
+	* src/prs_db_builder.c (main): Fixed segfault caused by freeing null
+	FileInfo pointer.
+	(verify_database): Delete recordings from the database which are no
+	longer on disk.
+
+	* src/db.c (get_playlist_template): Changed layout of the schedule
+	table and added support for recurring time slots.
+	
 2003-01-09  Marc Mulcahy  <marc@plbb.net>
 
 	* src/shoutmixeroutput.ch (shout_mixer_output_new): Added

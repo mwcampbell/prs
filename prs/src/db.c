@@ -466,10 +466,12 @@ create_playlist_tables (Database *db)
 		"create table schedule (
     time_slot_id int primary key auto_increment,
     start_time double,
-    end_time double,
+    length double,
+    repetition double,
+    daylight int,
     template_id int,
-      fallback_id int,
-      end_prefade double)";
+    fallback_id int,
+    end_prefade double)";
 
 	char *create_playlist_event_query =
 		"create table playlist_event (
@@ -543,6 +545,18 @@ get_playlist_template_from_result (Database *db,
 
 
 
+static int
+is_daylight (double cur_time)
+{
+	time_t ct;
+	struct tm *timestruct;
+
+	ct = (time_t) cur_time;
+	timestruct = localtime(&ct);
+	return timestruct->tm_isdst;
+}
+
+
 PlaylistTemplate *
 get_playlist_template (Database *db, double cur_time)
 {
@@ -550,12 +564,24 @@ get_playlist_template (Database *db, double cur_time)
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW row;
 	char buffer[1024];
+	int daylight;
+	double repetition;
+	char *schedule_query =
+    "select schedule.template_id, template_name, repeat_events,
+    artist_exclude, recording_exclude, start_time,
+    length, repetition, fallback_id,
+    end_prefade from playlist_template, schedule
+    where playlist_template.template_id = schedule.template_id and
+    ((repetition = 0 and start_time <= %lf and start_time+length > %lf) or
+    (repetition != 0 and start_time <= %lf and mod(%lf-start_time-(daylight*3600)+%d, repetition) < length))
+    order by start_time desc";
 
+	daylight = is_daylight (cur_time);
 	assert (db != NULL);
 	debug_printf (DEBUG_FLAGS_DATABASE,
 		      "get_playlist_template: cur_time=%f\n", cur_time);
 	db_lock (db);
-	sprintf (buffer, "select playlist_template.template_id, template_name, repeat_events, artist_exclude, recording_exclude, start_time, end_time, fallback_id, end_prefade from playlist_template, schedule where playlist_template.template_id = schedule.template_id and start_time <= %lf and end_time > %lf", cur_time, cur_time);
+	sprintf (buffer, schedule_query, cur_time, cur_time, cur_time, cur_time, daylight*3600);
 	res = db_query (db, buffer);
 	if (mysql_num_rows (res) < 1 ||
 	    (row = mysql_fetch_row (res)) == NULL)
@@ -569,8 +595,22 @@ get_playlist_template (Database *db, double cur_time)
 	t = get_playlist_template_from_result (db, row);
 	t->start_time = atof (row[5]);
 	t->end_time = atof (row[6]);
-	t->fallback_id = atoi (row[7]);
-	t->end_prefade = atof(row[8]);;
+	repetition = atof (row[7]);
+
+	if (repetition != 0) {
+		
+		/* Figure out th start and nd times of the current
+		 * repeition of this template
+		 *
+		 */
+
+		t->start_time = cur_time -
+			(int) (cur_time-t->start_time-is_daylight(t->start_time)*3600+daylight*3600)%(int) repetition;
+	}
+	t->end_time += t->start_time;
+	
+	t->fallback_id = atoi (row[8]);
+	t->end_prefade = atof(row[9]);;
 	mysql_free_result (res);
 	db_unlock (db);
   

@@ -62,7 +62,7 @@ verify_database (Database *db)
 		r = (Recording *) tmp->data;
 		fp = fopen (r->path, "rb");
 		if (!fp) {
-			fprintf (stderr, "Deleting %s\n", r->name);
+			delete_recording (r);
 		}
 		else
 			fclose (fp);
@@ -158,7 +158,8 @@ main (int argc, char *argv[])
 	      recording_free (r);
 	      continue;
 	    }
-	  file_info_free (i);
+	  if (i)
+		  file_info_free (i);
 	  if (r)
 	    {
 	      delete_recording (r);
