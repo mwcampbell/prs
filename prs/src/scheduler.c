@@ -437,7 +437,7 @@ scheduler_schedule_next_event (scheduler *s)
 			e->end_time = e->start_time;
 			e->start_time = s->prev_event_start_time;
 			break;
-		}
+	}
       
 		/* Add the channel to the mixer */
 
@@ -474,6 +474,7 @@ scheduler_schedule_next_event (scheduler *s)
 			automation_event_destroy (ae);
 			ae = NULL;
 			e->end_time = e->start_time;
+			e->start_time = s->prev_event_start_time;
 		}
 		else {
 			mixer_add_file (s->a->m, ae->channel_name, e->detail1, stack_entry->t->end_time);

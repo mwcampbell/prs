@@ -1,3 +1,21 @@
+2003-01-30  Marc Mulcahy  <marc@plbb.net>
+
+	* src/scheduler.c (scheduler_schedule_next_event): Fix for path
+	events that can't find the file.
+
+2003-01-25  Marc Mulcahy  <marc@plbb.net>
+
+	* src/scheduler.c (scheduler_schedule_next_event): Ensure that
+	fallback templates for url relays fade.
+
+	* src/shoutmixeroutput.c (shout_thread): Added support for
+	re-establishing a shout connection if it dies.
+	
+2003-01-24  Marc Mulcahy  <marc@plbb.net>
+
+	* src/scheduler.c (url_manager): Don't stop an already stopped
+	automation object.
+
 2003-01-22  Marc Mulcahy  <marc@plbb.net>
 
 	* src/mixerchannel.c (mixer_channel_process_levels): Fixed weirdness.
