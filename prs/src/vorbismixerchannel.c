@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
-#include <vorbis/vorbisfile.h>
+#include <tremor/ivorbisfile.h>
 #include "debug.h"
 #include "mixerchannel.h"
 
@@ -56,7 +56,7 @@ vorbis_mixer_channel_get_data (MixerChannel *ch)
 	assert (ch->data != NULL);
 	while (remainder > 0) {
 		rv = ov_read (i->vf, (char *) tmp, remainder * sizeof (short),
-			      0, sizeof (short), 1, &(i->section));
+			      &(i->section));
 		if (rv <= 0)
 			break;
 		remainder -= rv / sizeof (short);

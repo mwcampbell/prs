@@ -20,8 +20,7 @@ dnl --------------------------------------------------
 LIBS="-lreadline -lhistory -ltermcap"
 AC_CHECK_LIB(m, cos, LIBS="$LIBS -lm")
 AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
-AC_CHECK_LIB(vorbis, vorbis_block_init, LIBS="$LIBS -lvorbis")
-AC_CHECK_LIB(vorbisfile, ov_open, LIBS="$LIBS -lvorbisfile")
+AC_CHECK_LIB(vorbisidec, ov_open, LIBS="$LIBS -lvorbisidec")
 AC_CHECK_LIB(xml2, xmlParseFile, LIBS="$LIBS -lxml2")
 XML_CFLAGS=`xml2-config --cflags`
 CFLAGS="$CFLAGS $XML_CFLAGS"
