@@ -222,6 +222,8 @@ get_playlist_event_from_result (MYSQL_ROW row)
 		e->type = EVENT_TYPE_RANDOM;
 	else if (!strcmp (type, "fade"))
 		e->type = EVENT_TYPE_FADE;
+	else if (!strcmp (type, "url"))
+		e->type = EVENT_TYPE_URL;
 
 	e->channel_name = strdup (row[4]);
 	e->level = atof (row[5]);

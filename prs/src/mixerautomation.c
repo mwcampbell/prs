@@ -146,11 +146,13 @@ mixer_automation_next_event (MixerAutomation *a)
 		else
 			ch = vorbis_mixer_channel_new (e->channel_name, e->detail1,
 						       a->m->latency);
-		ch->level = e->level;
-
-		mixer_add_channel (a->m, ch);
-		mixer_patch_channel_all (a->m, e->channel_name);
-		mixer_enable_channel (a->m, e->channel_name, 1);
+		if (ch) {
+			ch->level = e->level;
+			
+			mixer_add_channel (a->m, ch);
+			mixer_patch_channel_all (a->m, e->channel_name);
+			mixer_enable_channel (a->m, e->channel_name, 1);
+		}
 		break;
 	case AUTOMATION_EVENT_TYPE_FADE_CHANNEL:
 		mixer_fade_channel (a->m, e->channel_name, e->level, atof (e->detail1));
@@ -330,19 +332,27 @@ mixer_automation_get_last_event_end (MixerAutomation *a)
 
 
 void
-mixer_automation_flush (MixerAutomation *a)
+mixer_automation_flush (MixerAutomation *a,
+			double timestamp)
 {
 	list *tmp;
+	double cur_time = a->last_event_time;
 	
 	if (!a)
 		return;
 	pthread_mutex_lock (&(a->mut));
-	for (tmp = a->events; tmp; tmp = tmp->next) {
+	tmp = a->events;
+	while (tmp) {
+		list *next = tmp->next;
 		AutomationEvent *e = tmp->data;
-		automation_event_destroy (e);
+		cur_time += e->delta_time;
+		if (timestamp == -1 || cur_time < timestamp) {
+			automation_event_destroy (e);
+			a->events = list_delete_item (a->events, tmp);
+		}
+		else
+			break;
+		tmp = next;
 	}
-	if (a->events)
-		list_free (a->events);
-	a->events = NULL;
 	pthread_mutex_unlock (&(a->mut));
 }

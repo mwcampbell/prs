@@ -137,7 +137,8 @@ typedef enum {
 	EVENT_TYPE_SIMPLE_RANDOM,
 	EVENT_TYPE_RANDOM,
 	EVENT_TYPE_PATH,
-	EVENT_TYPE_FADE
+	EVENT_TYPE_FADE,
+	EVENT_TYPE_URL
 } playlist_event_type;
 
 struct _PlaylistEvent {

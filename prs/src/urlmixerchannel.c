@@ -1,4 +1,8 @@
 #define _GNU_SOURCE
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <curl/curl.h>
+#include "list.h"
 #include "mixer.h"
 #include "mp3header.h"
 
@@ -23,6 +28,10 @@ typedef struct {
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 	
+	/* Reference to owning MixerChannel */
+
+	MixerChannel *ch;
+
 	/* Sample rate info */
 
 	int rate;
@@ -30,8 +39,12 @@ typedef struct {
 
 	char *url;
 	char *transfer_url;
-
+	int archive_file_fd;
+	
 	int connected;
+	int destroyed;
+	int bytes_sent;
+	int decoder_connected;
 
 	/* Decoder process ID and input and output fds */
 
@@ -42,11 +55,41 @@ typedef struct {
 
 
 
+
+
+
+static list *url_channels = NULL;
+
+
+
+static void
+broken_pipe_handler (int signum)
+{
+	list *tmp;
+
+	for (tmp = url_channels; tmp; tmp = tmp->next) {
+		MixerChannel *ch = (MixerChannel *) tmp->data;
+		channel_info *i = (channel_info *) ch->data;
+		ch->data_end_reached = 1;
+		i->decoder_connected = 0;
+	}
+}
+
+
+
 static void
 channel_info_destroy (channel_info *i)
 {
+	list *tmp, *next;
+	
 	if (!i)
 		return;
+
+	/* Wait for curl to exit */
+
+	pthread_mutex_lock (&(i->mutex));
+	i->destroyed = 1;
+
 	if (i->url)
 		free (i->url);
 	if (i->transfer_url)
@@ -55,10 +98,27 @@ channel_info_destroy (channel_info *i)
 		close (i->decoder_input_fd);
 	if (i->decoder_output_fd != -1)
 		close (i->decoder_output_fd);
+	if (i->archive_file_fd != -1)
+		close (i->archive_file_fd);
 	if (i->decoder_pid != -1) {
-		kill (i->decoder_pid, SIGKILL);
+		kill (i->decoder_pid, SIGTERM);
 		waitpid (i->decoder_pid, NULL, 0);
 	}
+	pthread_cond_wait (&(i->cond), &(i->mutex));
+	pthread_mutex_unlock (&(i->mutex));
+
+	/* Remove from our list of url channels */
+
+	tmp = url_channels;
+	while (tmp) {
+		list *next = tmp->next;
+		MixerChannel *ch = (MixerChannel *) tmp->data;
+		if (ch == i->ch) {
+			url_channels = list_delete_item (url_channels, tmp);
+		}
+		tmp = next;
+	}
+	
 	free (i);
 }
 
@@ -87,16 +147,14 @@ url_mixer_channel_get_data (MixerChannel *ch)
 	remainder = ch->buffer_size;
 	while (remainder > 0) {
 		rv = read (i->decoder_output_fd, tmp, remainder*sizeof(short));
-		if (rv <= 0)
+		if (rv <= 0) {
+			ch->data_end_reached = 1;
 			break;
+		}
 		remainder -= rv/sizeof(short);
 		tmp += rv/sizeof(short);
 	}
 	if (remainder) {
-
-		/* We've reached the end of the data */
-
-		ch->data_end_reached = 1;
 		ch->buffer_length = ch->buffer_size-remainder;
 	}
 	else
@@ -149,40 +207,52 @@ start_mp3_decoder (channel_info *i)
 	list *args_list = NULL;
 	char **args_array;
 	char *prog_name;
-	
-	/* Setup program call */
-
-	switch (i->type) {
-	case CHANNEL_TYPE_MP3:
-		prog_name = "mpg123";
-		args_list = string_list_prepend (args_list, prog_name);
-		args_list = string_list_prepend (args_list, "-s");
-		args_list = string_list_prepend (args_list, "-q");
-		args_list = string_list_prepend (args_list, "-");
-		args_list = list_reverse (args_list);
-		args_array = string_list_to_array (args_list);
-		list_free (args_list);
-		break;
-	}
+	int pid;
 	
 	/* Setup pipe */
 
-	pipe (&input);
-	pipe (&output);
-
-	i->decoder_pid = fork ();
-	if (i->decoder_pid == 0) {
+	pipe (input);
+	pipe (output);
+	fcntl (output[0], F_SETFL, O_NONBLOCK);
+	
+	pid = fork ();
+	if (pid == 0) {
+		close (output[0]);
+		close (input[1]);
 		close (0);
 		close (1);
-		close (2);
 		dup (input[0]);
 		dup (output[1]);
+		dup (output[1]);
+
+		/* Setup program call */
+
+		switch (i->type) {
+		case CHANNEL_TYPE_MP3:
+			prog_name = "mpg123";
+			args_list = string_list_prepend (args_list, prog_name);
+			args_list = string_list_prepend (args_list, "-s");
+			args_list = string_list_prepend (args_list, "-q");
+			args_list = string_list_prepend (args_list, "-");
+			args_list = list_reverse (args_list);
+			args_array = string_list_to_array (args_list);
+			list_free (args_list);
+			break;
+		}
+	
 		execvp (prog_name, args_array);
 	}
+	i->decoder_pid = pid;
 	close (input[0]);
 	close (output[1]);
 	i->decoder_input_fd = input[1];
 	i->decoder_output_fd = output[0];
+
+	/* handle broken pipe */
+
+	signal (SIGPIPE, broken_pipe_handler);
+	
+	i->decoder_connected = 1;
 	
 	return 0;
 }
@@ -209,7 +279,8 @@ mp3_process_first_block (channel_info *i,
 					(*(buf+3)));
 			mp3_header_parse (ulong_header, &mh);
 			if (mh.syncword == 0X0FFF &&
-			    mh.version > 0 && mh.layer > 0) {
+			    mh.version > 0 && mh.layer > 0 &&
+			    mh.samplerate > 0) {
 				rv = buf;
 				break;
 			}
@@ -250,13 +321,32 @@ curl_write_func (void *ptr,
 	channel_info *i = (channel_info *) data;
 	char *buf = (char *) ptr;
 	int bytes_to_process = mem*size;
+	int decoder_input_fd;
+	int archive_file_fd;
+	int connected;
+	int destroyed;
+	int bytes_sent;
+	channel_type type;
 	
-	/* If this is the first block of data we're receiving, set the
+	pthread_mutex_lock (&(i->mutex));
+	connected = i->connected;
+	destroyed = i->destroyed;
+	decoder_input_fd = i->decoder_input_fd;
+	archive_file_fd = i->archive_file_fd;
+	type = i->type;
+	bytes_sent = i->bytes_sent;
+	pthread_mutex_unlock (&(i->mutex));
+	
+        if (destroyed) {
+		return 0;
+	}
+	
+        /* If this is the first block of data we're receiving, set the
 	 * connected flag and signal any thread that might be waiting to know
 	 * if we're connected
 	 */
 
-	if (!i->connected) {
+	if (!connected) {
 
 		/* If this is any ICY header, process it */
 
@@ -265,27 +355,42 @@ curl_write_func (void *ptr,
 			buf = process_icy_headers (i, buf);
 			if (buf) 
 				bytes_to_process -= (buf-(char *)ptr);
-			if (!buf || bytes_to_process <= 0)
+			if (!buf || bytes_to_process <= 0) {
 				return mem*size;
+			}
 		}
 
 		/* Do any special per type processing of the initial block */
 
-		if (i->type == CHANNEL_TYPE_MP3) {
+		if (type == CHANNEL_TYPE_MP3) {
 			char *rv = mp3_process_first_block (i,
 							    buf,
 							    bytes_to_process);
-			if (!rv)
+			if (!rv) {
 				return mem*size;
+			}
 			buf = rv;
 			bytes_to_process = (mem*size)-(buf-(char *)ptr);
-			i->connected = 1;
+			pthread_mutex_lock (&(i->mutex));
+			connected = i->connected = 1;
+			i->bytes_sent = 0;
+			pthread_mutex_unlock (&(i->mutex));
 			start_mp3_decoder (i);
-			pthread_cond_broadcast (&(i->cond));
 		}
 	}
 	
-	write (i->decoder_input_fd, (void *) buf, bytes_to_process);
+	if (archive_file_fd != -1)
+		write (archive_file_fd, (void *) buf, bytes_to_process);
+	if (i->decoder_connected)
+		write (decoder_input_fd, (void *) buf, bytes_to_process);
+	pthread_mutex_lock (&(i->mutex));
+	if (connected)
+		bytes_sent += mem*size;
+	if (i->bytes_sent <= 4096 && bytes_sent > 4096 && connected) {
+		pthread_cond_broadcast (&(i->cond));
+	}
+	i->bytes_sent = bytes_sent;
+	pthread_mutex_unlock (&(i->mutex));
 	return mem*size;
 }
 
@@ -295,7 +400,7 @@ curl_transfer_thread_func (void *data)
 {
 	channel_info *i = (channel_info *) data;
 	CURL *url;
-
+	
 	url = curl_easy_init ();
 	curl_easy_setopt (url, CURLOPT_URL, i->url);
 	curl_easy_setopt (url, CURLOPT_WRITEFUNCTION, curl_write_func);
@@ -308,8 +413,11 @@ curl_transfer_thread_func (void *data)
 	curl_easy_perform (url);
 	curl_easy_cleanup (url);
 	pthread_mutex_lock (&(i->mutex));
-	if (i->connected == 0)
-		pthread_cond_broadcast (&(i->cond));
+	if (i->connected) {
+		if (i->ch && !i->destroyed)
+			i->ch->data_end_reached = 1;
+	}
+	pthread_cond_broadcast (&(i->cond));
 	pthread_mutex_unlock (&(i->mutex));
 }
 
@@ -317,11 +425,14 @@ curl_transfer_thread_func (void *data)
 MixerChannel *
 url_mixer_channel_new (const char *name,
 		       const char *location,
+		       const char *archive_file_name,
 		       const int mixer_latency)
 {
 	MixerChannel *ch;
 	int attempts = 0;
-	channel_info *i = (channel_info *) malloc (sizeof(channel_info));
+	channel_info *i;
+
+	i = (channel_info *) calloc (sizeof(channel_info), 1);
 	
 	if (!i)
 		return NULL;
@@ -330,8 +441,19 @@ url_mixer_channel_new (const char *name,
 	i->transfer_url = NULL;
 	i->rate = -1;
 	i->channels = -1;
+	i->ch = NULL;
 	
-	/* Set pid and fds to invalid */
+	/* Open archive file */
+
+	if (archive_file_name) {
+		i->archive_file_fd = open (archive_file_name, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
+		if (i->archive_file_fd <= 0)
+			i->archive_file_fd = -1;
+		}
+	else
+		i->archive_file_fd = -1;
+
+        /* Set pid and fds to invalid */
 
 	i->decoder_pid = -1;
 	i->decoder_input_fd = i->decoder_output_fd = -1;
@@ -340,7 +462,19 @@ url_mixer_channel_new (const char *name,
 
 	i->connected = 0;
 	
-	/* Create mutex and condition for notification when transfer begins */
+	/* Flag used to communicate destruction */
+
+	i->destroyed = 0;
+
+        /* Track number of byts sent */
+
+	i->bytes_sent = 0;
+
+        /* Flag indicating whether the decoder is connected */
+
+	i->decoder_connected = 0;
+
+        /* Create mutex and condition for notification when transfer begins */
 
         pthread_mutex_init (&(i->mutex), NULL);
 	pthread_cond_init (&(i->cond), NULL);
@@ -348,11 +482,12 @@ url_mixer_channel_new (const char *name,
         /* start transfer thread-- also handles redirects */
 
 	while (!(i->connected) && attempts < 5) {
+		pthread_mutex_lock (&(i->mutex));
 		if (pthread_create (&(i->transfer_thread),
 				    NULL,
 				    curl_transfer_thread_func,
 				    (void *) i)) {
-			fprintf (stderr, "Error creating curl transfer thread.\n");
+			pthread_mutex_unlock (&(i->mutex));
 			channel_info_destroy (i);
 			return NULL;
 		}
@@ -361,8 +496,6 @@ url_mixer_channel_new (const char *name,
 		 * the first block of data is received
 		 */
 		
-		fprintf (stderr, "Waiting for first data...\n");
-		pthread_mutex_lock (&(i->mutex));
 		pthread_cond_wait (&(i->cond), &(i->mutex));
 		pthread_mutex_unlock (&(i->mutex));
 		
@@ -374,8 +507,6 @@ url_mixer_channel_new (const char *name,
 					   i->channels == -1)) {
 			pthread_join (i->transfer_thread, NULL);
 			channel_info_destroy (i);
-			fprintf (stderr, "Error creating channel, %d %d %d.\n",
-				 i->connected, i->rate, i->channels);
 			return NULL;
 		}
 		else if (i->transfer_url) {
@@ -383,6 +514,7 @@ url_mixer_channel_new (const char *name,
 			free (i->url);
 			i->url = i->transfer_url;
 			i->transfer_url = NULL;
+			i->bytes_sent = 0;
 			pthread_mutex_unlock (&(i->mutex));
 		}
 		else
@@ -392,7 +524,6 @@ url_mixer_channel_new (const char *name,
 		
 	ch = mixer_channel_new (i->rate, i->channels, mixer_latency);
 	if (!ch) {
-		fprintf (stderr, "Couldn't create channel\n");
 		channel_info_destroy (i);
 		return NULL;
 	}
@@ -400,12 +531,17 @@ url_mixer_channel_new (const char *name,
 	ch->name = strdup (name);
 	ch->location = strdup (location);
 	ch->data = (void *) i;
-	
+        pthread_mutex_lock (&(i->mutex));
+        i->ch = ch;
+        pthread_mutex_unlock (&(i->mutex));
+
 	/* Overrideable methods */
 	
 	ch->get_data = url_mixer_channel_get_data;
 	ch->free_data = url_mixer_channel_free_data;
 	
-	fprintf (stderr, "Returning channel %d %d.\n", ch->rate, ch->channels);
+	/* Add channel to global list of url channels */
+
+	url_channels = list_prepend (url_channels, ch);
 	return ch;
 }

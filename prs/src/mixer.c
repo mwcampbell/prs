@@ -77,7 +77,7 @@ mixer_main_thread (void *data)
 
 			/* If this channel is disabled, skip it */
 
-			if (!ch->enabled) {
+			if (!ch->enabled || !ch->patchpoints) {
 				tmp = next;
 				continue;
 			}

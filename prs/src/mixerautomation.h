@@ -69,6 +69,9 @@ mixer_automation_set_start_time (MixerAutomation *a,
 				 double start_time);
 double
 mixer_automation_get_last_event_end (MixerAutomation *a);
+void
+mixer_automation_flush (MixerAutomation *a,
+			double timestamp);
 
 
 

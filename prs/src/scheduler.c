@@ -6,6 +6,8 @@
 #include <signal.h>
 #include "scheduler.h"
 #include "db.h"
+#include "fileinfo.h"
+#include "urlmixerchannel.h"
 
 
 
@@ -18,6 +20,23 @@ typedef struct {
 
 
 
+typedef struct {
+	mixer *m;
+	MixerAutomation *a;
+	
+	/* Url parameters */
+
+	char *url;
+	char *archive_file_name;
+	double last_event_start_time;
+	double start_time;
+	double end_time;
+	double retry_delay;
+	double end_fade;
+} url_manager_info;
+
+
+	
 static void
 scheduler_push_template (scheduler *s,
 			 PlaylistTemplate *t,
@@ -89,6 +108,98 @@ scheduler_destroy (scheduler *s)
 
 
 
+static void *
+url_manager (void *data)
+{
+	url_manager_info *i = (url_manager_info *) data;
+	double cur_time;
+	unsigned int retry_sleep_delay = (unsigned long) (i->retry_delay)*1000000;
+	double start_delay;
+	MixerChannel *ch;
+	
+	/* Wait until start time */
+
+	cur_time = i->start_time;
+
+	start_delay = i->start_time;
+	start_delay -= mixer_get_time (i->m);
+	if (start_delay < 0)
+		start_delay = 0;
+	if (start_delay > 0)
+		usleep ((unsigned int) start_delay*1000000);
+	
+
+	cur_time = mixer_get_time (i->m);
+	mixer_automation_stop (i->a);
+
+
+	/* Try an initial attempt */
+
+	ch = url_mixer_channel_new (i->url, i->url,
+				    i->archive_file_name,
+				    i->m->latency);
+			
+	if (ch) {
+		ch->level = 0;
+		ch->enabled = 1;
+		mixer_add_channel (i->m, ch);
+		mixer_patch_channel_all (i->m, i->url);
+		mixer_automation_stop (i->a);
+		mixer_fade_all (i->m, 0, 1);
+		mixer_fade_channel (i->m, i->url, 1, 1);
+	}
+	while (cur_time < i->end_time-i->end_fade) {
+		ch = mixer_get_channel (i->m, i->url);
+		if (!ch) {
+
+			/* Turn automation on */
+
+			mixer_fade_all (i->m, 1.0, 1);
+			mixer_automation_start (i->a);
+
+			/* Try to create the URL channel */
+
+			ch = url_mixer_channel_new (i->url, i->url,
+						    i->archive_file_name,
+						    i->m->latency);
+			
+			if (ch) {
+				ch->level = 0;
+				ch->enabled = 1;
+				mixer_add_channel (i->m, ch);
+				mixer_patch_channel_all (i->m, i->url);
+			}
+		}
+		else
+			ch = NULL;
+		usleep (retry_sleep_delay);
+		if (ch && mixer_get_channel (i->m, i->url)) {
+			mixer_automation_stop (i->a);
+			mixer_fade_all (i->m, 0, 1);
+			mixer_fade_channel (i->m, i->url, 1, 1);
+		}
+		cur_time = mixer_get_time (i->m);
+	}
+	
+	/* Ensure mixer automation is running when we leave */
+
+	cur_time = i->end_time-i->end_fade;
+	mixer_automation_stop (i->a);
+	mixer_automation_flush (i->a, cur_time);
+	mixer_automation_start (i->a);
+	
+        /* Free stuff to exit */
+
+	if (i->url)
+		free (i->url);
+	if (i->archive_file_name)
+		free (i->archive_file_name);
+	free (i);
+}
+
+
+
+
 double
 scheduler_schedule_next_event (scheduler *s)
 {
@@ -98,8 +209,11 @@ scheduler_schedule_next_event (scheduler *s)
 	AutomationEvent *ae;
 	list *categories = NULL;
 	Recording *r;
+	FileInfo *info;
 	double rv;
-  
+	url_manager_info *i;
+	pthread_t url_manager_thread;
+	
 	if (!s)
 		return;
 	pthread_mutex_lock (&(s->mut));
@@ -118,14 +232,17 @@ scheduler_schedule_next_event (scheduler *s)
 			pthread_mutex_unlock (&(s->mut));
 			return s->prev_event_end_time;
 		}
-		start_time = mixer_get_time (s->a->m);
+		start_time = s->last_event_end_time;
 		if (t->start_time > start_time)
 			start_time = t->start_time;
 		s->prev_event_end_time = s->last_event_end_time = start_time;
 		scheduler_push_template (s, t, 1);
 		stack_entry = (template_stack_entry *) s->template_stack->data;
 	}
-	if (t->id != stack_entry->t->id && t->fallback_id != stack_entry->t->id) {
+	
+	if (t && (t->id != stack_entry->t->id && t->fallback_id != stack_entry->t->id) &&
+		(t->start_time == stack_entry->t->start_time &&
+		 t->end_time == stack_entry->t->end_time)) {
 
 		/* Forceable immediate template change */
 
@@ -136,7 +253,7 @@ scheduler_schedule_next_event (scheduler *s)
 		ae->length = 2;
 		ae->level = 0;
 		mixer_automation_stop (s->a);
-		mixer_automation_flush (s->a);
+		mixer_automation_flush (s->a, -1);
 		mixer_automation_add_event (s->a, ae);
 		ae = automation_event_new ();
 		ae->type = AUTOMATION_EVENT_TYPE_DELETE_ALL;
@@ -234,16 +351,48 @@ scheduler_schedule_next_event (scheduler *s)
 
 	case EVENT_TYPE_PATH:
 
-		r = find_recording_by_path (s->db, e->detail1);
+		info = file_info_new (e->detail1, 1000, 2000);
 		ae->type = AUTOMATION_EVENT_TYPE_ADD_CHANNEL;
 		ae->detail1 = strdup (r->path);
 		ae->level = e->level;
-		e->start_time -= r->audio_in;
-		ae->delta_time -= r->audio_in;
-		ae->length = r->audio_out;
-		e->end_time = e->start_time+r->audio_out;
-		recording_free (r);
+		e->start_time -= info->audio_in;
+		ae->delta_time -= info->audio_in;
+		ae->length = info->audio_out;
+		e->end_time = e->start_time+info->audio_out;
+		file_info_free (info);
 		break;
+		case EVENT_TYPE_URL:
+
+			i = malloc (sizeof(url_manager_info));
+			i->url = strdup (e->detail1);
+			i->archive_file_name = strdup (e->detail3);
+			e->start_time = i->start_time = e->start_time;
+			i->end_time = i->start_time+atof (e->detail2);
+			if (i->end_time > stack_entry->t->end_time)
+				i->end_time = stack_entry->t->end_time;
+			i->retry_delay = 1;
+			i->end_fade = stack_entry->t->end_prefade;
+			i->m = s->a->m;
+			i->a = s->a;
+			pthread_create (&url_manager_thread, NULL, url_manager, (void *) i);
+		
+			/* Switch to fallback template and schedule backup program */
+
+			t = get_playlist_template_by_id (s->db, stack_entry->t->fallback_id);
+			t->start_time = i->start_time+i->retry_delay;
+			t->end_time = i->end_time;
+			t->end_prefade = stack_entry->t->end_prefade;
+			t->fallback_id = -1;
+			pthread_mutex_unlock (&(s->mut));
+			scheduler_pop_template (s);
+			scheduler_push_template (s, t, 1);
+
+			/* Reset scheduling stuff */
+
+			s->prev_event_start_time = mixer_automation_get_last_event_end (s->a);
+			s->last_event_end_time = s->prev_event_end_time = e->start_time;
+			return scheduler_schedule_next_event (s);
+			break;
 	}
   
 	/* If the start time of the event falls outside this template, go to a new one */
@@ -265,20 +414,32 @@ scheduler_schedule_next_event (scheduler *s)
 	else if (e->start_time > stack_entry->t->end_time) {
 		if (ae)
 			automation_event_destroy (ae);
-		/* Schedule the fade */
+
+		/* Schedule the fade if desired*/
 
 		if (stack_entry->t->end_prefade > 0) {
 			ae = automation_event_new ();
 			ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
-			ae->level = 0.0;
+			ae->level = 0;
 			ae->length = stack_entry->t->end_prefade;
 			ae->delta_time = stack_entry->t->end_time-s->prev_event_start_time-stack_entry->t->end_prefade;
 			mixer_automation_add_event (s->a, ae);
+			ae = automation_event_new ();
+			ae->type = AUTOMATION_EVENT_TYPE_DELETE_ALL;
+			ae->delta_time = stack_entry->t->end_prefade;
+			ae->length = 0;
+			mixer_automation_add_event (s->a, ae);
+			s->prev_event_start_time = stack_entry->t->end_time-stack_entry->t->end_prefade;
+			s->prev_event_end_time = s->last_event_end_time = stack_entry->t->end_time;
+			scheduler_pop_template (s);
 		}
-			
-		s->prev_event_start_time = stack_entry->t->end_time-stack_entry->t->end_prefade;
-		s->prev_event_end_time = s->last_event_end_time = stack_entry->t->end_time;
+		else {
+		s->prev_event_start_time = e->start_time;
+		s->prev_event_end_time = s->last_event_end_time = e->start_time;
 		scheduler_pop_template (s);
+		return scheduler_schedule_next_event (s);
+		}
+
 		pthread_mutex_unlock (&(s->mut));
 		return scheduler_schedule_next_event (s);
 	}
@@ -293,8 +454,12 @@ scheduler_schedule_next_event (scheduler *s)
 	else
 		e->start_time = e->end_time = -1;
 	stack_entry->event_number++;
-	if (stack_entry->event_number > stack_entry->length)
-		stack_entry->event_number = 1;
+	if (stack_entry->event_number > stack_entry->length) {
+		if (stack_entry->t->repeat_events)
+			stack_entry->event_number = 1;
+		else
+			scheduler_pop_template (s);
+	}
 	rv = s->prev_event_start_time;
 	pthread_mutex_unlock (&(s->mut));
 	return rv;
@@ -347,4 +512,6 @@ scheduler_start (scheduler *s,
 	pthread_create (&(s->scheduler_thread), NULL, scheduler_main_thread, (void *) s);
 	pthread_mutex_unlock (&(s->mut));
 }
-  
+
+
+

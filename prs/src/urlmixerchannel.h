@@ -7,6 +7,7 @@
 MixerChannel *
 url_mixer_channel_new (const char *name,
 			  const char *location,
+		       const char *archive_file_name,
 		       const int mixer_latency);
 
 #endif

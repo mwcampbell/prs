@@ -1,3 +1,15 @@
+2002-12-11  Marc Mulcahy  <marc@plbb.net>
+
+	* src/db.ch: Added URL event type to the scheduler.
+
+	* src/mixerautomation.ch (mixer_automation_flush): Allows flushing
+	automation events before a specified time or -1 for all events.
+	
+	* src/scheduler.c (url_manager): Hurrah, now urls with fallback
+	programming are supported.
+
+	* src/urlmixerchannel.ch: The UrlMixerChannel now actually works.
+
 2002-12-06  Marc Mulcahy  <marc@plbb.net>
 
 	* src/scheduler.c (scheduler_schedule_next_event): Support immediate
