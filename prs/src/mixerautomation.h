@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include "list.h"
 #include "mixer.h"
+#include "mp3mixerchannel.h"
 #include "vorbismixerchannel.h"
 
 

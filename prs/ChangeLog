@@ -1,4 +1,20 @@
-2002-10-24  Marc Mulcahy <marc.mulcahy@sun.com
+2002-11-02  Matt Campbell  <mattcampbell@pobox.com>
+
+	* src/db.c: The username is now quoted when a grant operation is
+	done.  This is necessary because the username for the Web server
+	under Debian is www-data, which must be in quotes in PostgreSQL.
+
+	* src/prs_db_builder.c: The database builder now accepts up to
+	three command line arguments:  the root directory of the audio
+	files, the username under which the Web server runs, and
+	optionally the category in which all imported files should be
+	placed.
+
+	* Added MP3 input, using mpg123 for decoding and the mp3tech.c
+	file from the mp3info file for parsing the ID3 tags and MP3
+	header.
+
+2002-10-24  Marc Mulcahy <marc.mulcahy@sun.com>
 
 	* src/prs_server.c src/shoutmixeroutput.c: Added support for
 	stereo/mono encoding.  added support for both Vorbis and mp3 encoding.

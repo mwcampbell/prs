@@ -3,33 +3,39 @@
 #include <math.h>
 #include <string.h>
 #include "fileinfo.h"
+#include "mp3fileinfo.h"
+#include "vorbisfileinfo.h"
 #include "db.h"
 
 
 
 
 
-int main (void)
+int
+main (int argc, char *argv[])
 {
-  char path[1024];
+  char path[1024], find_cmd[1024];
   FILE *fp;
+  FileInfoConstructor get_file_info;
   FileInfo *i;
   list *users;
   int recording_table_created, user_table_created;
+
+  if (argc < 3)
+    {
+      fprintf (stderr, "Usage:  %s PATH WWW-USER [GENRE]\n", argv[0]);
+      return 1;
+    }
   
   /* Create list of audio files */
 
   nice (20);
-  system ("find /shares/audio -name *.ogg > /tmp/audio.list");
-  fp = fopen ("/tmp/audio.list", "rb");
+  sprintf (find_cmd, "find \"%s\" -type f", argv[1]);
+  fp = popen (find_cmd, "r");
   
-  /* Connect  to prs database */
-
-
-
   /* Set up list of users who will receive access to tables */
 
-  users = string_list_prepend (NULL, "apache");
+  users = string_list_prepend (NULL, argv[2]);
 
   /* Create tables */
 
@@ -58,18 +64,27 @@ int main (void)
 
   while (!feof (fp))
     {
-      Recording *r;
+      Recording *r = NULL;
+      char *ext = NULL;
 
       fgets (path, 1024, fp);
       if (feof (fp))
 	break;
       path[strlen(path)-1] = 0;
+      ext = path + strlen (path) - 4;
+      if (strcmp (ext, ".mp3") == 0)
+	get_file_info = get_mp3_file_info;
+      else if (strcmp (ext, ".ogg") == 0)
+	get_file_info = get_vorbis_file_info;
+      else
+	continue;
+
       if (!recording_table_created)
 	{
-	  i = get_vorbis_file_info (path, 0);
+	  i = get_file_info (path, 0);
 	  r = find_recording_by_path (path);
 	  if (r && abs (i->length-r->length) <= .001 &&
-	      !strcmp (r->category, i->genre) &&
+	      !strcmp (r->category, argc > 3 ? argv[3] : i->genre) &&
 	      !strcmp (r->name, i->name))
 	    {
 	      file_info_free (i);
@@ -82,12 +97,12 @@ int main (void)
 	      delete_recording (r);
 	      recording_free (r);
 	    }
-	  i = get_vorbis_file_info (path, 1000);
+	  i = get_file_info (path, 1000);
 	  r = (Recording *) malloc (sizeof(Recording));
 	}
       else
 	{
-	  i = get_vorbis_file_info (path, 1000);
+	  i = get_file_info (path, 1000);
 	  r = (Recording *) malloc (sizeof(Recording));
 	}
       if (i->name)
@@ -99,7 +114,9 @@ int main (void)
 	r->artist = strdup (i->artist);
       else
 	r->artist = strdup ("");
-      if (i->genre)
+      if (argc > 3)
+	r->category = strdup (argv[3]);
+      else if (i->genre)
 	r->category = strdup (i->genre);
       else
 	r->category = strdup ("");
@@ -117,4 +134,7 @@ int main (void)
       recording_free (r);
       file_info_free (i);
     }
+
+  pclose (fp);
+  return 0;
 }

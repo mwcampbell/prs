@@ -1,5 +1,5 @@
 #ifndef _VORBIS_MIXER_CHANNEL_H
-#define _VORBIS_MMIXER_CHANNEL_H
+#define _VORBIS_MIXER_CHANNEL_H
 #include "mixer.h"
 
 

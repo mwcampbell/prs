@@ -3,7 +3,6 @@
 #include <malloc.h>
 #include "mixerautomation.h"
 #include "db.h"
-#include "prs_log.h"
 
 
 
@@ -50,7 +49,7 @@ mixer_automation_log_event (MixerAutomation *a,
     {
       case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
 	r = find_recording_by_path (e->detail1);
-	log_recording (r);
+	/* log_recording (r); */
 	recording_free (r);
       break;
     }
@@ -136,7 +135,10 @@ mixer_automation_next_event (MixerAutomation *a)
   switch (e->type)
     {
     case AUTOMATION_EVENT_TYPE_ADD_CHANNEL:
-      ch = vorbis_mixer_channel_new (e->channel_name, e->detail1);
+      if (strcmp (e->detail1 + strlen (e->detail1) - 4, ".mp3") == 0)
+	ch = mp3_mixer_channel_new (e->channel_name, e->detail1);
+      else
+	ch = vorbis_mixer_channel_new (e->channel_name, e->detail1);
       ch->level = e->level;
 
       mixer_add_channel (a->m, ch);

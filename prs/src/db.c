@@ -105,7 +105,7 @@ create_table (PGconn *connection,
 	  char *user = (char *) tmp->data;
 	  if (!user)
 	    continue;
-	  sprintf (query, "grant select on %s to %s;", table_name, user);
+	  sprintf (query, "grant select on %s to \"%s\";", table_name, user);
 	  res = PQexec (connection, query);
 	}
     }
@@ -119,7 +119,7 @@ create_table (PGconn *connection,
 	  char *user = (char *) tmp->data;
 	  if (!user)
 	    continue;
-	  sprintf (query, "grant all on %s to %s;\n", table_name, user);
+	  sprintf (query, "grant all on %s to \"%s\";\n", table_name, user);
 	  res = PQexec (connection, query);
 	}
     }

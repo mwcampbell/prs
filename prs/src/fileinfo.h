@@ -19,10 +19,10 @@ typedef struct {
   double audio_out;
 } FileInfo;
 
+typedef FileInfo * (*FileInfoConstructor) (char *path,
+					   unsigned short threshhold);
+
 void
 file_info_free (FileInfo *info);
-FileInfo *
-get_vorbis_file_info (char *path,
-		      unsigned short threshhold);
   
 #endif
