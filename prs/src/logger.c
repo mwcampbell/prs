@@ -209,6 +209,10 @@ live365_log_file (logger_data *d)
 		      CURLFORM_COPYCONTENTS, d->l->password,
 		      CURLFORM_END);
 	curl_formadd (&post, &end,
+		      CURLFORM_COPYNAME, "version",
+		      CURLFORM_COPYCONTENTS, "2",
+		      CURLFORM_END);
+	curl_formadd (&post, &end,
 		      CURLFORM_COPYNAME, "title",
 		      CURLFORM_COPYCONTENTS, d->name,
 		      CURLFORM_END);
