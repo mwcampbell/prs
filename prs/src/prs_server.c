@@ -235,16 +235,16 @@ int main (void)
      ATTACK_TIME,
      RELEASE_TIME,
      1,
-     OUTPUT_GAIN*30); 
+     OUTPUT_GAIN*31);
   multiband_audio_compressor_add_band
     (f,
      300,
-     -40,
-     4,
+     -30,
+     3,
      ATTACK_TIME,
      RELEASE_TIME,
      1,
-     OUTPUT_GAIN*30); 
+     OUTPUT_GAIN*10);
   multiband_audio_compressor_add_band
     (f,
      600,
@@ -253,7 +253,7 @@ int main (void)
      ATTACK_TIME,
      RELEASE_TIME,
      1,
-     OUTPUT_GAIN*10); 
+     OUTPUT_GAIN*8);
   multiband_audio_compressor_add_band
     (f,
      6000,
@@ -271,7 +271,7 @@ int main (void)
      ATTACK_TIME,
      RELEASE_TIME,
      1,
-     OUTPUT_GAIN*6); 
+     OUTPUT_GAIN*7); 
   mixer_bus_add_filter (b, f);
   mixer_add_output (m, o);
   mixer_patch_bus (m, "air", "soundcard");
