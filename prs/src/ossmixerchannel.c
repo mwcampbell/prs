@@ -145,7 +145,7 @@ oss_mixer_channel_new (const char *name,
   ch->get_data = oss_mixer_channel_get_data;
   ch->free_data = oss_mixer_channel_free_data;
 
-  ch->level = 100.0;
+  ch->level = 1.0;
   ch->fade = 0.0000001;
   ch->fade_destination = 100.0;
   ch->outputs = NULL;

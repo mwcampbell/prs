@@ -335,7 +335,8 @@ process_playlist_event (PlaylistTemplate *t,
     }
   else
     {
-      *end_time = *start_time = -1.0;
+      *end_time = last_end_time;
+      *start_time = last_start_time;
       return;
     }
 }
