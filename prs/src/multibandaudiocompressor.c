@@ -102,18 +102,18 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 			b->x1[0] = in;
 			b->y2[0] = b->y1[0];
 			b->y1[0] = out;
-			if (out < -32768)
-				out = -32768;
-			else if (out > 32767)
-				out = 32767;
 			new_val = (*iptr)-out;
 			if (new_val > 32767)
 				new_val = 32767;
 			else if (new_val < -32768)
 				new_val = -32768;
-//			*iptr++ = new_val;
-			iptr++;
-			*optr++ = out*b->volume;
+			*iptr++ = new_val;
+			out *= b->volume;
+			if (out < -32768)
+				out = -32768;
+			else if (out > 32767)
+				out = 32767;
+			*optr++ = out;
 			if (f->channels == 2)
 			{
 				in = *iptr;
@@ -121,24 +121,24 @@ multiband_audio_compressor_process_data (AudioFilter *f,
 					(b->b0/b->a0)*in +
 					(b->b1/b->a0)*b->x1[1] +
 					(b->b2/b->a0)*b->x2[1] -
-				(b->a1/b->a0)*b->y1[1] -
-				(b->a2/b->a0)*b->y2[1];
-			b->x2[1] = b->x1[1];
-			b->x1[1] = in;
-			b->y2[1] = b->y1[1];
-			b->y1[1] = out;
-				if (out > 32767)
-					out = 32767;
-				else if (out < -32768)
-					out = -32768;
+					(b->a1/b->a0)*b->y1[1] -
+					(b->a2/b->a0)*b->y2[1];
+				b->x2[1] = b->x1[1];
+				b->x1[1] = in;
+				b->y2[1] = b->y1[1];
+				b->y1[1] = out;
 				new_val = (*iptr)-out;
 				if (new_val > 32767)
 					new_val = 32767;
 				else if (new_val < -32768)
 					new_val = -32768;
-//				*iptr++ = new_val;
-				iptr++;
-				*optr++ = out*b->volume;
+				*iptr++ = new_val;
+				out *= b->volume;
+				if (out > 32767)
+					out = 32767;
+				else if (out < -32768)
+					out = -32768;
+				*optr++ = out;
 			}
 		}
 		buffer_end = f->buffer+f->buffer_size*f->channels;
@@ -235,8 +235,6 @@ multiband_audio_compressor_new (int rate,
 void
 multiband_audio_compressor_add_band (AudioFilter *f,
 				     double freq,
-				     double bandwidth,
-				     double q,
 				     double threshhold,
 				     double ratio,
 				     double attack_time,
@@ -250,19 +248,18 @@ multiband_audio_compressor_add_band (AudioFilter *f,
 	double omega = 2*PI*freq/f->rate;
 	double sine = sin(omega);
 	double cosine = cos(omega);
-	double bw = bandwidth;
-	double Q = q;
-	double alpha = sine*sinh(log(2)/2*bw*omega/sine);
+	double Q = 1.0;
+	double alpha = sine/(2*Q);
 
 	
 	b = (band *) malloc (sizeof (band));
 
 	/* Setup low-pass filter */
 
-	b->b0 = Q*alpha;
-	b->b1 = 0;
-	b->b2 = -Q*alpha;
-	b->a0 = 1+alpha;
+	b->b0 = (1-cosine)/2;
+	b->b1 = 1-cosine;
+	b->b2 = (1-cosine)/2;
+	b->a0= 1+alpha;
 	b->a1 = -2*cosine;
 	b->a2 = 1-alpha;
 		

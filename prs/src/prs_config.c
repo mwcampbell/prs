@@ -223,8 +223,6 @@ multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 {
 	AudioFilter *f;
 	double freq;
-	double bandwidth;
-	double q;
 	double threshhold;
 	double ratio;
 	double attack_time;
@@ -242,8 +240,6 @@ multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 	while (cur) {
 		if (!xmlStrcmp (cur->name, "band")) {
 			freq = atof (xmlGetProp(cur, "freq"));
-			bandwidth = atof (xmlGetProp (cur, "bandwidth"));
-			q = atof (xmlGetProp (cur, "q"));
 			threshhold = atof (xmlGetProp(cur, "threshhold"));
 			ratio = atof (xmlGetProp(cur, "ratio"));
 			attack_time = atof (xmlGetProp(cur, "attack_time"));
@@ -254,8 +250,6 @@ multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 				freq = (b->rate/2)*.9;
 			multiband_audio_compressor_add_band (f,
 							     freq,
-							     bandwidth,
-							     q,
 							     threshhold,
 							     ratio,
 							     attack_time,
