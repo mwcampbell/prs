@@ -163,8 +163,7 @@ scheduler_switch_templates (scheduler *s)
 			start_time = mixer_get_time (s->a->m);
 			if (t->start_time > start_time)
 				start_time = t->start_time;
-			s->last_event_end_time = s->prev_event_end_time = s->prev_event_start_time = start_time;
-			mixer_automation_set_start_time (s->a, start_time);
+			s->last_event_end_time = s->prev_event_end_time = start_time;
 		}
 		else {
 			s->last_event_end_time = s->prev_event_end_time = s->prev_event_start_time = t->start_time;
@@ -498,8 +497,8 @@ scheduler_schedule_next_event (scheduler *s)
 				t->end_prefade = stack_entry->t->end_prefade;
 			}
 			scheduler_pop_template (s);
-		if (t)
-			scheduler_push_template (s, t, 1);
+			if (t)
+				scheduler_push_template (s, t, 1);
 		}
 	}
 	rv = s->prev_event_start_time;
