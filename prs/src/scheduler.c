@@ -230,7 +230,7 @@ scheduler_switch_templates (scheduler *s)
 		ae->type = AUTOMATION_EVENT_TYPE_DELETE_CHANNELS;
 		ae->data = prev_template_end_time;
 		ae->delta_time = fade;
-		mixer_automation_add_event (s->a->m, ae);
+		mixer_automation_add_event (s->a, ae);
 	}
 	s->last_event_end_time = s->prev_event_end_time = start_time;
 
