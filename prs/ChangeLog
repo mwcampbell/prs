@@ -1,3 +1,19 @@
+2002-11-25  Marc Mulcahy  <marc@plbb.net>
+
+	* src/urlmixerchannel.ch Makefile.am: Added support for retrieving
+	streams and files via libcurl.
+
+	* src/list.c: re-formatted and fixed bug in list_reverse ().
+
+	* src/mixer.c (mixer_add_channel): Ensured that NULL channels can't
+	be added to the mixer.
+	
+2002-11-21  Marc Mulcahy  <marc@plbb.net>
+
+	* src/list.ch (string_list_to_array): Added a function to convert a
+	linked list of strings to an array of strings-- handy for passing
+	arguments to programs.
+	
 2002-11-20  Matt Campbell  <mattcampbell@pobox.com>
 
 	* configure.in src/mp3fileinfo.c: PRS should now work with both

@@ -254,7 +254,7 @@ void
 mixer_add_channel (mixer *m,
 		   MixerChannel *ch)
 {
-	if (!m)
+	if (!m || !ch)
 		return;
 	mixer_lock (m);
 	m->channels = list_prepend (m->channels, ch);

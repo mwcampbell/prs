@@ -34,6 +34,7 @@ prs_server_SOURCES = \
 	mp3decoder.c \
 	mp3header.c \
 	ossmixerchannel.c \
+	urlmixerchannel.c \
 	audiofilter.c \
 	audiocompressor.c \
 	multibandaudiocompressor.c \

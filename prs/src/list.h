@@ -74,4 +74,6 @@ string_list_prepend (list *l,
 list *
 string_list_append (list *l,
 		    const char *s);
+char **
+string_list_to_array (list *l);
 #endif
