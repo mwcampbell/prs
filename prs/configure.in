@@ -25,8 +25,6 @@ XML_CFLAGS=`xml2-config --cflags`
 CFLAGS="$CFLAGS $XML_CFLAGS"
 AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
 AC_CHECK_LIB(mysqlclient, mysql_init, LIBS="$LIBS -lmysqlclient")
-MYSQL_CFLAGS=`mysql_config --cflags`
-CFLAGS="$CFLAGS $MYSQL_CFLAGS"
 AC_CHECK_LIB(shout, shout_open, LIBS="$LIBS -lshout")
 AC_CHECK_LIB(curl, curl_easy_init, LIBS="$LIBS -lcurl")
 

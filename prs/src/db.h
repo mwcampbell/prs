@@ -1,6 +1,6 @@
 #ifndef _DB_H
 #define _DB_H
-#include <mysql.h>
+#include <mysql/mysql.h>
 #include <pthread.h>
 #include <libxml/parser.h>
 #include "list.h"

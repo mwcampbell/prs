@@ -1,5 +1,10 @@
 2002-11-16  Matt Campbell  <mattcampbell@pobox.com>
 
+	* configure.in src/db.c src/db.h: Quit using mysql_config, because
+	that utility isn't present in slightly older versions of MySQL,
+	but mysql.h is in the same location on both Red Hat and Debian, so
+	it doesn't really matter.
+
 	* Switched to MySQL (version 3.23.x).
 
 	* src/mp3decoder.c (mp3_decoder_destroy): This function now kills
