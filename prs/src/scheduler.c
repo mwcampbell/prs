@@ -103,12 +103,15 @@ scheduler_schedule_next_event (scheduler *s)
 	if (!s)
 		return;
 	pthread_mutex_lock (&(s->mut));
-	if (!s->template_stack) {
 
-		/* Get the current template */
+	/* Get the current template */
+	
+	t = get_playlist_template (s->db, s->last_event_end_time);
+	if (s->template_stack)
+		stack_entry = (template_stack_entry *) s->template_stack->data;
+	else {
 
 		double start_time;
-		t = get_playlist_template (s->db, s->last_event_end_time);
 		if (!t) {
 			s->last_event_end_time += s->preschedule;
 			s->prev_event_start_time = s->prev_event_end_time = s->last_event_end_time;
@@ -120,9 +123,34 @@ scheduler_schedule_next_event (scheduler *s)
 			start_time = t->start_time;
 		s->prev_event_end_time = s->last_event_end_time = start_time;
 		scheduler_push_template (s, t, 1);
+		stack_entry = (template_stack_entry *) s->template_stack->data;
 	}
+	if (t->id != stack_entry->t->id && t->fallback_id != stack_entry->t->id) {
 
-	stack_entry = (template_stack_entry *) s->template_stack->data;
+		/* Forceable immediate template change */
+
+		double cur_time = mixer_get_time (s->a->m);
+		AutomationEvent *ae = automation_event_new ();
+		ae->type = AUTOMATION_EVENT_TYPE_FADE_ALL;
+		ae->delta_time = 0;
+		ae->length = 2;
+		ae->level = 0;
+		mixer_automation_stop (s->a);
+		mixer_automation_flush (s->a);
+		mixer_automation_add_event (s->a, ae);
+		ae = automation_event_new ();
+		ae->type = AUTOMATION_EVENT_TYPE_DELETE_ALL;
+		ae->delta_time = 2;
+		ae->length = 0;
+		mixer_automation_add_event (s->a, ae);
+		mixer_automation_set_start_time (s->a, cur_time);
+		mixer_automation_start (s->a);
+		s->last_event_end_time = s->prev_event_start_time = s->prev_event_end_time = cur_time;
+		scheduler_pop_template (s);
+		scheduler_push_template (s, t, 1);
+		stack_entry = (template_stack_entry *) s->template_stack->data;
+	}
+	
 	e = list_get_item (stack_entry->t->events, stack_entry->event_number-1);
 	anchor = list_get_item (stack_entry->t->events, e->anchor_event_number-1);
   
@@ -248,7 +276,8 @@ scheduler_schedule_next_event (scheduler *s)
 			mixer_automation_add_event (s->a, ae);
 		}
 			
-		s->prev_event_end_time = s->prev_event_start_time = s->last_event_end_time = stack_entry->t->end_time;
+		s->prev_event_start_time = stack_entry->t->end_time-stack_entry->t->end_prefade;
+		s->prev_event_end_time = s->last_event_end_time = stack_entry->t->end_time;
 		scheduler_pop_template (s);
 		pthread_mutex_unlock (&(s->mut));
 		return scheduler_schedule_next_event (s);

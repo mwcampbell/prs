@@ -1,5 +1,11 @@
 2002-12-06  Marc Mulcahy  <marc@plbb.net>
 
+	* src/scheduler.c (scheduler_schedule_next_event): Support immediate
+	re-scheduling when database is changed.
+	
+	* src/mixerautomation.c (mixer_automation_flush): Added function to
+	get rid of all events in support of scheduler automatic rescheduling.
+	
 	* php/*.php: Updated to support new scheduling system.
 
 	* src/prs_config.c (stream_config): Fixed configuration bug when
