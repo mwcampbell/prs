@@ -9,7 +9,7 @@
 
 
 
-static void
+static int
 mp3_mixer_channel_get_data (MixerChannel *ch)
 {
 	MP3Decoder *d = NULL;
