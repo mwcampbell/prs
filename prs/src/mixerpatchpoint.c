@@ -91,7 +91,10 @@ mixer_patch_point_post_data (MixerPatchPoint *p)
 	}
 	sptr = p->input_buffer;
 	if (p->ch->channels > p->bus->channels) {
-		resample_channels = p->bus->channels;
+		resample_channels =
+			(p->ch->channels > p->bus->channels) ? p->bus->channels
+			: p->ch->channels;
+		
 		while (i) {
 			*sptr++ = (*input * (1.0f / 32768.0f) + *(input + 1) * (1.0f / 32768.0f)) / 2.0f;
 			input += 2;

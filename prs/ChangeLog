@@ -1,3 +1,11 @@
+2002-11-11  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixerautomation.c (mixer_automation_destroy): Kill automation
+	thread when automation object is destroyed rather than joining it.
+
+	* src/scheduler.c (scheduler_destroy): Kill scheduler thread when
+	scheduler object is destroyed rather than joining it.
+
 2002-11-10  Matt Campbell  <mattcampbell@pobox.com>
 
 	* src/prs_config.c src/prs_server.c: The configuration file to be
@@ -11,6 +19,11 @@
 	terminal on which it was started but still be controlled if
 	desired.
 
+2002-11-10  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixerpatchpoint.c (mixer_patch_point_post_data): Fixed
+	mono/stereo resampling bug.
+	
 2002-11-10  Marc Mulcahy  <marc@plbb.net>
 
 	* Removed src/global_data.c and src/global_data.h.

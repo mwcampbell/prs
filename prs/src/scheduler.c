@@ -3,6 +3,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <unistd.h>
+#include <signal.h>
 #include "scheduler.h"
 #include "db.h"
 
@@ -82,7 +83,7 @@ scheduler_destroy (scheduler *s)
   s->running = 0;
   thread = s->scheduler_thread;
   pthread_mutex_unlock (&(s->mut));
-  pthread_join (thread, NULL);
+  pthread_kill (thread, SIGKILL);
   list_free (s->template_stack);
   free (s);
 }

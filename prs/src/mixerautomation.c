@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
+#include <signal.h>
 #include "mixerautomation.h"
 #include "db.h"
 
@@ -82,7 +83,7 @@ mixer_automation_destroy (MixerAutomation *a)
   if (a->automation_thread > 0)
     {
       a->running = 0;
-      pthread_join ((a->automation_thread), NULL);
+      pthread_kill (a->automation_thread, SIGKILL);
     }
   for (tmp = a->events; tmp; tmp = tmp->next)
     {
