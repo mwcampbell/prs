@@ -88,7 +88,8 @@ start_encoder (MixerOutput *o)
 		char channels_arg[128];
 		char bitrate_arg[128];
       
-		sprintf (bitrate_arg, "-b%d", shout_get_bitrate (i->shout));
+		sprintf (bitrate_arg, "-b%s", shout_get_audio_info (i->shout,
+								    SHOUT_AI_BITRATE));
 		i->args_list = string_list_prepend (i->args_list, bitrate_arg);
 
 		if (shout_get_format (i->shout) == SHOUT_FORMAT_MP3) {
@@ -202,6 +203,7 @@ shout_thread (void *data)
 	char buffer[BLOCK_SIZE];
 	char *tmp;
 	int bytes_read, bytes_left;
+	int bitrate;
 	
 	assert (data != NULL);
 	o = (MixerOutput *) data;
@@ -214,7 +216,9 @@ shout_thread (void *data)
 	 *
 	 */
 
-	retry_delay = (double)(BLOCK_SIZE/shout_get_bitrate(i->shout)*1000/8)*i->retry_delay;
+	bitrate = atoi (shout_get_audio_info (i->shout,
+					      SHOUT_AI_BITRATE));
+	retry_delay = (double)(BLOCK_SIZE/bitrate*1000/8)*i->retry_delay;
 
 	while (!i->stream_reset) {
 		tmp = buffer;
