@@ -208,8 +208,7 @@ mixer_new (int latency)
 
 	/* Set mixer time to the current time */
 
-	tzset ();
-	m->cur_time = (double) time (NULL)+timezone+daylight*3600;
+	m->cur_time = (double) time (NULL);
 
 	/* No channels, busses, or outputs */
 
