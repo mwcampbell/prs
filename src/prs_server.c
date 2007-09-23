@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mcheck.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -202,14 +201,6 @@ main (int argc, char *argv[])
   const char *config_filename = "prs.conf";
   PRS *prs = prs_new ();
 
-  /* Start malloc tracing */
-
-  mtrace ();
-
-  /* For electric fence */
-
-  free (malloc(8));
-
   debug_set_flags (DEBUG_FLAGS_ALL);
   debug_printf (DEBUG_FLAGS_ALL,
 		"Prs started as pid %d\n", getpid ());
@@ -297,9 +288,5 @@ main (int argc, char *argv[])
   debug_printf (DEBUG_FLAGS_GENERAL, "Destroying prs instance.\n");
   prs_destroy (prs);
   
-  /* Stop malloc tracing */
-
-  muntrace ();
-
   return 0;
 }
