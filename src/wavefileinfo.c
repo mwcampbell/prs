@@ -25,24 +25,24 @@ get_wave_audio_in (FILE *fp,
 	double audio_in = 0.0;
 	int done = 0;
   
-	buffer_size = format_chunk->samples_per_second*sizeof(short);
+	buffer_size = format_chunk->samples_per_second*sizeof(short)*format_chunk->channels;
 	buffer = (char *) malloc (buffer_size);
 
 	fseek (fp, WAVE_HEADER_SIZE, SEEK_SET);
 	while (!done) {
-		bytes_read = fread (buffer, buffer_size, 1, fp);
+		bytes_read = fread (buffer, 1, buffer_size, fp);
 		end_buffer = buffer+bytes_read;
 		ptr = (short *) buffer;
 		while (ptr < (short *) end_buffer) {
 			if (*ptr > threshhold || *ptr < -threshhold) {
-				audio_in += (double) (ptr-(short *) buffer)/format_chunk->samples_per_second;
+				audio_in += (double) (ptr-(short *) buffer)/format_chunk->samples_per_second/format_chunk->channels;
 				done = 1;
 				break;
 			}
 			ptr++;
 		}
 		if (!done)
-			audio_in += (double) bytes_read/sizeof(short)/format_chunk->samples_per_second;
+			audio_in += (double) bytes_read/sizeof(short)/format_chunk->samples_per_second/format_chunk->channels;
 	}
 	free (buffer);
 	return audio_in;
@@ -62,19 +62,19 @@ get_wave_audio_out (FILE *fp,
 	double audio_out;
 	double seek_time;
   
-	buffer_size = format_chunk->samples_per_second*sizeof(short)*10;
+	buffer_size = format_chunk->samples_per_second*format_chunk->channels*sizeof(short)*10;
 	buffer = (char *) malloc (buffer_size);
 
-	seek_time = data_chunk_header->len/sizeof(short)/format_chunk->samples_per_second;
+	seek_time = data_chunk_header->len/sizeof(short)/format_chunk->samples_per_second/format_chunk->channels;
 	
 	seek_time -= 10;
 	if (seek_time < 0)
 		seek_time = 0;
 	fseek (fp,
-	       WAVE_HEADER_SIZE+(seek_time*sizeof(short)*format_chunk->samples_per_second),
+	       WAVE_HEADER_SIZE+(seek_time*sizeof(short)*format_chunk->samples_per_second*format_chunk->channels),
 	       SEEK_SET);
 	
-	bytes_read = fread (buffer, buffer_size, 1, fp);
+	bytes_read = fread (buffer, 1, buffer_size, fp);
 	end_buffer = buffer+bytes_read;
 	ptr = (short *) end_buffer-1;
 	while (ptr > (short *) buffer) {
@@ -82,7 +82,7 @@ get_wave_audio_out (FILE *fp,
 			break;
 		ptr--;
 	}
-	audio_out = seek_time + (double) (ptr-(short *)buffer)/format_chunk->samples_per_second;
+	audio_out = seek_time + (double) (ptr-(short *)buffer)/format_chunk->samples_per_second/format_chunk->channels;
 	free (buffer);
 	return audio_out;
 }
@@ -110,6 +110,11 @@ wave_file_info_new (char *path,
 	fread (&riff, sizeof(riff_header), 1, fp);
 	fread (&format_chunk_header, sizeof(chunk_header), 1, fp);
 	fread (&format_chunk, sizeof(format_header), 1, fp);
+	
+	/* If format chunk has padding, account for it here */
+
+	fseek (fp, sizeof(riff)+sizeof(format_chunk_header)+format_chunk_header.len, 0);
+
 	fread (&data_chunk_header, sizeof(chunk_header), 1, fp);
 
         /* Allocate the FileInfo structure */
@@ -129,8 +134,9 @@ wave_file_info_new (char *path,
 	info->album = NULL;
 	info->track_number = NULL;
 
-	info->rate = format_chunk.samples_per_second/format_chunk.channels;
+	info->rate = format_chunk.samples_per_second;
 	info->channels = format_chunk.channels;
+	info->length = (data_chunk_header.len/format_chunk.average_bytes_per_sec);
 	if (in_threshhold > 0)
 		info->audio_in = get_wave_audio_in (fp,
 						    &format_chunk,

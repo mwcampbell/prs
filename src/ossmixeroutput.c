@@ -40,10 +40,7 @@ oss_mixer_output_free_data (MixerOutput *o)
 		      o->name);
 	assert (o->data != NULL);
 	i = (oss_info *) o->data;
-	if (!soundcard_get_duplex ()) {
-		close (i->fd);
-		soundcard_set_fd (-1);
-	}
+	close (i->fd);
 	free (o->data);
 }
 
@@ -66,15 +63,14 @@ oss_mixer_output_post_data (MixerOutput *o)
 
 
 MixerOutput *
-oss_mixer_output_new (const char *name,
+oss_mixer_output_new (const char *sc_name,
+		      const char *name,
 		      int rate,
 		      int channels,
 		      int latency)
 {
 	MixerOutput *o;
 	oss_info *i;
-	int tmp;
-	int fragment_size;
 
 	assert (name != NULL);
 	debug_printf (DEBUG_FLAGS_MIXER,
@@ -88,9 +84,11 @@ oss_mixer_output_new (const char *name,
 
 	/* Open the sound device */
 
-	i->fd = soundcard_get_fd ();
-	if (i->fd < 0)
-		i->fd = soundcard_setup (rate, channels, latency);
+	i->fd = soundcard_setup (sc_name,
+				 rate,
+				 channels,
+				 soundcard_write,
+				 latency);
 	if (i->fd < 0) {
 		free (i);
 		return NULL;

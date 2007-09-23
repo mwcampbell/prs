@@ -12,7 +12,8 @@
 
 
 MixerChannel *
-oss_mixer_channel_new (const char *name,
+oss_mixer_channel_new (const char *sc_name,
+		       const char *name,
 		       int rate,
 		       int channels,
 		       const int latency);

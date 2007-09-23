@@ -255,16 +255,19 @@ mixer_output_config (mixer *m, xmlNodePtr cur)
 {
 	MixerOutput *o = NULL;
 	xmlChar *name;
+	xmlChar *sc_name;
 	xmlChar *type;
 	xmlChar *rate;
 	xmlChar *channels;
 	
 	name = xmlGetProp (cur, "name");
+	sc_name = xmlGetProp (cur, "sc_name");
 	type = xmlGetProp (cur, "type");
 	rate = xmlGetProp (cur, "rate");
 	channels = xmlGetProp (cur, "channels");
 	if (!xmlStrcmp (type, "oss"))
-		o = oss_mixer_output_new (name,
+		o = oss_mixer_output_new (sc_name,
+					  name,
 					  atoi(rate),
 					  atoi(channels),
 					  m->latency);
@@ -278,6 +281,8 @@ mixer_output_config (mixer *m, xmlNodePtr cur)
 	}
 	if (name)
 		xmlFree (name);
+	if (sc_name)
+		xmlFree (sc_name);
 	if (type)
 		xmlFree (type);
 	if (rate)
@@ -292,6 +297,7 @@ static void
 mixer_channel_config (mixer *m, xmlNodePtr cur)
 {
 	MixerChannel *ch = NULL;
+	xmlChar *sc_name;
 	xmlChar *rate;
 	xmlChar *channels;
 	xmlChar *name;
@@ -300,10 +306,14 @@ mixer_channel_config (mixer *m, xmlNodePtr cur)
 
 	name = xmlGetProp (cur, "name");
 	type = xmlGetProp (cur, "type");
+	sc_name = xmlGetProp (cur, "sc_name");
 	rate = xmlGetProp (cur, "rate");
 	channels = xmlGetProp (cur, "channels");
 	if (!xmlStrcmp (type, "oss"))
-		ch = oss_mixer_channel_new (name,atoi( rate), atoi(channels),
+		ch = oss_mixer_channel_new (sc_name,
+					    name,
+					    atoi (rate),
+					    atoi(channels),
 					    m->latency);
 	if (ch) {
 		ch->enabled = 0;
@@ -311,6 +321,8 @@ mixer_channel_config (mixer *m, xmlNodePtr cur)
 	}
 	if (name)
 		xmlFree (name);
+	if (sc_name)
+		xmlFree (sc_name);
 	if (location)
 		xmlFree (location);
 	if (rate)

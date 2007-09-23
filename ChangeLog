@@ -1,3 +1,34 @@
+2004-03-03  Marc Mulcahy  <marc@plbb.net>
+
+	* src/wavefileinfo.c (wave_file_info_new): Account for padding in
+	the format chunk header.
+	
+2004-03-02  Marc Mulcahy  <marc@plbb.net>
+
+	* src/soundcard.ch: Now only using soundcard setup to open and
+	setup the sound card appropriately.  The soundcard_setup()
+	function now also takes a soundcard name.  These changes allow the
+	use of multiple sound cards.
+	
+	
+	* src/ossmixerchannel.c: Modified for new multiple soundcard support.
+
+	* src/ossmixeroutput.c: Modified for new multiple soundcard support.
+
+	* src/shoutmixeroutput.c (stop_encoder): Close the pipes when
+	destroying the output, so the shout thread dies.
+
+2004-03-01  Marc Mulcahy  <marc@plbb.net>
+
+	* src/wavefileinfo.c (get_wave_audio_in): Reverse parameters to
+	fread so it actually does return the number of bytes read
+	(get_wave_audio_out): Same fix to fread call.
+
+2004-02-29  Marc Mulcahy  <marc@plbb.net>
+
+	* src/shoutmixeroutput.c: Fix Vorbis broadcasting.
+	
+
 2004-02-18  Marc Mulcahy  <marc@plbb.net>
 
 	* src/logger.c (shoutcast_log_file): Don't log album names for

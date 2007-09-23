@@ -61,17 +61,15 @@ oss_mixer_channel_free_data (MixerChannel *ch)
 	i = (oss_info *) ch->data;
 	if (!i)
 		return;
-	if (!soundcard_get_duplex ()) {
-		close (i->fd);
-		soundcard_set_fd (-1);
-	}
+	close (i->fd);
 	free (i);
 }
 
 
 
 MixerChannel *
-oss_mixer_channel_new (const char *name,
+oss_mixer_channel_new (const char *sc_name,
+		       const char *name,
 		       int rate,
 		       int channels,
 		       int latency)
@@ -87,9 +85,7 @@ oss_mixer_channel_new (const char *name,
 
 	/* Open the sound device */
 
-	i->fd = soundcard_get_fd ();
-	if (i->fd < 0)
-		i->fd = soundcard_setup (rate, channels, latency);
+	i->fd = soundcard_setup (sc_name, rate, channels, soundcard_write, latency);
 	if (i->fd < 0) {
 		free (i);
 		return NULL;

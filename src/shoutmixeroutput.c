@@ -19,7 +19,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/soundcard.h>
-#include <shout/shout.h>
+#include <shout.h>
 #include "debug.h"
 #include "shoutmixeroutput.h"
 #include "list.h"
@@ -31,8 +31,8 @@ typedef struct {
 	shout_t *shout;
 	int retry_delay;
 	pid_t encoder_pid;
-	int encoder_output_fd;
-	int encoder_input_fd;
+	int encoder_output[2];
+	int encoder_input[2];
 	list *args_list;
 	int stream_reset;
 	int stereo;
@@ -55,11 +55,6 @@ start_encoder (MixerOutput *o)
 		return;
 	i = (shout_info *) o->data;
   
-	/* Create pipes */
-
-	pipe (encoder_output);
-	pipe (encoder_input);
-
 	/* Fork the encoder process */
 
 	i->encoder_pid = fork ();
@@ -111,21 +106,13 @@ start_encoder (MixerOutput *o)
 						    prog_name);
 		args_array = string_list_to_array (i->args_list);
 		close (0);
-		dup (encoder_input[0]);
-		close (encoder_input[1]);
+		dup (i->encoder_input[0]);
       
 		close (1);
 		close (2);
-		dup (encoder_output[1]);
-		close (encoder_output[0]);
+		dup (i->encoder_output[1]);
 
 		execvp (prog_name, args_array);
-	}
-	else {
-		close (encoder_input[0]);
-		i->encoder_input_fd = encoder_input[1];
-		close (encoder_output[1]);
-		i->encoder_output_fd = encoder_output[0];
 	}
 }
 
@@ -142,7 +129,6 @@ stop_encoder (MixerOutput *o)
 		return;
 
 	i = (shout_info *) o->data;
-	close (i->encoder_input_fd);
 	kill (i->encoder_pid, SIGTERM);
 	waitpid (i->encoder_pid, NULL, 0);
 }
@@ -162,6 +148,14 @@ shout_mixer_output_free_data (MixerOutput *o)
 
 	stop_encoder (o);
 	i->stream_reset = 1;
+
+	/* Close the pipes */
+
+	close (i->encoder_input[0]);
+	close (i->encoder_input[1]);
+	close (i->encoder_output[0]);
+	close (i->encoder_output[1]);
+	
 	pthread_join (i->shout_thread_id, NULL);
 	if (i->shout)
 		shout_free (i->shout);
@@ -179,70 +173,55 @@ shout_thread (void *data)
 {
 	MixerOutput *o = NULL;
 	shout_info *i = NULL;
-	int retry_delay;
-	int blocks_waited = 0;
 	int connected = 0;
 	char buffer[BLOCK_SIZE];
-	char *tmp;
-	int bytes_read, bytes_left;
-	int bitrate;
+	int bytes_read;
+	int rv;
 	
 	assert (data != NULL);
 	o = (MixerOutput *) data;
 	i = (shout_info *) o->data;
 
-	/*
-	 *
-	 * Guess roughly how many blocks to wait before retrying the
-	 * connection if it's disconnected
-	 *
-	 */
-
-	bitrate = atoi (shout_get_audio_info (i->shout,
-					      SHOUT_AI_BITRATE));
-	retry_delay = (double)(BLOCK_SIZE/bitrate*1000/8)*i->retry_delay;
-
 	while (!i->stream_reset) {
-		tmp = buffer;
-		bytes_left = BLOCK_SIZE;
 
-		while (bytes_left) {
-			bytes_read = read (i->encoder_output_fd, tmp, bytes_left);
-			if (bytes_read <= 0)
-				break;
-			tmp += bytes_read;
-			bytes_left -= bytes_read;
-		}
-		if (!connected && !(blocks_waited%retry_delay)) {
-			int rv;
+		/* If we're not connected, try to connect */
 
+		if (!connected) {
 			debug_printf (DEBUG_FLAGS_GENERAL, "Attempting to connect to server.\n");
 			rv = shout_open (i->shout);
 			if (!rv) {
+				start_encoder (o);
 				connected = 1;
 				debug_printf (DEBUG_FLAGS_GENERAL, "Connected to server.\n");
 			}
 			else {
 				debug_printf (DEBUG_FLAGS_GENERAL,
 					      "Server connection attempt failed: %s\n", shout_get_error (i->shout));
-				blocks_waited = 0;
+				connected = 0;
 			}
 		}
-		else if (connected) {
-			int rv = shout_send (i->shout, buffer, BLOCK_SIZE-bytes_left);
+		if (!connected) {
+			sleep (10);
+			continue;
+		}
+		bytes_read = read (i->encoder_output[0], &buffer, BLOCK_SIZE);
+		if (bytes_read <= 0) {
+			debug_printf (DEBUG_FLAGS_ALL, "Encoder died.\n");
+			stop_encoder (o);
+			shout_close (i->shout);
+			connected = 0;
+		}
+		else {
+			rv = shout_send (i->shout, buffer, bytes_read);
 			if (rv) {
 				debug_printf (DEBUG_FLAGS_GENERAL, "Error sending data to server: %s\n", shout_get_error (i->shout));
+				stop_encoder (o);
 				shout_close (i->shout);
 				connected = 0;
-				blocks_waited = 0;
 			}
+			if (i->archive_file_fd > 0)
+				write (i->archive_file_fd, buffer, bytes_read);
 		}
-		else
-			blocks_waited++;
-		if (i->archive_file_fd > 0)
-			write (i->archive_file_fd, buffer, 1024-bytes_left);
-		if (bytes_left > 0)
-			i->stream_reset = 1;
 	}
 }
 
@@ -258,11 +237,8 @@ shout_mixer_output_post_data (MixerOutput *o)
 
 	if (i->shout_thread_id == 0)
 		pthread_create (&(i->shout_thread_id), NULL, shout_thread, o);
-	if (write (i->encoder_input_fd, o->buffer,
-		   o->buffer_size*sizeof(short)*o->channels) < 0)
-		debug_printf (DEBUG_FLAGS_MIXER,
-			      "shout_mixer_output_post_data: write: %s\n",
-			      strerror (errno));
+	write (i->encoder_input[1], o->buffer,
+	       o->buffer_size*sizeof(short)*o->channels);
 }
 
 
@@ -292,6 +268,12 @@ shout_mixer_output_new (const char *name,
 	i->stereo = stereo;
 	i->args_list = encoder_args;
 	i->stream_reset = 0;
+
+	/* Create pipes */
+
+	pipe (i->encoder_output);
+	pipe (i->encoder_input);
+	fcntl (i->encoder_input[1], F_SETFL, O_NONBLOCK);
 
 	/* Open the archive file if one is specified */
 
@@ -323,7 +305,6 @@ shout_mixer_output_new (const char *name,
 	mixer_output_alloc_buffer (o, latency);
 
 	i->shout_thread_id = 0;
-	start_encoder (o);
 	return o;
 }
 
