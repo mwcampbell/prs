@@ -31,7 +31,7 @@ prs_server_CFLAGS = \
 	$(shout_CFLAGS) \
 	$(libcurl_CFLAGS) \
 	$(mysql_CFLAGS)
-prs_server_LIBS = \
+prs_server_LDADD = \
 	$(pthread_LIBS) \
 	$(vorbis_LIBS) \
 	$(vorbisfile_LIBS) \
