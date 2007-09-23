@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT(ChangeLog)
+AC_INIT(src/prs_server.c)
 AM_INIT_AUTOMAKE(prs, 0.0.1)
 
 AC_PROG_CC
