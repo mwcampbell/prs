@@ -71,7 +71,7 @@ mixer_channel_new (const int rate,
 	ch->rate = rate;
 	ch->channels = channels;
 	ch->chunk_size = (latency/44100.0)*rate;
-	if (ch->chunk_size % latency)
+	if (latency % ch->chunk_size)
 		ch->chunk_size++;
 	ch->this_chunk_size = 0;
 	ch->space_left = ch->buffer_size = ch->chunk_size*1000;

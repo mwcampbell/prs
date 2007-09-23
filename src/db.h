@@ -7,21 +7,28 @@
 
 #ifndef _DB_H
 #define _DB_H
+#include <mysql/mysql.h>
 #include <pthread.h>
 #include <libxml/parser.h>
 #include "list.h"
 
 typedef struct _Database Database;
 
+struct _Database
+{
+	MYSQL *conn;
+	pthread_mutex_t mutex;
+};
+
 Database *
 db_new (void);
-Database *
-db_new (void);
-void
-db_from_config (xmlNodePtr cur,
-		Database *db);
+int
+db_connect (Database *db, const char *host, const char *user,
+	    const char *password, const char *name);
 void
 db_close (Database *db);
+void
+db_config (Database *db, xmlNodePtr cur);
 
 /*
  *
@@ -110,8 +117,7 @@ struct _PlaylistTemplate {
 	char *name;
 	double start_time;
 	double end_time;
-	double repetition;
-        int repeat_events;
+	int repeat_events;
 	handle_overlap_type handle_overlap;
 	double artist_exclude;
 	double recording_exclude;

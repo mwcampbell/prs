@@ -1,10 +1,19 @@
-2004-02-13  Marc Mulcahy  <marc@plbb.net>
+2004-02-18  Marc Mulcahy  <marc@plbb.net>
 
-	* Added support for editting path and url events from the web
-	interface.
+	* src/logger.c (shoutcast_log_file): Don't log album names for
+	Shoutcast logging.
 	
-	* Merged in wavemixerchannel support from the mysql branch.
-	
+2004-02-16  Marc Mulcahy  <marc@plbb.net>
+
+	* src/mixer.c (mixer_add_file): Convert file extensions to lower
+	case.
+
+	* src/fileinfo.c (file_info_new): Convert file extensions to lower
+	case.
+
+	* src/mixerpatchpoint.c (mixer_patch_point_new): Make input buffer
+	size the same as the channel chunk size.
+
 2004-02-13  Marc Mulcahy  <marc@plbb.net>
 
 	* src/wavefileinfo.c (get_wave_audio_in): No ampersand on buffer
@@ -33,32 +42,6 @@
 
 	* src/Makefile.am (prs_server_SOURCES): Add .h files to the
 	distribution.
-
-2004-02-08  Marc Mulcahy  <marc@plbb.net>
-
-	* src/mixerchannel.c (data_reader): Unlock the mutex during the
-	read, so that if it blocks the mixer doesn't block (duh).
-	
-	* src/soundcard.c (soundcard_setup): Put soundcard in nonblocking mode.
-
-2004-02-08  Marc Mulcahy  <marc@plbb.net>
-
-	* src/db.c (playlist_template_query_cb): The scheduler now uses
-	length internally in the database, so adjust for that when
-	creating the PlaylistTemplate internal structure from a database
-	result row.
-
-	* src/db.c (get_playlist_template): Sometimes a scheduler query
-	returns more than one valid template.  allow for this, and pick
-	the most recent addition.
-	
-2003-02-07  Marc Mulcahy  <marc@plbb.net>
-
-	* Tweaks to get all the new database stuff working.
-
-2004-02-06  Marc Mulcahy  <marc@plbb.net>
-
-	* Applied Matt's patch to add SQLite support.
 
 2003-08-02 Marc Mulcahy  <marc@plbb.net>
 	

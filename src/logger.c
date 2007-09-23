@@ -241,7 +241,7 @@ shoutcast_log_file (logger_data *d)
 
         /* Create mock file name for "least popular tracks" feature */
 
-	asprintf (&filename, "%s - %s - %s", d->artist, d->name, d->album);
+	asprintf (&filename, "%s - %s", d->artist, d->name);
 	encoded_filename = curl_escape (filename, strlen(filename));
 	encoded_password = curl_escape (d->l->password, strlen(d->l->password));
 	

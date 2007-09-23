@@ -475,7 +475,7 @@ prs_config (PRS *prs, const char *filename)
 		else if (!xmlStrcmp (cur->name, "telnet"))
 			telnet_config (prs, cur);
 		else if (!xmlStrcmp (cur->name, "db"))
-			db_from_config (cur, prs->db);
+			db_config (prs->db, cur);
 		else if (!xmlStrcmp (cur->name, "logger")) {
 			prs->logger = logger_config (cur);
 			mixer_automation_add_logger (prs->automation,

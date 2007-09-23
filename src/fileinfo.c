@@ -39,23 +39,33 @@ file_info_new (const char *path,
 {
 	FileInfo *info = NULL;
 	char *tmp = NULL;
+	char *lower_path;
 	int i;
 	int l;
 
 	assert (path != NULL);
 	debug_printf (DEBUG_FLAGS_FILE_INFO, "file_info_new (%s, %hu, %hu)\n",
 		      path, in_threshhold, out_threshhold);
-	l = strlen (path);
+	lower_path = strdup (path);
+	tmp = lower_path;
+	while (*tmp)
+	  {
+	    *tmp = tolower (*tmp);
+	    tmp++;
+	  }
+	l = strlen (lower_path);
 	for (i = 0; i < SUPPORTED_EXTENSIONS; i++) {
-		tmp = strstr (path, links[i].ext);
-		if (tmp - path == l - strlen (links[i].ext)) {
+	  tmp = strstr (lower_path, links[i].ext);
+		if (tmp - lower_path == l - strlen (links[i].ext)) {
 			info = links[i].constructor (path, in_threshhold,
 						     out_threshhold);
+			free (lower_path);
 			return info;
 		}
 	}
 	debug_printf (DEBUG_FLAGS_FILE_INFO,
 		      "file_info_new: no match found\n");
+	free (lower_path);
 	return NULL;
 }
 

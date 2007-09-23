@@ -5,7 +5,7 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_INIT(ChangeLog)
-AM_INIT_AUTOMAKE(prs, 0.1)
+AM_INIT_AUTOMAKE(prs, 0.0.1)
 
 AC_PROG_CC
 AC_PROG_CPP
@@ -28,14 +28,18 @@ AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
 AC_CHECK_LIB(shout, shout_open, LIBS="$LIBS -lshout")
 AC_CHECK_LIB(curl, curl_easy_init, LIBS="$LIBS -lcurl")
 
-dnl Ensure C++ support and zlib get linked in for id3lib
-LIBS="$LIBS -lstdc++ -lz"
+dnl Ensure C++ support gets linked in for id3lib
+LIBS="$LIBS -lstdc++"
 AC_CHECK_LIB(id3, ID3Tag_New, LIBS="$LIBS -lid3")
 AC_CHECK_FUNCS(ID3Field_GetASCIIItem)
 
-dnl SQLite configuration
+dnl MySQL configuration
 
-AC_CHECK_LIB(sqlite, sqlite_close, LIBS="-lsqlite $LIBS")
+MYSQL_LIBS=`mysql_config --libs`
+if test "x$MYSQL_LIBS" = x ; then
+  AC_CHECK_LIB(mysqlclient, mysql_init, MYSQL_LIBS="-lmysqlclient")
+fi
+LIBS="$LIBS $MYSQL_LIBS"
 
 dnl --------------------------------------------------
 dnl Do substitutions

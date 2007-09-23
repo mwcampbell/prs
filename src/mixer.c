@@ -878,10 +878,17 @@ mixer_add_file (mixer *m,
 		const int key)
 {
 	MixerChannel *ch = NULL;
-	const char *file_extension;
+	char *file_extension;
+	char *ptr;
 	int i;
 	
-	file_extension = path+strlen(path)-4;
+	file_extension = strdup (path+strlen(path)-4);
+	ptr = file_extension;
+	while (*ptr)
+	  {
+	    *ptr = tolower (*ptr);
+	    ptr++;
+	  }
 
 	for (i = 0; i < N_LINKS; i++) {
 		if (!strcmp (type_links[i].extension, file_extension))
@@ -891,4 +898,5 @@ mixer_add_file (mixer *m,
 		ch->key = key;
 		mixer_add_channel (m, ch);
 	}
+	free (file_extension);
 }

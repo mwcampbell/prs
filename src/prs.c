@@ -40,11 +40,9 @@ prs_new (void)
 	prs->telnet_interface = 0;
 	prs->telnet_port = 0;
 	prs->password = NULL;
-	prs->db = NULL;
-
 	prs->mixer = mixer_new (512);
-	mixer_sync_time (prs->mixer);
 	prs->db = db_new ();
+	mixer_sync_time (prs->mixer);
 	prs->automation = mixer_automation_new (prs->mixer, prs->db);
 	prs->scheduler = scheduler_new (prs->automation, prs->db,
 					mixer_get_time (prs->mixer));

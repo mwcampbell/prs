@@ -41,11 +41,11 @@ mixer_patch_point_new (MixerChannel *ch,
 
 		/* Allocate buffers */
 
-		p->input_buffer_size = (latency/44100.0)*ch->rate;
+		p->input_buffer_size = ch->chunk_size;
 		p->input_buffer = (SAMPLE *) malloc (p->input_buffer_size*sizeof(SAMPLE)*b->channels);
 		assert (p->input_buffer != NULL);
 		p->output_buffer_size = p->tmp_buffer_size =
-			(latency/44100.0)*b->rate;
+		  (latency/44100.0)*b->rate;
 		p->output_buffer = (SAMPLE *) malloc (p->output_buffer_size*sizeof(SAMPLE)*b->channels);
 		assert (p->output_buffer != NULL);
 		p->tmp_buffer = (short *) malloc (p->tmp_buffer_size*sizeof(short)*b->channels);
