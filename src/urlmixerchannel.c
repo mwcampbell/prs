@@ -128,7 +128,7 @@ channel_info_destroy (channel_info *i)
 		list *next = tmp->next;
 		MixerChannel *ch = (MixerChannel *) tmp->data;
 		if (ch == i->ch) {
-			url_channels = list_delete_item (url_channels, tmp);
+			url_channels = prs_list_delete_item (url_channels, tmp);
 		}
 		tmp = next;
 	}
@@ -225,7 +225,9 @@ start_mp3_decoder (channel_info *i)
 	/* Setup pipe */
 
 	pipe (input);
+	fcntl (input[1], F_SETFD, FD_CLOEXEC);
 	pipe (output);
+	fcntl (output[0], F_SETFD, FD_CLOEXEC);
 	fcntl (output[0], F_SETFL, O_NONBLOCK);
 	
 	pid = fork ();
@@ -247,9 +249,9 @@ start_mp3_decoder (channel_info *i)
 			args_list = string_list_prepend (args_list, "-s");
 			args_list = string_list_prepend (args_list, "-q");
 			args_list = string_list_prepend (args_list, "-");
-			args_list = list_reverse (args_list);
+			args_list = prs_list_reverse (args_list);
 			args_array = string_list_to_array (args_list);
-			list_free (args_list);
+			prs_list_free (args_list);
 			break;
 		}
 	
@@ -571,6 +573,6 @@ url_mixer_channel_new (const char *name,
 	
 	/* Add channel to global list of url channels */
 
-	url_channels = list_prepend (url_channels, ch);
+	url_channels = prs_list_prepend (url_channels, ch);
 	return ch;
 }

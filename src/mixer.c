@@ -129,7 +129,7 @@ mixer_main_thread (void *data)
 				debug_printf (DEBUG_FLAGS_MIXER,
 					      "mixer: end of data for %s\n",
 					      ch->name);
-				m->channels = list_delete_item
+				m->channels = prs_list_delete_item
 					(m->channels, tmp);
 				mixer_channel_destroy (ch);
 				tmp = next;
@@ -304,19 +304,19 @@ mixer_destroy (mixer *m)
 
 	for (tmp = m->outputs; tmp; tmp = tmp->next)
 		mixer_output_destroy ((MixerOutput *) tmp->data);
-	list_free (m->outputs);
+	prs_list_free (m->outputs);
 
 	/* Free Busses list */
 
 	for (tmp = m->busses; tmp; tmp = tmp->next)
 		mixer_bus_destroy ((MixerBus *) tmp->data);
-	list_free (m->busses);
+	prs_list_free (m->busses);
 
 	/* Free channel list */
 
 	for (tmp = m->channels; tmp; tmp = tmp->next)
 		mixer_channel_destroy ((MixerChannel *) tmp->data);
-	list_free (m->channels);
+	prs_list_free (m->channels);
 
 	mixer_unlock (m);
 }
@@ -332,7 +332,7 @@ mixer_add_channel (mixer *m,
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "adding channel %s to mixer\n", ch->name);
 	mixer_lock (m);
-	m->channels = list_prepend (m->channels, ch);
+	m->channels = prs_list_prepend (m->channels, ch);
 	mixer_unlock (m);
 }
 
@@ -357,7 +357,7 @@ mixer_delete_channel (mixer *m,
 			break;
 	}
 	if (tmp)
-		m->channels = list_delete_item (m->channels, tmp);
+		m->channels = prs_list_delete_item (m->channels, tmp);
 	else
 		debug_printf (DEBUG_FLAGS_MIXER,
 			      "mixer_delete_channel: %s not found\n",
@@ -435,7 +435,7 @@ mixer_add_bus (mixer *m,
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "adding mixer bus %s\n", b->name);
 	mixer_lock (m);
-	m->busses = list_prepend (m->busses, b);
+	m->busses = prs_list_prepend (m->busses, b);
 	mixer_unlock (m);
 }
 
@@ -461,7 +461,7 @@ mixer_delete_bus (mixer *m,
 			break;
 	}
 	if (tmp) {
-		m->busses = list_delete_item (m->busses, tmp);
+		m->busses = prs_list_delete_item (m->busses, tmp);
 		debug_printf (DEBUG_FLAGS_MIXER,
 			      "deleted bus %s\n", bus_name);
 	} else
@@ -517,7 +517,7 @@ mixer_add_output (mixer *m,
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "adding mixer output %s\n", o->name);
 	mixer_lock (m);
-	m->outputs = list_prepend (m->outputs, o);
+	m->outputs = prs_list_prepend (m->outputs, o);
 	mixer_unlock (m);
 }
 
@@ -543,7 +543,7 @@ mixer_delete_output (mixer *m,
 			break;
 	}
 	if (tmp) {
-		m->outputs = list_delete_item (m->outputs, tmp);
+		m->outputs = prs_list_delete_item (m->outputs, tmp);
 		debug_printf (DEBUG_FLAGS_MIXER,
 			      "deleted mixer output %s\n", output_name);
 	} else
@@ -638,7 +638,7 @@ mixer_patch_channel (mixer *m,
 
 	p = mixer_patch_point_new (ch, b, m->latency);
 	mixer_lock (m);
-	ch->patchpoints = list_prepend (ch->patchpoints, p);
+	ch->patchpoints = prs_list_prepend (ch->patchpoints, p);
 	mixer_unlock (m);
 }
 
@@ -665,7 +665,7 @@ mixer_patch_channel_all (mixer *m,
 
 	mixer_lock (m);
 	if (ch->patchpoints) {
-		list_free (ch->patchpoints);
+		prs_list_free (ch->patchpoints);
 		ch->patchpoints = NULL;
 	}
 	
@@ -674,7 +674,7 @@ mixer_patch_channel_all (mixer *m,
 		b = (MixerBus *) tmp->data;
 		assert (b != NULL);
 		p = mixer_patch_point_new (ch, b, m->latency);
-		ch->patchpoints = list_prepend (ch->patchpoints, p);
+		ch->patchpoints = prs_list_prepend (ch->patchpoints, p);
 		tmp = tmp->next;
 	}
 	mixer_unlock (m);
@@ -698,7 +698,7 @@ mixer_delete_channels (mixer *m,
 		MixerChannel *ch = (MixerChannel *) tmp->data;
 		assert (ch != NULL);
 		if (ch->key == key) {
-			m->channels = list_delete_item (m->channels, tmp);
+			m->channels = prs_list_delete_item (m->channels, tmp);
 			debug_printf (DEBUG_FLAGS_MIXER,
 				      "deleted channel %s\n", ch->name);
 			mixer_channel_destroy (ch);
@@ -729,7 +729,7 @@ mixer_patch_bus (mixer *m,
 		return;
 
 	mixer_lock (m);
-	b->outputs = list_prepend (b->outputs, o);
+	b->outputs = prs_list_prepend (b->outputs, o);
 	mixer_unlock (m);
 }
 

@@ -7,7 +7,7 @@
 
 #ifndef _SHOUT_MIXER_OUTPUT_H
 #define _SHOUT_MIXER_OUTPUT_H
-#include <shout.h>
+#include <shout/shout.h>
 #include "list.h"
 #include "mixeroutput.h"
 

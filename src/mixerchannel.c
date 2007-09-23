@@ -143,7 +143,7 @@ mixer_channel_destroy (MixerChannel *ch)
 	for (tmp = ch->patchpoints; tmp; tmp = tmp->next)
 		mixer_patch_point_destroy ((MixerPatchPoint *) tmp->data);
 	if (ch->patchpoints)
-		list_free (ch->patchpoints);
+		prs_list_free (ch->patchpoints);
 	free (ch);
 }
 

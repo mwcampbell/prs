@@ -19,7 +19,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/soundcard.h>
-#include <shout.h>
+#include <shout/shout.h>
 #include "debug.h"
 #include "shoutmixeroutput.h"
 #include "list.h"
@@ -58,7 +58,10 @@ start_encoder (MixerOutput *o)
 	/* Fork the encoder process */
 
 	i->encoder_pid = fork ();
-	if (!i->encoder_pid) {
+	if (i->encoder_pid) {
+		close (i->encoder_input[0]);
+		close (i->encoder_output[1]);
+	} else {
 		char *prog_name;
 		char **args_array;
 		char sample_rate_arg[128];
@@ -101,7 +104,7 @@ start_encoder (MixerOutput *o)
 		if (shout_get_format (i->shout) == SHOUT_FORMAT_MP3)
 			i->args_list = string_list_prepend (i->args_list,
 							    "-");
-		i->args_list = list_reverse (i->args_list);
+		i->args_list = prs_list_reverse (i->args_list);
 		i->args_list = string_list_prepend (i->args_list,
 						    prog_name);
 		args_array = string_list_to_array (i->args_list);
@@ -111,6 +114,10 @@ start_encoder (MixerOutput *o)
 		close (1);
 		close (2);
 		dup (i->encoder_output[1]);
+		close (i->encoder_input[0]);
+		close (i->encoder_input[1]);
+		close (i->encoder_output[0]);
+		close (i->encoder_output[1]);
 
 		execvp (prog_name, args_array);
 	}
@@ -272,8 +279,10 @@ shout_mixer_output_new (const char *name,
 	/* Create pipes */
 
 	pipe (i->encoder_output);
+	fcntl (i->encoder_output[0], F_SETFD, FD_CLOEXEC);
 	pipe (i->encoder_input);
 	fcntl (i->encoder_input[1], F_SETFL, O_NONBLOCK);
+	fcntl (i->encoder_input[1], F_SETFD, FD_CLOEXEC);
 
 	/* Open the archive file if one is specified */
 

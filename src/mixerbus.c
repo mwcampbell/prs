@@ -141,7 +141,7 @@ mixer_bus_add_output (MixerBus *b,
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "adding output %s to bus %s\n",
 		      o->name, b->name);
-	b->outputs = list_append (b->outputs, o);
+	b->outputs = prs_list_append (b->outputs, o);
 }
 
 
@@ -155,5 +155,5 @@ mixer_bus_add_filter (MixerBus *b,
 	debug_printf (DEBUG_FLAGS_MIXER,
 		      "adding filter to bus %s\n",
 		      b->name);
-	b->filters = list_append (b->filters, f);
+	b->filters = prs_list_append (b->filters, f);
 }

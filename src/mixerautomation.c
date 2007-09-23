@@ -89,7 +89,7 @@ mixer_automation_destroy (MixerAutomation *a)
 		logger_destroy (l);
 	}
 	if (a->loggers)
-		list_free (a->loggers);
+		prs_list_free (a->loggers);
 	free (a);
 	debug_printf (DEBUG_FLAGS_AUTOMATION, "Automation object destroyed.\n");
 }
@@ -111,7 +111,7 @@ mixer_automation_add_event (MixerAutomation *a,
 		if (a->running) {
 			mixer_reset_notification_time (a->m, a->last_event_time+e->delta_time);
 		}
-	a->events = list_append (a->events, e);
+	a->events = prs_list_append (a->events, e);
 	pthread_mutex_unlock (&(a->mut));
 	switch (e->type) {
 	case AUTOMATION_EVENT_TYPE_ENABLE_CHANNEL:
@@ -178,7 +178,7 @@ mixer_automation_next_event (MixerAutomation *a)
 		mixer_delete_channels (a->m, e->data);
 		break;
 	}
-	a->events = list_delete_item (a->events, a->events);
+	a->events = prs_list_delete_item (a->events, a->events);
 	if (a->running)
 		a->last_event_time = a->last_event_time+e->delta_time;
 	else
@@ -331,7 +331,7 @@ mixer_automation_set_start_time (MixerAutomation *a,
 		if (cur_time < start_time) {
 			debug_printf (DEBUG_FLAGS_AUTOMATION, "Removing event %lf seconds before start time\n", start_time-cur_time);
 			automation_event_destroy (e);
-			a->events = list_delete_item (a->events, tmp);
+			a->events = prs_list_delete_item (a->events, tmp);
 		}
 		else
 			break;
@@ -387,7 +387,7 @@ mixer_automation_add_logger (MixerAutomation *a,
 	if (!a || !l)
 		return;
 	pthread_mutex_lock (&(a->mut));
-	a->loggers = list_append (a->loggers, l);
+	a->loggers = prs_list_append (a->loggers, l);
 	a->logger_enabled = 1;
 	pthread_mutex_unlock (&(a->mut));
 }

@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -26,7 +27,7 @@ mp3_decoder_new (const char *filename, double start_time)
 	MP3Decoder *d = NULL;
 	int decoder_output[2] = {-1, -1};
 	int rv = -1;
-	char start_time_str[10] = "0";
+	char start_time_str[100] = "0";
 
 	assert (filename != NULL);
 	debug_printf (DEBUG_FLAGS_CODEC,
@@ -43,6 +44,7 @@ mp3_decoder_new (const char *filename, double start_time)
 			      strerror (errno));
 		return NULL;
 	}
+	fcntl (decoder_output[0], F_SETFD, FD_CLOEXEC);
 
 	/* Fork the decoder process */
 

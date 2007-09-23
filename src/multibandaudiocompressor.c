@@ -289,7 +289,7 @@ multiband_audio_compressor_add_band (AudioFilter *f,
 	b->fade_destination = 1.0;
 
 	bands = (list *) f->data;
-	bands = list_append (bands, b);
+	bands = prs_list_append (bands, b);
 	f->data = bands;
 }
 

@@ -14,7 +14,7 @@
 
 
 void *
-list_get_item (list *l, int item)
+prs_list_get_item (list *l, int item)
 {
 	while (item-- && l)
 		l = l->next;
@@ -27,7 +27,7 @@ list_get_item (list *l, int item)
 
 
 void
-list_free (list *l)
+prs_list_free (list *l)
 {
 	list *tmp = l, *next = l;
 
@@ -42,7 +42,7 @@ list_free (list *l)
 
 
 list *
-list_append (list *l, void *data)
+prs_list_append (list *l, void *data)
 {
 	list *tmp = l; 
 	list *new_item = (list *) malloc (sizeof(list));
@@ -68,7 +68,7 @@ list_append (list *l, void *data)
 
 
 list *
-list_prepend (list *l, void *data)
+prs_list_prepend (list *l, void *data)
 {
 	list *tmp = l;
 	list *new_item = (list *) malloc (sizeof(list));
@@ -85,7 +85,7 @@ list_prepend (list *l, void *data)
 
 
 list *
-list_insert_before (list *l,
+prs_list_insert_before (list *l,
 		    void *data)
 {
 	list *new_item = (list *) malloc (sizeof (list));
@@ -104,7 +104,7 @@ list_insert_before (list *l,
 
 
 list *
-list_insert_after (list *l,
+prs_list_insert_after (list *l,
 		   void *data)
 {
 	list *new_item = (list *) malloc (sizeof (list));
@@ -123,7 +123,7 @@ list_insert_after (list *l,
 
 
 list *
-list_delete_item (list *l,
+prs_list_delete_item (list *l,
 		  list *item)
 {
 	assert (l != NULL);
@@ -141,7 +141,7 @@ list_delete_item (list *l,
 
 
 int
-list_length (list *l)
+prs_list_length (list *l)
 {
 	int i = 0;
 
@@ -156,7 +156,7 @@ list_length (list *l)
 
 
 list *
-list_copy (list *l)
+prs_list_copy (list *l)
 {
 	list *new_list;
 	list *tmp;
@@ -182,7 +182,7 @@ list_copy (list *l)
 
 
 list *
-list_reverse (list *l)
+prs_list_reverse (list *l)
 {
 	list *tmp;
 
@@ -209,7 +209,7 @@ string_list_free (list *l)
 			free (tmp->data);
 		tmp = tmp->next;
 	}
-	list_free (l);
+	prs_list_free (l);
 }
 
 
@@ -218,7 +218,7 @@ list *
 string_list_prepend (list *l,
 		     const char *s)
 {
-	return list_prepend (l, (void *) strdup(s));
+	return prs_list_prepend (l, (void *) strdup(s));
 }
 
 
@@ -227,7 +227,7 @@ list *
 string_list_append (list *l,
 		    const char *s)
 {
-	return list_append (l, (void *) strdup(s));
+	return prs_list_append (l, (void *) strdup(s));
 }
 
 
@@ -238,7 +238,7 @@ string_list_to_array (list *l)
 	char **array;
 
 	assert (l != NULL);
-	i = list_length (l);
+	i = prs_list_length (l);
 	array = malloc ((i+1)*sizeof(char *));
 	i = 0;
 	while (l) {

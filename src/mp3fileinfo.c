@@ -104,17 +104,15 @@ get_mp3_audio_in (FileInfo *info, int threshhold)
 
 
 static double
-get_mp3_audio_out (FileInfo *info, int frames, int threshhold)
+get_mp3_audio_out (FileInfo *info, int threshhold)
 {
 	MP3Decoder *d = NULL;
-	short *buffer = NULL, *end_buffer = NULL;
-	int buffer_size, samples_read;
-	short *ptr;
+	short *buffer = NULL;
+	int buffer_size, samples_read, i;
 	double audio_out;
 	double seek_time;
 
 	assert (info != NULL);
-	assert (frames >= 0);
 	buffer_size = info->rate * info->channels * 20;
 	buffer = (short *) malloc (buffer_size * sizeof (short));
 	assert (buffer != NULL);
@@ -126,16 +124,14 @@ get_mp3_audio_out (FileInfo *info, int frames, int threshhold)
 	assert (d != NULL);
 
 	samples_read = mp3_decoder_get_data (d, buffer, buffer_size);
-	end_buffer = buffer + samples_read;
-	ptr = end_buffer;
-	while (ptr > buffer)
+	assert (samples_read > 0);
+	for (i = samples_read - 1; i > 0; i--)
 	{
-		if (*ptr > threshhold || *ptr < -threshhold)
+		if (buffer[i] > threshhold || buffer[i] < -threshhold)
 			break;
-		ptr--;
 	}
 	audio_out =
-		info->length - (double) (end_buffer - ptr) / (info->rate * info->channels);
+		info->length - (double) (samples_read - i) / (info->rate * info->channels);
 	mp3_decoder_destroy (d);
 	free (buffer);
 	return audio_out;
@@ -228,7 +224,7 @@ mp3_file_info_new (const char *path, const unsigned short in_threshhold,
 	if (in_threshhold > 0)
 		info->audio_in = get_mp3_audio_in (info, in_threshhold);
 	if (out_threshhold > 0)
-		info->audio_out = get_mp3_audio_out (info, frames, out_threshhold);
+		info->audio_out = get_mp3_audio_out (info, out_threshhold);
   
 	return info;
 }

@@ -28,30 +28,30 @@ struct _list {
 
 
 void *
-list_get_item (list *l, int item);
+prs_list_get_item (list *l, int item);
 void
-list_free (list *l);
+prs_list_free (list *l);
 list *
-list_append (list *l,
+prs_list_append (list *l,
 	     void *data);
 list *
-list_prepend (list *l,
+prs_list_prepend (list *l,
 	      void *data);
 list *
-list_insert_before (list *l,
+prs_list_insert_before (list *l,
 		    void *data);
 list *
-list_insert_after (list *l,
+prs_list_insert_after (list *l,
 		    void *data);
 list *
-list_delete_item (list *l,
+prs_list_delete_item (list *l,
 		  list *item);
 int
-list_length (list *l);
+prs_list_length (list *l);
 list *
-list_copy (list *l);
+prs_list_copy (list *l);
 list *
-list_reverse (list *l);
+prs_list_reverse (list *l);
 
 
 

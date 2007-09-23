@@ -122,12 +122,12 @@ db_config (Database *db, xmlNodePtr cur)
 	xmlChar *host = NULL, *user = NULL, *password = NULL, *name = NULL;
 	host = xmlGetProp (cur, "host");
 	if (host == NULL)
-		host = "localhost";
+		host = strdup ("localhost");
 	user = xmlGetProp (cur, "user");
 	password = xmlGetProp (cur, "password");
 	name = xmlGetProp (cur, "name");
 	db_connect (db, host, user, password,
-		    (name) ? name : "prs");
+		    (name) ? name : (xmlChar*)"prs");
 	if (name)
 		xmlFree (name);
 	if (host)
@@ -325,7 +325,7 @@ playlist_event_list_free (list *l)
 		if (tmp->data)
 			playlist_event_free ((PlaylistEvent *)tmp->data);
 	}
-	list_free (l);
+	prs_list_free (l);
 }
 
 
@@ -346,7 +346,7 @@ get_playlist_events_from_template (Database *db,
 	while (row = mysql_fetch_row (res))
 	{
 		PlaylistEvent *e = get_playlist_event_from_result (row);
-		events = list_prepend (events, (void *) e);
+		events = prs_list_prepend (events, (void *) e);
 	}
 
 	mysql_free_result (res);
@@ -446,7 +446,7 @@ recording_list_free (list *l)
 	{
 		recording_free ((Recording *)tmp->data);
 	}
-	list_free (l);
+	prs_list_free (l);
 }
 
 
@@ -703,7 +703,7 @@ playlist_template_get_event (PlaylistTemplate *t,
   
 	assert (t != NULL);
 	assert (t->events != NULL);
-	e = (PlaylistEvent *) list_get_item (t->events, event_number-1);
+	e = (PlaylistEvent *) prs_list_get_item (t->events, event_number-1);
 	return e;
 }
 
@@ -909,7 +909,7 @@ get_recordings (Database *db)
 	while (i) {
 		row = mysql_fetch_row (res);
 		r = get_recording_from_result (db, row);
-		rv = list_prepend (rv, r);
+		rv = prs_list_prepend (rv, r);
 		i--;
 	}
 	mysql_free_result (res);
@@ -1081,22 +1081,23 @@ recording_picker_select (RecordingPicker *p,
 		strcpy (buffer, select_query);
 		if (category_list)
 			strcat (buffer, category_part);
-		strcat (buffer, " and recording.recording_id not in (");
 		first = 1;
 
 		for (tmp = recordings; tmp; tmp = tmp->next)
 		{
 			if (first)
+			{
+				strcat (buffer, " and recording.recording_id not in (");
 				first = 0;
+			}
 			else
 				strcat (buffer, ", ");
 
 			strcat (buffer, tmp->data);
 		}
 
-		if (first)
-			strcat (buffer, "null");
-		strcat (buffer, ") and artist_name not in (");
+		if (!first)
+			strcat (buffer, ")");
 		first = 1;
 
 		for (tmp = artists; tmp; tmp = tmp->next)
@@ -1104,7 +1105,10 @@ recording_picker_select (RecordingPicker *p,
 			char *tmp_str = process_for_sql (tmp->data);
 
 			if (first)
+			{
+				strcat (buffer, " and artist_name not in (");
 				first = 0;
+			}
 			else
 				strcat (buffer, ", ");
 
@@ -1114,9 +1118,8 @@ recording_picker_select (RecordingPicker *p,
 			free (tmp_str);
 		}
 
-		if (first)
-			strcat (buffer, "null");
-		strcat (buffer, ")");
+		if (!first)
+			strcat (buffer, ")");
 		string_list_free (artists);
 		string_list_free (recordings);
 	}

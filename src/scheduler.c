@@ -55,9 +55,9 @@ scheduler_push_template (scheduler *s,
 		malloc (sizeof (template_stack_entry));
 	e->t = t;
 	e->event_number = event_number;
-	e->length = list_length (t->events);
+	e->length = prs_list_length (t->events);
 	e->p = recording_picker_new (s->db, t->artist_exclude, t->recording_exclude);
-	s->template_stack = list_prepend (s->template_stack, e);
+	s->template_stack = prs_list_prepend (s->template_stack, e);
 	debug_printf (DEBUG_FLAGS_SCHEDULER, "Pushing template %s on the scheduler stack\n", t->name);
 }
 
@@ -79,7 +79,7 @@ scheduler_pop_template (scheduler *s)
 	playlist_template_destroy (e->t);
 	recording_picker_destroy (e->p);
 	free (e);
-	s->template_stack = list_delete_item (s->template_stack, s->template_stack);
+	s->template_stack = prs_list_delete_item (s->template_stack, s->template_stack);
 }
 
 
@@ -117,7 +117,7 @@ scheduler_destroy (scheduler *s)
 	thread = s->scheduler_thread;
 	pthread_mutex_unlock (&(s->mut));
 	pthread_cancel (thread);
-	list_free (s->template_stack);
+	prs_list_free (s->template_stack);
 	free (s);
 	debug_printf (DEBUG_FLAGS_SCHEDULER, "Destroying scheduler object\n");
 }
@@ -355,8 +355,8 @@ scheduler_schedule_next_event (scheduler *s)
 		return s->prev_event_end_time;
 	}
 	
-	e = list_get_item (stack_entry->t->events, stack_entry->event_number-1);
-	anchor = list_get_item (stack_entry->t->events, e->anchor_event_number-1);
+	e = prs_list_get_item (stack_entry->t->events, stack_entry->event_number-1);
+	anchor = prs_list_get_item (stack_entry->t->events, e->anchor_event_number-1);
   
 	/* compute start time */
 
@@ -413,7 +413,7 @@ scheduler_schedule_next_event (scheduler *s)
 
 		/* Free the list of categories */
 
-		list_free (categories);
+		prs_list_free (categories);
 
 		/* if the recording selection failed, the event has a zero length since
 		 * there is no event, so just return the current time

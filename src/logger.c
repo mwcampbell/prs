@@ -167,8 +167,8 @@ static void
 live365_log_file (logger_data *d)
 {
 	CURL *url;
-	struct HttpPost *post = NULL;
-	struct HttpPost *end = NULL;
+	struct curl_httppost *post = NULL;
+	struct curl_httppost *end = NULL;
 	char *filename = NULL;
 
         /* Create mock file name for "least popular tracks" feature */
