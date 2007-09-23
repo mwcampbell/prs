@@ -18,15 +18,6 @@
 
 
 
-/* Ugly hack to get around C API change in id3lib 3.8 */
-#ifdef HAVE_ID3FIELD_GETASCIIITEM
-#define ID3FIELD_GETASCII ID3Field_GetASCII
-#else
-#define ID3FIELD_GETASCII(a, b, c) ID3Field_GetASCII ((a), (b), (c), 1)
-#endif
-
-
-
 static int
 mp3_scan (FileInfo *info)
 {
@@ -183,7 +174,7 @@ mp3_file_info_new (const char *path, const unsigned short in_threshhold,
 	    (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
 	{
 		char title[256];
-		ID3FIELD_GETASCII (field, title, 256);
+		ID3Field_GetASCII (field, title, 256);
 		info->name = strdup (title);
 	}
   
@@ -191,7 +182,7 @@ mp3_file_info_new (const char *path, const unsigned short in_threshhold,
 	    (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
 	{
 		char artist[256];
-		ID3FIELD_GETASCII (field, artist, 256);
+		ID3Field_GetASCII (field, artist, 256);
 		info->artist = strdup (artist);
 	}
   
@@ -199,7 +190,7 @@ mp3_file_info_new (const char *path, const unsigned short in_threshhold,
 	    (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
 	{
 		char album[256];
-		ID3FIELD_GETASCII (field, album, 256);
+		ID3Field_GetASCII (field, album, 256);
 		info->album = strdup (album);
 	}
   
@@ -207,7 +198,7 @@ mp3_file_info_new (const char *path, const unsigned short in_threshhold,
 	    (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
 	{
 		char date[256];
-		ID3FIELD_GETASCII (field, date, 256);
+		ID3Field_GetASCII (field, date, 256);
 		info->date = strdup (date);
 	}
   
@@ -215,7 +206,7 @@ mp3_file_info_new (const char *path, const unsigned short in_threshhold,
 	    (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
 	{
 		char genre[256];
-		ID3FIELD_GETASCII (field, genre, 256);
+		ID3Field_GetASCII (field, genre, 256);
 		info->genre = strdup (genre);
 	}
   

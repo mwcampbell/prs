@@ -1,5 +1,17 @@
 bin_PROGRAMS = prs_db_builder prs_server
 
+prs_db_builder_CFLAGS = \
+	$(vorbis_CFLAGS) \
+	$(vorbisfile_CFLAGS) \
+	$(libxml2_CFLAGS) \
+	$(mysql_CFLAGS)
+prs_db_builder_LDADD = \
+	$(pthread_LIBS) \
+	$(vorbis_LIBS) \
+	$(vorbisfile_LIBS) \
+	$(libxml2_LIBS) \
+	$(id3lib_LIBS) \
+	$(mysql_LIBS)
 prs_db_builder_SOURCES = \
 	db.c \
 	fileinfo.c \
@@ -12,6 +24,22 @@ prs_db_builder_SOURCES = \
 	debug.c \
 	prs_db_builder.c
 
+prs_server_CFLAGS = \
+	$(vorbis_CFLAGS) \
+	$(vorbisfile_CFLAGS) \
+	$(libxml2_CFLAGS) \
+	$(shout_CFLAGS) \
+	$(libcurl_CFLAGS) \
+	$(mysql_CFLAGS)
+prs_server_LIBS = \
+	$(pthread_LIBS) \
+	$(vorbis_LIBS) \
+	$(vorbisfile_LIBS) \
+	$(libxml2_LIBS) \
+	$(shout_LIBS) \
+	$(libcurl_LIBS) \
+	$(id3lib_LIBS) \
+	$(mysql_LIBS)
 prs_server_SOURCES = \
 	fileinfo.c \
 	fileinfo.h \

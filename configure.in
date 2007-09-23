@@ -11,45 +11,64 @@ AC_PROG_CC
 AC_PROG_CPP
 
 AM_PROG_LIBTOOL
+PKG_PROG_PKG_CONFIG
 
 
 dnl --------------------------------------------------
 dnl Check for libraries
 dnl --------------------------------------------------
 
-AC_CHECK_LIB(m, cos, LIBS="$LIBS -lm")
-AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
-AC_CHECK_LIB(vorbis, vorbis_block_init, LIBS="$LIBS -lvorbis")
-AC_CHECK_LIB(vorbisfile, ov_open, LIBS="$LIBS -lvorbisfile")
-AC_CHECK_LIB(xml2, xmlParseFile, LIBS="$LIBS -lxml2")
-XML_CFLAGS=`xml2-config --cflags`
-CFLAGS="$CFLAGS $XML_CFLAGS"
-AC_CHECK_LIB(pthread, pthread_create, LIBS="$LIBS -lpthread")
-AC_CHECK_LIB(shout, shout_open, LIBS="$LIBS -lshout")
-AC_CHECK_LIB(curl, curl_easy_init, LIBS="$LIBS -lcurl")
+AC_CHECK_LIBM
+AC_CHECK_LIB(pthread, pthread_create,
+    pthread_LIBS="-lpthread"
+  ,
+    AC_MSG_ERROR(could not find the pthread library)
+  )
+PKG_CHECK_MODULES(vorbis, vorbis)
+PKG_CHECK_MODULES(vorbisfile, vorbisfile)
+PKG_CHECK_MODULES(libxml2, libxml-2.0)
+PKG_CHECK_MODULES(shout, shout)
+PKG_CHECK_MODULES(libcurl, libcurl)
 
-dnl Ensure C++ support gets linked in for id3lib
-LIBS="$LIBS -lstdc++"
-AC_CHECK_LIB(id3, ID3Tag_New, LIBS="$LIBS -lid3")
-AC_CHECK_FUNCS(ID3Field_GetASCIIItem)
+AC_CHECK_LIB(id3, ID3Tag_New,
+    id3lib_LIBS="-lid3"
+  ,
+    AC_MSG_ERROR(could not find the id3 library)
+  )
 
 dnl MySQL configuration
 
-MYSQL_LIBS=`mysql_config --libs`
-if test "x$MYSQL_LIBS" = x ; then
-  AC_CHECK_LIB(mysqlclient, mysql_init, MYSQL_LIBS="-lmysqlclient")
+MYSQL_CONFIG=`which mysql_config`
+if test "x$MYSQL_CONFIG" = x ; then
+  AC_CHECK_LIB(mysqlclient, mysql_init,
+      mysql_libs="-lmysqlclient"
+    ,
+      AC_MSG_ERROR(could not find the mysqlclient library)
+    )
+else
+  mysql_LIBS=`$MYSQL_CONFIG --libs`
+  mysql_CFLAGS=`$MYSQL_CONFIG --cflags`
 fi
-LIBS="$LIBS $MYSQL_LIBS"
 
 dnl --------------------------------------------------
 dnl Do substitutions
 dnl --------------------------------------------------
 
-LIBS="$LIBS $pthread_lib $vorbis_libs"
-
 AC_SUBST(LIBS)
-AC_SUBST(pthread_lib)
-AC_SUBST(vorbisfile_lib)
+AC_SUBST(pthread_LIBS)
+AC_SUBST(vorbis_CFLAGS)
+AC_SUBST(vorbis_LIBS)
+AC_SUBST(vorbisfile_CFLAGS)
+AC_SUBST(vorbisfile_LIBS)
+AC_SUBST(libxml2_CFLAGS)
+AC_SUBST(libxml2_LIBS)
+AC_SUBST(shout_CFLAGS)
+AC_SUBST(shout_LIBS)
+AC_SUBST(libcurl_CFLAGS)
+AC_SUBST(libcurl_LIBS)
+AC_SUBST(id3lib_LIBS)
+AC_SUBST(mysql_LIBS)
+AC_SUBST(mysql_CFLAGS)
 
 AC_OUTPUT(Makefile
 	src/Makefile)
