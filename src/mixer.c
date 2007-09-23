@@ -13,7 +13,6 @@
 #include <time.h>
 #include <string.h>
 #include <pthread.h>
-#include <malloc.h>
 #include "debug.h"
 #include "mixer.h"
 #include "mixerchannel.h"

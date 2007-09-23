@@ -7,7 +7,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
 #include <signal.h>
 #include "debug.h"
 #include "mixerautomation.h"

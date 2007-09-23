@@ -3,6 +3,10 @@
 
 package="prs"
 
+if test -z "$AUTOMAKE_FLAGS" ; then
+  AUTOMAKE_FLAGS="--foreign"
+fi
+
 srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
 

@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include <malloc.h>
 #include <unistd.h>
 #include <signal.h>
 #include "debug.h"

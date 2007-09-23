@@ -8,7 +8,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <math.h>
-#include <malloc.h>
 #include "list.h"
 #include "audiofilter.h"
 #include "multibandaudiocompressor.h"

@@ -13,7 +13,6 @@
 #include <math.h>
 #include <time.h>
 #include <string.h>
-#include <malloc.h>
 #include <mysql/mysql.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
