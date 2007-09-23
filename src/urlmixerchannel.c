@@ -185,18 +185,18 @@ curl_header_func (void *ptr,
 {
 	channel_info *i = (channel_info *) data;
 	char *tmp, *tmp2;
-	char *key;
-	char *val;
+	char key[256] = "";
+	char val[256] = "";
 	
 	tmp = strstr ((char *) ptr, ": ");
 	if (!tmp)
 		return size*mem;
-	key = strndup ((char *) ptr, tmp-(char *)ptr);
+	strncpy (key, (char *) ptr, tmp-(char *)ptr);
 	tmp2 = strstr (tmp, "\r\n");
 	if (tmp2)
-		val = strndup (tmp+2, tmp2-tmp-2);
+		strncpy (val, tmp+2, tmp2-tmp-2);
 	else
-		val = strdup (tmp+2);
+		strcpy (val, tmp+2);
 	if (!strcmp (key, "Content-Type")) {
 		if (!strcmp(val, "audio/mpeg"))
 			i->type = CHANNEL_TYPE_MP3;
@@ -204,10 +204,6 @@ curl_header_func (void *ptr,
 	if (!strcmp (key, "Location")) {
 		i->transfer_url = strdup (val);
 	}
-	if (key)
-		free (key);
-	if (val)
-		free (val);
 	return size*mem;
 }
 
