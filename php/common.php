@@ -45,10 +45,9 @@ html_error ($message)
 function
 db_connect ()
 {
-	global $DB_HOST, $DB_NAME, $DB_USER, $DB_PASSWORD, $station;
-	mysql_connect ($DB_HOST, $DB_USER, $DB_PASSWORD)
-		or html_error ("Could not open database connection to " . $DB_HOST . ".");
-	mysql_select_db ($DB_NAME) or html_error ("Could not select database " . $DB_NAME . ".");
+	mysql_connect ($_SESSION["DB_HOST"], $_SESSION["DB_USER"], $_SESSION["DB_PASSWORD"])
+		or html_error ("Could not open database connection to " . $_SESSION["DB_HOST"] . ".");
+	mysql_select_db ($_SESSION["DB_NAME"]) or html_error ("Could not select database " . $_SESSION["DB_NAME"] . ".");
 }
 
 function
@@ -65,9 +64,7 @@ db_query ($query)
 function
 check_user ()
 {
-	global $user_username, $user_type;
-
-	if (!$user_username || $user_type != "admin")
+	if (!$_SESSION["user_username"] || $_SESSION["user_type"] != "admin")
 	{
 		html_error ("Access denied.");
 	}
