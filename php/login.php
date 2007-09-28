@@ -3,13 +3,14 @@ require_once ("common.php");
 
 function
 startElement ($parser, $name, $attrs) {
-	global $DB_HOST, $DB_NAME, $DB_USER, $DB_PASSWORD;
 
 	if ($name == "DB") {
-		$DB_USER = $attrs["USER"];
-		$DB_HOST = $attrs["HOST"];
-		$DB_PASSWORD = $attrs["PASSWORD"];
-		$DB_NAME = $attrs["NAME"];
+// We can add to the session because it was started in common.php.
+// We add these now so that db_connect() can use it in all circumstances.
+		$_SESSION["DB_USER"] = $attrs["USER"];
+		$_SESSION["DB_HOST"] = $attrs["HOST"];
+		$_SESSION["DB_PASSWORD"] = $attrs["PASSWORD"];
+		$_SESSION["DB_NAME"] = $attrs["NAME"];
 	}
 }
 
@@ -62,10 +63,7 @@ else if (!$_SESSION["user_username"])
 		$_SESSION["user_password"] = $real_password;
 		$_SESSION["user_type"] = $real_type;
 		$_SESSION["station"] = $_POST["station"];
-		$_SESSION["DB_HOST"] = $DB_HOST;
-		$_SESSION["DB_NAME"] = $DB_NAME;
-		$_SESSION["DB_USER"] = $DB_USER;
-		$_SESSION["DB_PASSWORD"] = $DB_PASSWORD;
+// DB session vars were set in startElement();
 	}
 }
 redirect ("main.php");
