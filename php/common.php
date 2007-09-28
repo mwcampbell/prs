@@ -106,10 +106,9 @@ check_user ()
 function
 redirect ($relative_url)
 {
-	global $HTTP_HOST, $PHP_SELF;
 	header ("HTTP/1.1 303 See Other");
-	header ("Location: http://$HTTP_HOST/" . dirname ($PHP_SELF) .
-		"/$relative_url");
+	header ("Location: http://" . $_SERVER["SERVER_NAME" . "/" .
+		dirname ($_SERVER["PHP_SELF"]) . "/$relative_url");
 	exit ();
 }
 
