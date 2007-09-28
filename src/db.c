@@ -60,7 +60,7 @@ db_connect (Database *db, const char *host, const char *user,
 	assert (password != NULL);
 	assert (name != NULL);
 	debug_printf (DEBUG_FLAGS_DATABASE,
-		      "db_connect: host=%s, user=%s, apssword=%s, name=%s\n",
+		      "db_connect: host=%s, user=%s, password=%s, name=%s\n",
 		      host, user, password, name);
 	db_lock (db);
 	result = mysql_real_connect (db->conn, host, user, password, name, 0,
