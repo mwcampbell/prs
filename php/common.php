@@ -43,36 +43,6 @@ html_error ($message)
 }
 
 function
-startElement ($parser, $name, $attrs) {
-	global $DB_HOST, $DB_NAME, $DB_USER, $DB_PASSWORD;
-
-	if ($name == "DB") {
-		$DB_USER = $attrs["USER"];
-		$DB_HOST = $attrs["HOST"];
-		$DB_PASSWORD = $attrs["PASSWORD"];
-		$DB_NAME = $attrs["NAME"];
-	}
-}
-
-function
-endElement ($parser, $name) {
-}
-
-function
-parse_config_file ($filename) {
-	$parser = xml_parser_create ();
-	xml_set_element_handler ($parser, "startElement", "endElement");
-	
-	if (!$fp = fopen ($filename, "r")) {
-		html_error ("Configuration file " . $filename . " not found.");
-		exit ();
-	}
-	while ($data = fread ($fp, 4096)) {
-		xml_parse ($parser, $data, feof($fp));
-	}
-}
-
-function
 db_connect ()
 {
 	global $DB_HOST, $DB_NAME, $DB_USER, $DB_PASSWORD, $station;
