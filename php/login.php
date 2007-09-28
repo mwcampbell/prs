@@ -27,11 +27,15 @@ else if (!$user_username)
 	}
 	else
 	{
-		$user_username = $username;
-		$user_password = $real_password;
-		$user_type = $real_type;
-		session_register ("user_username", "user_password", "user_type");
-		session_register ("station", "DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD");
+// We can assign to $_SESSION because session_start() was called in common.php
+		$_SESSION["user_username"] = $username;
+		$_SESSION["user_password"] = $real_password;
+		$_SESSION["user_type"] = $real_type;
+		$_SESSION["station"] = $station;
+		$_SESSION["DB_HOST"] = $DB_HOST;
+		$_SESSION["DB_NAME"] = $DB_NAME;
+		$_SESSION["DB_USER"] = $DB_USER;
+		$_SESSION["DB_PASSWORD"] = $DB_PASSWORD;
 	}
 }
 redirect ("main.php");
