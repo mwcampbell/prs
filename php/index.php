@@ -1,4 +1,29 @@
 <?
+if (!file_exists ("config.php")) {
+?>
+
+<HTML lang="en">
+<HEAD>
+<TITLE>PRS Manager: Welcome to PRS</TITLE>
+</HEAD>
+
+<BODY>
+<H1>Welcome to PRS</H1>
+
+<P>This is the web interface for PRS, a broadcast automation system.</P>
+
+<P>You need to configure the web interface before you can use it. </P>
+
+<P>Edit the file config.php.dist, giving the name and PRS config file path 
+for each station you have.  Then save it as config.php and reload this page.</P>
+</BODY>
+</HTML>
+
+
+<?
+	exit;
+}
+
 require_once ("common.php");
 html_start ("Log In");
 ?>
