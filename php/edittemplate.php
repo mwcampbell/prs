@@ -94,7 +94,7 @@ while ($row = mysql_fetch_assoc ($res)) {
 <input type = "hidden" name="detail1" id="detail1" value="<? echo $detail1 ?>">
 <input type = "hidden" name="detail2" id="detail2" value="<? echo $detail2 ?>">
 <input type = "hidden" name="detail3" id="detail3" value="<? echo $detail3 ?>">
-<input type = "hidden" name="detail14 id="detail4" value="<? echo $detail4 ?>">
+<input type = "hidden" name="detail4" id="detail4" value="<? echo $detail4 ?>">
 <input type = "hidden" name="detail5" id="detail5" value="<? echo $detail5 ?>">
 <input type = submit value="Edit Event">
 </form>
