@@ -3,6 +3,40 @@ require_once ("common.php");
 check_user ();
 db_connect ();
 
+// This script is called via Get from addevents.php and from a form via POst
+// from edittemplate.php and viewtemplate.php.  So we need to check for
+// the correct version of each variable and assign it to a copy in this script.
+// NOte that we only check for variables passed using both methods.
+
+if ($_SERVER["REQUEST_METHOD"] == "GET")
+{
+// Template ID is always set from addevents.php
+	$template_id = $_GET["template_id"];
+	if ($_GET["event_number"])
+		$event_number = $_GET["event_number"];
+	if ($_GET["insert_event"])
+		$insert_event = $_GET["insert_event"];
+// We know that event_type will be set via get from addevents.php
+	$event_type = $_GET["event_type"];
+{ else if ($_SERVER["REQUEST_METHOD"] == "POST")
+{
+	$template_id = $_POST["template_id"];
+	$event_number = $_POST["event_number"];
+	$event_name = $_POST["event_name"];
+	$event_type = $_POST["event_type"];
+
+// NOte that the following post variables are sent but not used
+// (maybe they should be?):
+
+// launched_from
+// event_channel_name
+// event_level
+// event_anchor_event_number
+// event_anchor_position
+// event_offset
+
+
+
 /* Get the next available event number for this template */
 
 if (!$event_number) {
@@ -44,11 +78,11 @@ for ($i = 1; $i <= min (count ($categories), 5); $i++)
 	foreach ($categories as $category)
 	{
 		print ("<option");
-		if (($i == 1 && $category == $detail1) ||
-		    ($i == 2 && $category == $detail2) ||
-		    ($i == 3 && $category == $detail3) ||
-		    ($i == 4 && $category == $detail4) ||
-		    ($i == 5 && $category == $detail5))
+		if (($i == 1 && $category == $_POST["detail1"]) ||
+		    ($i == 2 && $category == $_POST["detail2"]) ||
+		    ($i == 3 && $category == $_POST["detail3"]) ||
+		    ($i == 4 && $category == $_POST["detail4"]) ||
+		    ($i == 5 && $category == $_POST["detail5"]))
 			print (" selected=on");
 		print(">$category</option>\n");
 	}
