@@ -3,6 +3,15 @@ require_once ("common.php");
 check_user ();
 db_connect ();
 
+// Assign $template_id based on where it came from.
+if ($_SERVER["REQUEST_METHOD"] == "GET")
+{
+	if ($_GET["template_id])
+        	$template_id = $_GET["template_id"];
+else
+// $template_id is only posted from this script so will always be set to something.
+	$template_id = $_POST["template_id"];
+
 /* If we don't have a template id, let user pick a template */
 
 if (!$template_id) {
