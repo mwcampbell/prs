@@ -4,6 +4,21 @@ check_user ();
 db_connect ();
 $date_template = "%a %d-%b-%y %T";
 
+// This script is called via get from updatetimeslot.php
+// and via post from itself.
+
+if ($_SERVER["REQUEST_METHOD"] == "GET") {
+	if ($_GET["start_date"])
+		$start_date = $_GET["start_date"];
+	if ($_GET["end_date"])
+		$end_date = $_GET["end_date"];
+} // end if "get" request
+else {
+	$start_date = $_POST["start_date"];
+	$end_date = $_POST["end_date"];
+} // end if "POst" request.
+
+
 if (!$start_date || !$end_date) {
 	html_start ("View Schedule");
 ?>
@@ -21,7 +36,8 @@ if (!$start_date || !$end_date) {
 <?
 	html_end ();
 	exit ();
-}
+} // end if no dates specified
+
 $start_date = strtotime ($start_date);
 $end_date = strtotime ($end_date);
 if ($start_date == -1 || $end_date == -1) {
