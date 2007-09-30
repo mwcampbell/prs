@@ -3,24 +3,27 @@ require_once ("common.php");
 check_user ();
 db_connect ();
 
-if ($start_date && $end_date) {
-	$start_date = strtotime ($start_date);
+if ($_POST["start_date"] && $_POST["end_date"]) {
+	$start_date = strtotime ($_POST["start_date"]);
 	if ($start_date == -1) {
 		html_error ("Start date out of range.\n");
 		exit ();
 	}
-	$end_date = strtotime ($end_date);
+	$end_date = strtotime ($_POST["end_date"]);
 	if ($end_date == -1) {
 		html_error ("End date out of range.\n");
 		exit ();
 	}
 	$length = $end_date-$start_date;
+
+// The following returns 1 for daylight savings, 0 otherwise.
 	$daylight = date ("I", $start_date);
 
 	$query = "insert into schedule (start_time, length, repetition,
         daylight, template_id, fallback_id, end_prefade) values
-        ($start_date, $length, $repetition,
-        $daylight, $template_id, $fallback_id, $end_prefade)";
+        ($start_date, $length, " . $_POST["repetition"] . ", " .
+        $daylight . ", " . $_POST["template_id"] . ", " .
+	$_POST["fallback_id"] . ", " . $_POST["end_prefade"] . ")";
 	db_query ($query);
 	html_start ("Schedule updated");
 	echo "<a href = \"schedule.php\">Back to Schedule Administration</a>\n";
