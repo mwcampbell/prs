@@ -72,15 +72,7 @@ while ($row = mysql_fetch_assoc ($res)) {
 ?>
 </td>
 <td>
-<form name="edit_event" method="post"
-<?
-	  if ($event_type == "random" || $event_type == "simple_random")
-		  echo " action=\"randomevent.php\">\n";
-	if ($event_type == "path")
-		  echo " action=\"pathevent.php\">\n";
-	if ($event_type == "url")
-		  echo " action=\"urlevent.php\">\n";
-?>
+<form name="edit_event" method="post" action="editevent.php">
 <input type="hidden" name="launched_from" id="launched_from" value="viewer">
 <input type = "hidden" name="template_id" id="template_id" value="<? echo $template_id ?>">
 <input type = "hidden" name="event_number" id="event_number" value="<? echo $event_number ?>">

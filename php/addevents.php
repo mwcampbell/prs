@@ -36,13 +36,14 @@ html_start ("Add Playlist Event");
 // Do this to avoid multiple long lines.
 $url_query_base = 'template_id=' . $template_id .
 	'&amp;event_number=' . $_POST["event_number"] .
-	'&amp;insert_event=' . $_POST["insert_event"];
+	'&amp;insert_event=' . $_POST["insert_event"] .
+	'&amp;event_type=';
 
 echo "<ul>\n";
-echo '<li><a href="randomevent.php?' . $url_query_base . '&amp;event_type=random">Add Random Event</a></li>' . "\n";
-echo '<li><a href="randomevent.php?' . $url_query_base . '&amp;event_type=simple_random">Add Simple Random Event</a></li>' . "\n";
-echo '<li><a href="urlevent.php?' . $url_query_base . '">Add URL Event</a></li>' . "\n";
-echo '<li><a href="pathevent.php?' . $url_query_base . '">Add Path Event</a></li>' . "\n";
+echo '<li><a href="editevent.php?' . $url_query_base . 'random">Add Random Event</a></li>' . "\n";
+echo '<li><a href="editevent.php?' . $url_query_base . 'simple_random">Add Simple Random Event</a></li>' . "\n";
+echo '<li><a href="editevent.php?' . $url_query_base . 'url">Add URL Event</a></li>' . "\n";
+echo '<li><a href="editevent.php?' . $url_query_base . 'path">Add Path Event</a></li>' . "\n";
 echo '<li><a href = "edittemplate.php?template_id=' . $template_id . '">Edit this template</a></li>' . "\n";
 echo '<li><a href = "template.php">Back to Playlist Template Administration</a></li>' . "\n";
 echo "</ul>\n";

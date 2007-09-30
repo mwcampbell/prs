@@ -57,15 +57,7 @@ while ($row = mysql_get_assoc ($res)) {
 		echo ", $detail5";
 	echo "</td>";
 ?>
-<form name="edit_event" method="post"
-<?
-	 if ($event_type == "random" || $event_type == "simple_random")
-		 echo " action=\"randomevent.php\">";
-	if ($event_type == "url")
-		 echo " action=\"urlevent.php\">";
-	if ($event_type == "path")
-		 echo " action=\"pathevent.php\">";
-?>
+<form name="edit_event" method="post" action="editevent.php">
 <input type = hidden name="template_id" id="template_id" value="<? echo $template_id ?>">
 <input type = hidden name="event_number" id="event_number" value="<? echo $event_number ?>">
 <input type = hidden name="event_name" id="event_name" value="<? echo $event_name ?>">
