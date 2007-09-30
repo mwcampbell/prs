@@ -55,8 +55,12 @@ db_query ($query)
 {
 	$result = mysql_query ($query);
 
-	if (!$result)
-		html_error ("Database query failed: " . mysql_error ());
+	if (!$result) {
+		$error_string =  "Database query failed: " . mysql_error() . "</P>\n\n" .
+			"<P>The query which failed was:</P>\n\n" .
+			"<P><PRE>" . htmlspecialchars($query, ENT_QUOTES) . "</PRE>;
+		html_error ($error_string);
+	} // end if query failed
 
 	return $result;
 }
