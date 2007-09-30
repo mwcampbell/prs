@@ -4,7 +4,7 @@ check_user ();
 db_connect ();
 
 html_start ("Update Database");
-if (!$audio_root) {
+if (!$_POST["audio_root"]) {
 ?>
 <form name = "update_db" action="updatedb.php" method="post">
 <div>
@@ -31,12 +31,12 @@ if (!$audio_root) {
 }
 else {
 	$commandline = "/usr/local/bin/prs_db_builder ";
-	$commandline .= "-C \"".$station."\" ";
-	if ($existing_category)
-		$commandline .= "-c \"".$existing_category."\" ";
+	$commandline .= "-C \"" . $_SESION["station"] . "\" ";
+	if ($_POST["existing_category"])
+		$commandline .= "-c \"" . $_POST["existing_category"] . "\" ";
 	else
-		$commandline .= "-c \"".$new_category."\" ";;
-	$commandline .= " \"".$audio_root."\" >& /dev/null";
+		$commandline .= "-c \"" . $_POST["new_category"] . "\" ";;
+	$commandline .= " \"" . $_POST["audio_root"] . "\" >& /dev/null";
 	exec ($commandline);
 ?>
 <p>Database update in progress...</p>
