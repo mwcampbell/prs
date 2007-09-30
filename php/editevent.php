@@ -49,14 +49,40 @@ if (!$event_number) {
 else {
 	$update_event = "yes";
 }
+
 if (!$event_name)
         $event_name = "event $event_number";
-$categories = array ();
-$res = db_query ("select category_name from category");
-while ($row = mysql_fetch_assoc ($res))
-	$categories[] = $row["category_name"];
-mysql_free_result ($res);
-html_start ("Add " . (($event_type == "simple_random") ? "Simple Random" : "Random") . " Event");
+
+if (($event_type == "random") or ($event-type == "simple_random"))
+{
+	$categories = array ();
+	$res = db_query ("select category_name from category");
+	while ($row = mysql_fetch_assoc ($res))
+		$categories[] = $row["category_name"];
+	mysql_free_result ($res);
+} // end if random or simple random event
+
+// Set page title
+if ($update_event)
+	$page_title = "Edit ";
+else
+	$page_title = "Add ";
+
+switch ($event_tipe)
+{
+	case "simple_random":
+		$page_title .= "Simple ";
+	case "random":
+		$page_title .= "Random Event";
+		break;
+	case "url":
+		$page_title .= "URL Event";
+		break;
+	case "path":
+		$page_title .= "Path Event";
+} // end switch
+
+html_start ($page_title);
 ?>
 <form name="event" action="createevent.php" method="post">
 <input type = hidden name="insert_event" id="insert_event" value="<? echo $insert_event ?>">
@@ -68,26 +94,51 @@ html_start ("Add " . (($event_type == "simple_random") ? "Simple Random" : "Rand
 <input type="hidden" name="event_anchor_position" value="1">
 <input type="hidden" name="event_offset" value="0.0">
 <input type="hidden" name="event_level" value="1.0">
-<?
 
-for ($i = 1; $i <= min (count ($categories), 5); $i++)
+<?
+// Get correct user input based on event_type
+switch ($event_type)
 {
-	echo ("<label for=\"detail$i\">Category $i:</label>\n");
-	echo ("<select name=\"detail$i\" id=\"detail$i\">\n");
-	echo ("<option value=\"\">None Selected</option>\n");
-	foreach ($categories as $category)
-	{
-		print ("<option");
-		if (($i == 1 && $category == $_POST["detail1"]) ||
-		    ($i == 2 && $category == $_POST["detail2"]) ||
-		    ($i == 3 && $category == $_POST["detail3"]) ||
-		    ($i == 4 && $category == $_POST["detail4"]) ||
-		    ($i == 5 && $category == $_POST["detail5"]))
-			print (" selected=on");
-		print(">$category</option>\n");
-	}
-	print ("</select><br>\n");
-}
+	case "random":
+	case "simple_random":
+		for ($i = 1; $i <= min (count ($categories), 5); $i++)
+		{
+			echo ("<label for=\"detail$i\">Category $i:</label>\n");
+			echo ("<select name=\"detail$i\" id=\"detail$i\">\n");
+			echo ("<option value=\"\">None Selected</option>\n");
+			foreach ($categories as $category)
+			{
+				print ("<option");
+				if (($i == 1 && $category == $_POST["detail1"]) ||
+				    ($i == 2 && $category == $_POST["detail2"]) ||
+				    ($i == 3 && $category == $_POST["detail3"]) ||
+				    ($i == 4 && $category == $_POST["detail4"]) ||
+				    ($i == 5 && $category == $_POST["detail5"]))
+					print (" selected=on");
+				print(">$category</option>\n");
+			} // end foreach
+			print ("</select><br>\n");
+		} // end for
+		break; // end if random or simple_random event
+
+	case "url":
+		echo '<label for="detail1">Enter URL:</label>' . "\n";
+		echo '<input type = "text" name = "detail1" id="detail1" ';
+		echo 'value = "' . $detail1 . '">' ; "\n";
+		echo '<label for="detail2">Enter length in seconds:</label>' . "\n";
+		echo '<input type = "text" name="detail2" id="detail2" ';
+		echo 'value = "' . $detail2 . '">' ; "\n";
+		echo '<label for="detail3">Enter archive File Name:</label>' . "\n";
+		echo '<input type = "text" name="detail3" id="detail3" ';
+		echo 'value = "' . $detail3 . '">' ; "\n";
+		break; // end if URL event.
+
+	case "path":
+		echo '<label for="detail1">Enter File Name:</label>' . "\n";
+		echo '<input type = "text" name = "detail1" id="detail1" ';
+		echo 'value = "' . $detail1 . '">' ; "\n";
+} // end switch event_type
+
 foreach (array ("template_id", "event_number", "event_type") as $field)
 {
 	echo ("<input type=\"hidden\" name=\"$field\" value=\"" . $$field . "\">\n");
