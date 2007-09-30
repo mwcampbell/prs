@@ -4,7 +4,7 @@ check_user ();
 db_connect ();
 $date_template = "%a %d-%b-%y %T";
 
-if (!$source_start_date || !$source_end_date) {
+if (!$_POST["source_start_date"] || !$_POST["source_end_date"]) {
 	html_start ("Copy  Schedule");
 ?>
 <form name = "copy_schedule" action="copyschedule.php" method="post">
@@ -30,15 +30,17 @@ if (!$source_start_date || !$source_end_date) {
 	html_end ();
 	exit ();
 }
-$source_start_date = strtotime ($source_start_date);
-$source_end_date = strtotime ($source_end_date);
-$dest_start_date = strtotime ($dest_start_date);
-$dest_end_date = strtotime ($dest_end_date);
+
+$source_start_date = strtotime ($_POST["source_start_date"]);
+$source_end_date = strtotime ($_POST["source_end_date"]);
+$dest_start_date = strtotime ($_POST["dest_start_date"]);
+$dest_end_date = strtotime ($_POST["dest_end_date"]);
 if ($source_start_date == -1 || $source_end_date == -1 ||
 	$dest_start_date == -1 || $dest_end_date == -1) {
 	html_error ("Dates out of range.");
 	exit ();
 }
+
 $dest_cur_time = $dest_start_date;
 while ($dest_cur_time < $dest_end_date) {
 	$source_cur_time = $source_start_date;
