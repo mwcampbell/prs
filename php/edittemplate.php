@@ -8,6 +8,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET")
 {
 	if ($_GET["template_id])
         	$template_id = $_GET["template_id"];
+} // end if get request
 else
 // $template_id is only posted from this script so will always be set to something.
 	$template_id = $_POST["template_id"];
