@@ -58,7 +58,7 @@ db_query ($query)
 	if (!$result) {
 		$error_string =  "Database query failed: " . mysql_error() . "</P>\n\n" .
 			"<P>The query which failed was:</P>\n\n" .
-			"<P><PRE>" . htmlspecialchars($query, ENT_QUOTES) . "</PRE>;
+			"<P><PRE>" . htmlspecialchars($query, ENT_QUOTES) . "</PRE>";
 		html_error ($error_string);
 	} // end if query failed
 
@@ -78,7 +78,7 @@ function
 redirect ($relative_url)
 {
 	header ("HTTP/1.1 303 See Other");
-	header ("Location: http://" . $_SERVER["SERVER_NAME" . "/" .
+	header ("Location: http://" . $_SERVER["SERVER_NAME"] . "/" .
 		dirname ($_SERVER["PHP_SELF"]) . "/$relative_url");
 	exit ();
 }

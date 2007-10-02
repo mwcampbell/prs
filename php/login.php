@@ -32,7 +32,7 @@ parse_config_file ($filename) {
 	}
 }
 
-parse_config_file ($_POST["station");
+parse_config_file ($_POST["station"]);
 
 db_connect ();
 
