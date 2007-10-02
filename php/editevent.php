@@ -124,19 +124,19 @@ switch ($event_type)
 	case "url":
 		echo '<label for="detail1">Enter URL:</label>' . "\n";
 		echo '<input type = "text" name = "detail1" id="detail1" ';
-		echo 'value = "' . $detail1 . '">' ; "\n";
+		echo 'value = "' . htmlspecialchars ($_POST["detail1"]) . '"><BR>' . "\n";
 		echo '<label for="detail2">Enter length in seconds:</label>' . "\n";
 		echo '<input type = "text" name="detail2" id="detail2" ';
-		echo 'value = "' . $detail2 . '">' ; "\n";
+		echo 'value = "' . $_POST["detail2"] . '"><BR>' . "\n";
 		echo '<label for="detail3">Enter archive File Name:</label>' . "\n";
 		echo '<input type = "text" name="detail3" id="detail3" ';
-		echo 'value = "' . $detail3 . '">' ; "\n";
+		echo 'value = "' . htmlspecialchars($_POST["detail3"]) . '"><BR>' . "\n";
 		break; // end if URL event.
 
 	case "path":
 		echo '<label for="detail1">Enter File Name:</label>' . "\n";
 		echo '<input type = "text" name = "detail1" id="detail1" ';
-		echo 'value = "' . $detail1 . '">' ; "\n";
+		echo 'value = "' . htmlspecialchars($_POST["detail1"] . '">' . "\n";
 } // end switch event_type
 
 foreach (array ("template_id", "event_number", "event_type") as $field)
