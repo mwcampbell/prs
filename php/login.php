@@ -28,9 +28,12 @@ parse_config_file ($filename) {
 		exit ();
 	}
 	while ($data = fread ($fp, 4096)) {
-		xml_parse ($parser, $data, feof($fp));
-	}
-}
+		if (!xml_parse ($parser, $data, feof($fp)))
+			html_error ("XML error parsing " . $filename . ": " .
+				xml_error_string(xml_get_error_code($parser)) .
+				" on line " . xml_get_current_line_number($parser));
+	} // end while
+} // end parse_config_file()
 
 parse_config_file ($_POST["station"]);
 
