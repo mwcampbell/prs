@@ -68,7 +68,7 @@ if ($update_event)
 else
 	$page_title = "Add ";
 
-switch ($event_tipe)
+switch ($event_type)
 {
 	case "simple_random":
 		$page_title .= "Simple ";
