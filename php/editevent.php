@@ -18,7 +18,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET")
 		$insert_event = $_GET["insert_event"];
 // We know that event_type will be set via get from addevents.php
 	$event_type = $_GET["event_type"];
-{ else if ($_SERVER["REQUEST_METHOD"] == "POST")
+} else if ($_SERVER["REQUEST_METHOD"] == "POST")
 {
 	$template_id = $_POST["template_id"];
 	$event_number = $_POST["event_number"];
@@ -35,7 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET")
 // event_anchor_position
 // event_offset
 
-
+} // end if post request
 
 /* Get the next available event number for this template */
 

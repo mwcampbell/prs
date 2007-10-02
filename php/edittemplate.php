@@ -6,7 +6,7 @@ db_connect ();
 // Assign $template_id based on where it came from.
 if ($_SERVER["REQUEST_METHOD"] == "GET")
 {
-	if ($_GET["template_id])
+	if ($_GET["template_id"])
         	$template_id = $_GET["template_id"];
 } // end if get request
 else
