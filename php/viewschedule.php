@@ -136,7 +136,7 @@ echo ">Weekly</option>";
 <input type="hidden" name="action" id="action" value="2">
 <input type="submit" value="Modify Time Slot">
 </form>
-<form name = "delete_time_slot" action="updatetimeslot.php">
+<form name = "delete_time_slot" action="updatetimeslot.php" method="post">
 <input type="hidden" name="time_slot_id" value="<? echo $time_slot_id ?>">
 <input type="hidden" name="action" id="action" value="1">
 <input type="submit" value="Delete Time Slot">
