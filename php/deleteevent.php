@@ -5,7 +5,7 @@ db_connect ();
 
 /* Delete the specified event */
 
-$query = "delete from playlist_event where template_id = " . $_POST["$template_id"] .
+$query = "delete from playlist_event where template_id = " . $_POST["template_id"] .
 	" and event_number = " . $_POST["event_number"];
 db_query ($query);
 
