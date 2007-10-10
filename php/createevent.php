@@ -6,12 +6,12 @@ db_connect ();
 /* Ensure that event_anchor_position has something in it */
 
 if ($_POST["event_anchor_position"])
-	$event_anchor_position = $_POST["event_anchor_position"]
+	$event_anchor_position = $_POST["event_anchor_position"];
 else
 	$event_anchor_position = "0";
 
 if ($_POST["event_channel_name"])
-	$event_channel_name = $_POST["event_channel_name"]
+	$event_channel_name = $_POST["event_channel_name"];
 else
 	$event_channel_name = $_POST["event_name"];
 
@@ -65,7 +65,7 @@ else {
 	$event_anchor_position . ', ' . $_POST["event_offset"] . ', ' .
 	'"' . $_POST["detail1"] . '", "' . $_POST["detail2"] . '", ' .
 	'"' . $_POST["detail3"] . '", "' . $_POST["detail4"] . '", ' .
-	'"' . $_POST["detail5"] . ')';
+	'"' . $_POST["detail5"] . '")';
 }
 db_query ($query);
 if ($_POST["update_event"] || $_POST["insert_event"]) {
