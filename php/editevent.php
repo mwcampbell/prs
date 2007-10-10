@@ -136,7 +136,7 @@ switch ($event_type)
 	case "path":
 		echo '<label for="detail1">Enter File Name:</label>' . "\n";
 		echo '<input type = "text" name = "detail1" id="detail1" ';
-		echo 'value = "' . htmlspecialchars($_POST["detail1"] . '">' . "\n";
+		echo 'value = "' . htmlspecialchars($_POST["detail1"]) . '">' . "\n";
 } // end switch event_type
 
 foreach (array ("template_id", "event_number", "event_type") as $field)
