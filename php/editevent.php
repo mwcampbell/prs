@@ -143,10 +143,13 @@ foreach (array ("template_id", "event_number", "event_type") as $field)
 {
 	echo ("<input type=\"hidden\" name=\"$field\" value=\"" . $$field . "\">\n");
 }
-?>
-<input type="submit" value="Add Event">
-</div>
-</form>
-<?
+
+echo '<input type="submit" value="';
+if ($update_event)
+	echo "Update";
+else
+	echo "Add";
+echo ' Event">' . "\n";
+echo "</div>\n</form>\n";
 html_end ();
 ?>
