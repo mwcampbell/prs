@@ -435,18 +435,24 @@ logger_config (xmlNodePtr cur)
 	xmlChar *url = xmlGetProp (cur, "url");
 	xmlChar *username = xmlGetProp (cur, "username");
 	xmlChar *password = xmlGetProp (cur, "password");
+	xmlChar *mount = xmlGetProp (cur, "mount");
 	xmlChar *type_string = xmlGetProp (cur, "type");
 	xmlChar *log_file_name = xmlGetProp (cur, "log_file_name");
 	
 	if (!xmlStrcmp (type_string, "live365")) {
 		l = logger_new (LOGGER_TYPE_LIVE365,
 				log_file_name, NULL,
-				   username, password);
+				   username, password, NULL);
 	}
 	if (!xmlStrcmp (type_string, "shoutcast")) {
 		l = logger_new (LOGGER_TYPE_SHOUTCAST,
 				log_file_name, url,
-				   username, password);
+				   username, password, NULL);
+	}
+	if (!xmlStrcmp (type_string, "icecast")) {
+		l = logger_new (LOGGER_TYPE_ICECAST,
+				log_file_name, url,
+				   username, password, mount);
 	}
 	if (url)
 		xmlFree (url);
@@ -454,6 +460,8 @@ logger_config (xmlNodePtr cur)
 		xmlFree (username);
 	if (password)
 		xmlFree (password);
+	if (mount)
+		xmlFree (mount);
 	if (type_string)
 		xmlFree (type_string);
 	if (log_file_name)

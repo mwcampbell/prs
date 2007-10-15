@@ -12,7 +12,8 @@
 
 typedef enum {
 	LOGGER_TYPE_LIVE365,
-	LOGGER_TYPE_SHOUTCAST
+	LOGGER_TYPE_SHOUTCAST,
+	LOGGER_TYPE_ICECAST
 } LOGGER_TYPE;
 
 
@@ -22,6 +23,7 @@ typedef struct {
 	char *url;
 	char *username;
 	char *password;
+	char *mount;
 } logger;
 
 
@@ -30,7 +32,8 @@ logger_new (const LOGGER_TYPE type,
 	    const char *log_file_name,
 	    const char *url,
 	    const char *username,
-	    const char *password);
+	    const char *password,
+	    const char *mount);
 void
 logger_destroy (logger *l);
 void

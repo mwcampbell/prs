@@ -18,7 +18,8 @@ logger_new (const LOGGER_TYPE type,
 	    const char *log_file_name,
 	    const char *url,
 	    const char *username,
-	    const char *password)
+	    const char *password,
+	    const char *mount)
 {
 	logger *l = malloc (sizeof(logger));
 
@@ -41,6 +42,10 @@ logger_new (const LOGGER_TYPE type,
 		l->password = strdup (password);
 	else
 		l->password = NULL;
+	if (mount)
+		l->mount = strdup (mount);
+	else
+		l->mount = NULL;
 	return l;
 }
 
@@ -56,6 +61,8 @@ logger_destroy (logger *l)
 		free (l->username);
 	if (l->password)
 		free (l->password);
+	if (l->mount)
+		free (l->mount);
 	if (l->log_file) {
 		fprintf (l->log_file, "</log>\n");
 		fclose (l->log_file);
@@ -80,6 +87,7 @@ logger_data_new (logger *l,
 		 const char *url,
 		 const char *username,
 		 const char *password,
+		 const char *mount,
 		 const char *path)
 {
 	logger_data *d = malloc (sizeof(logger_data));
@@ -268,6 +276,53 @@ shoutcast_log_file (logger_data *d)
 }
 
 
+static void
+icecast_log_file (logger_data *d)
+{
+	CURL *url;
+	struct HttpPost *post = NULL;
+	struct HttpPost *end = NULL;
+	char *filename = NULL;
+	char *address;
+	CURLcode ret;
+	char *encoded_username;
+	char *encoded_password;
+	char *encoded_mount;
+	char *encoded_filename;
+	
+
+
+        /* Create mock file name for "least popular tracks" feature */
+
+	asprintf (&filename, "%s - %s", d->artist, d->name);
+	encoded_filename = curl_escape (filename, strlen(filename));
+	encoded_username = curl_escape (d->l->username, strlen(d->l->username));
+	encoded_password = curl_escape (d->l->password, strlen(d->l->password));
+	encoded_mount = curl_escape (d->l->mount, strlen(d->l->mount));
+	
+	asprintf (&address, "%s:%s@%s/admin/metadata?mount=%s&mode=updinfo&song=%s", encoded_username, encoded_password, d->l->url, encoded_mount, encoded_filename);
+	url = curl_easy_init ();
+	curl_easy_setopt (url, CURLOPT_URL,
+			  address);
+	
+	curl_easy_setopt (url, CURLOPT_NOSIGNAL, 1);
+
+	curl_easy_setopt (url, CURLOPT_USERAGENT, "Mozilla");
+	ret = curl_easy_perform (url);
+	curl_easy_cleanup (url);
+	logger_data_destroy (d);
+	if (address)
+		free (address);
+	
+	if (filename) {
+		free (filename);
+		curl_free (encoded_filename);
+	}
+	if (encoded_password)
+		curl_free (encoded_password);
+}
+
+
 static void *
 logger_log_file_thread (void *data)
 {
@@ -284,6 +339,9 @@ logger_log_file_thread (void *data)
 	case LOGGER_TYPE_SHOUTCAST:
 		shoutcast_log_file (d);
 		break;
+	case LOGGER_TYPE_ICECAST:
+		icecast_log_file (d);
+		break;
 	}
 }
 
@@ -297,7 +355,7 @@ logger_log_file (logger *l,
 	
 	if (!l)
 		return;
-	d = logger_data_new (l, l->url, l->username, l->password, path);
+	d = logger_data_new (l, l->url, l->username, l->password, l->mount, path);
 
 	pthread_create (&id, NULL, logger_log_file_thread, d);
 	pthread_detach (id);
