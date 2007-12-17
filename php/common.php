@@ -87,7 +87,7 @@ redirect ($relative_url)
 function
 display_template_list ($selected_template)
 {
-        $res = db_query ("select template_id, template_name from playlist_template");
+        $res = db_query ("select template_id, template_name from playlist_template order by template_name");
         echo "<option value=\"-1\">None Selected</option>\n";
 	while ($row = mysql_fetch_assoc ($res)) {
         	$id = $row["template_id"];
