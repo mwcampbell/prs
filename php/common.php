@@ -78,7 +78,7 @@ function
 redirect ($relative_url)
 {
 	header ("HTTP/1.1 303 See Other");
-	header ("Location: http://" . $_SERVER["SERVER_NAME"] . "/" .
+	header ("Location: http://" . $_SERVER["SERVER_NAME"] .
 		dirname ($_SERVER["PHP_SELF"]) . "/$relative_url");
 	exit ();
 }
