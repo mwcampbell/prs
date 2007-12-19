@@ -36,7 +36,7 @@ $query = "select * from playlist_event where template_id = $template_id order by
 $res = db_query ($query);
 ?>
 <div>
-<a href = "template.php">Back to Playlist Template Management</a>
+<a href = "main.php">Back to Main Menu</a>
 </div>
 <div>
 <form name="add_event" action="addevents.php" method="post">

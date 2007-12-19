@@ -26,7 +26,7 @@ if ($_POST["start_date"] && $_POST["end_date"]) {
 	$_POST["fallback_id"] . ", " . $_POST["end_prefade"] . ")";
 	db_query ($query);
 	html_start ("Schedule updated");
-	echo "<a href = \"schedule.php\">Back to Schedule Administration</a>\n";
+	echo "<a href = \"main.php\">Back to Main Menu</a>\n";
 	$schedule_updated = 1;
 }
 else {

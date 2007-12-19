@@ -45,7 +45,7 @@ echo '<li><a href="editevent.php?' . $url_query_base . 'simple_random">Add Simpl
 echo '<li><a href="editevent.php?' . $url_query_base . 'url">Add URL Event</a></li>' . "\n";
 echo '<li><a href="editevent.php?' . $url_query_base . 'path">Add Path Event</a></li>' . "\n";
 echo '<li><a href = "edittemplate.php?template_id=' . $template_id . '">Edit this template</a></li>' . "\n";
-echo '<li><a href = "template.php">Back to Playlist Template Administration</a></li>' . "\n";
+echo '<li><a href = "main.php">Back to Main Menu</a></li>' . "\n";
 echo "</ul>\n";
 
 html_end ();

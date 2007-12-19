@@ -76,7 +76,7 @@ while ($dest_cur_time < $dest_end_date) {
 	}
 }
 ?>
-<a href = "schedule.php">Back to Schedule Administration page</a>
+<a href = "main.php">Back to Main Menu</a>
 <?
 html_end ();
 exit ();
