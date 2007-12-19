@@ -1,7 +1,7 @@
 <?
 require_once ("common.php");
 check_user ();
-html_start ("Manage Playlist Templates");
+html_start ("Main Menu");
 ?>
 <ul>
 <li><a href = "template.php">Manage Playlist Templates</a></li>
