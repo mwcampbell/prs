@@ -1,0 +1,149 @@
+These are incomplete installation instructions, but should serve as a 
+helping hand for getting started.  This document is a work in progress, 
+so all suggestions are welcome.
+
+1.  Building the code:
+
+Since this is development code, you need the various auto* tools to 
+compile it.  In particular, you need a relatively recent automake.  
+1.9.6 works fine, 1.4-p6 does not.  I did not try any versions 
+inbetween.
+
+The following is a probably incomplete list of libraries required to 
+build PRS:
+
+* libogg
+* libvorbis
+* libvorbisfile
+* libcurl
+* libspeex
+* libshout
+* libmysqlclient
+* libxml2
+* GnuTLS
+* libtheora?
+* libid3
+* libc6
+
+Note that while PRS seems to link against all these libraries, it 
+doesn't necessarily seem to use all of them.  Speex is one example.  
+Also, it may be able to compile without some of them.
+
+The following executables are required when running PRS:
+
+* madplay
+* mpg123
+* lame
+* oggenc
+
+You also need PHP and a webserver in order to run the web interface to 
+the schedule.  The PHP interface is in the php subdirectory of the 
+source tree and currently is not modified by the build process, though 
+this may change.
+
+To build, type the following:
+
+./autogen.sh
+make
+make install
+
+You will end up with two executables - prs_db_builder and prs_server.  
+prs_server is the actual playout application and prs_db_builder is for 
+importing information for audio files into the categorised database.
+
+The executables will be installed in /usr/local/bin by default unless 
+you change this with options to configure (which is called by autogen).  
+The PHP scripts are not installed anywhere so you will have to move them 
+to where you want them.
+
+2.  Setting up PRS:
+
+There are three steps you need to take before you can run anything -- 
+setting up the database, configuring PRS and configuring the web 
+interface.
+
+2.1.  Setting up the database:
+
+This section is both crucial and incomplete.  Apologies for this and I 
+will do some work on finding out what is needed to get the database in a 
+fully working state.
+
+Each PRS instance needs its own database.  You will need to create this 
+database, as far as I can tell PRS will not create it for you.  You will 
+also need to make sure that the user you wish to log in as has full 
+access to it.
+
+I *think* that prs_db_builder will do much of the database creation work 
+for you, and most of the rest will be done by prs_server when it runs.  
+However you need to configure pRS before you can run prs_db_builder.
+
+One thing that prs_db_builder will *not* do for you is set up access for 
+the PHP interface.  One table contains credentials for a user to log in 
+and program the system.  At present this needs to be added manually.
+
+I will shortly update this document with details on how to do this.
+
+2.2.  Configuring PRS:
+
+I strongly recommend giving PRS its own directory to run in.  By 
+deftault it will look for the config file prs.conf in the directory 
+where you launch it, and it will generate prs.log and prs.err.
+
+For the sake of example, I will use the directory /home/prs as the base 
+directory.
+
+The next step is to create prs.conf.  This file is used by all three 
+parts of the PRS system so we need to make it before going any further.
+
+A sample file prs.conf.dist can be found in the src directory of the PRS 
+sources.  the terminology used in the example is a bit confusing, and I 
+plan to add a glossary file here explaining what all the config and 
+scheduler terms really mean.  But it should be clear enough what the 
+file does, even if it's not so clear exactly how it does it.
+
+Most if not all of the config file is optional, however a config file 
+without at least one output method *and* at least one bus won't be of 
+much practical use, and of course you need to tell it where the database 
+is and how to get to it.  If you don't want to use the one or 
+both of the compressors, comment them out or delete them from the file.  
+The same goes with the soundcard definitions.
+
+The telnet port definition allows you to get to the PRS CLI.  I am not 
+particularly sure how much of the CLI works at the moment, but if you 
+mainly want automation then you won't need to worry much about this.  
+The "shutdown" command in the CLI will (or at least should) cause PRS to 
+terminate, so this is worth defining just for this reason alone.  Note 
+that it is also possible to set up PRS in such a way that the CLI comes 
+up on the login where you start PRS, but this and the telnet port are 
+mutually exclusive.
+
+It is very important to make sure that sample rates and channels match 
+internally within PRS.  You can tell PRS via extra parameters (not 
+currently demonstrated in the sample config) to produce a stream of a 
+differing sampling rate, but if a bus expects a different sampling rate 
+from what an output expects, the results can range from odd sounds 
+to program termination without explanation.
+
+Note 1: At time of writing, the example provided is quite old and 
+demonstrates a connection to an Icecast 1.x server.  Changing 
+"xaudiocast" to "http" should be enough to get it working with Icecast 
+2.x, but it is my intention to shortly rework the example file to give a 
+proper Icecast 2 example.
+
+Note 2: My only work on the C portion of PRS so far was a patch to 
+implement logging (i.e. sending of metadata) for Icecast 2 servers.  
+This patch has not been reviewed by anyone else and I would like it to 
+be.  It was implemented in revision 368 of the subversion repository and 
+is also in the Source Forge patch system at 
+http://sourceforge.net/tracker/?atid=996961&group_id=206263&func=browse
+
+(hmm, the patch actually doesn't appear to be attached to the item, but 
+it should be.  I will add it again hopefully)
+
+If you wish to use this functionality, you can do so with an entry like 
+this in the config file:
+
+<logger type="icecast" url="localhost:8000" mount="/stream" 
+username="source" password="MyPassword" />
+
+*** I will write more on this file shortly ***
