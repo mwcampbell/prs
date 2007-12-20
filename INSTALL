@@ -135,10 +135,7 @@ implement logging (i.e. sending of metadata) for Icecast 2 servers.
 This patch has not been reviewed by anyone else and I would like it to 
 be.  It was implemented in revision 368 of the subversion repository and 
 is also in the Source Forge patch system at 
-http://sourceforge.net/tracker/?atid=996961&group_id=206263&func=browse
-
-(hmm, the patch actually doesn't appear to be attached to the item, but 
-it should be.  I will add it again hopefully)
+http://sourceforge.net/tracker/index.php?func=detail&aid=1837908&group_id=206263&atid=996961
 
 If you wish to use this functionality, you can do so with an entry like 
 this in the config file:
