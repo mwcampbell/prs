@@ -1,0 +1,38 @@
+You may control the running PRS process by logging into the telnet port 
+as defined in the config file with the configured password.  *WARNING* 
+At time of writing, the password is echoed back to you.
+
+It is also possible to configure PRS to present the CLI on the console 
+where prs_server is launched.
+
+According to prs_server.c, the following commands are available to you:
+
+"shutdown": Terminate prs_server.
+
+"quit": Exit the command interface.
+
+"on": Turn on soundcard input.  Other channels are faded to a background 
+level.  Designed for speaking over the music.
+
+"off": Turns off soundcard input and fades up any faded channels.  
+Opposite to "on".
+
+"soundon": Turns on soundcard output (i.e. local monitoring of PRS).
+
+"soundoff": Turn off soundcard output.
+
+"n": Skip to next event (?).
+
+"start": Start automation.  Not sure exactly what this does, might be 
+related to being able to add tracks to a playlist in this mode.
+
+"stop": Stop automation.  Dito.
+
+"date": Print mixer and system date and time.
+
+"N": Same as "off" plus "n".
+
+"S": Same as "off" plus "start".
+
+There is a function called "add_file" which is defined in prs_server.c 
+but appears not to be used.
