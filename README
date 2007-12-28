@@ -1,1 +1,61 @@
-This is prs the personal radio station.
+This is PRS the personal radio station.
+
+Please note that code is currently considered alpha software, though 
+hopefully with your help it can be made more stable and bug-free.
+
+What is PRS?
+
+PRS is a package for automating radio broadcasts.  It is primarily 
+designed for Internet broadcasting and for broadcasting pre-recorded 
+content without supervision, though some support for live broadcasting 
+is included.  PRS can play a series of pre-defined specific programs, or 
+programming based on categories with optional no-repeat rules.
+
+PRS performs advanced cross-fading thanks to its ability to examine 
+files to determine cross-fade points.  It can also optionally perform 
+simple and/or multi-band audio compression.
+
+PRS can stream to one or more Shoutcast, Icecast 1.x and Icecast 2.x 
+servers, as well as output to a sound card.  It can also take input from 
+a sound card, as well as relay live streams which it can also log for 
+optional later replay.
+
+PRS can play wave, MP3 and Ogg Vorbis sound files, and can produce MP3 
+and Ogg Vorbis streams.
+
+Package contents:
+
+This package contains the following directories:
+
+src: The C sources for prs_server and prs_db_builder.  Also contains 
+prs.conf.dist which is a sample PRS master config file.
+
+php: Contains a web interface to the scheduling system.  Includes 
+config.php.dist which is a sample config file for the web interface.
+
+doc: Various documentation files describing various aspects of the PRS 
+system.
+
+Installation:
+
+Read the file INSTALL for installation and setup instructions.
+
+License:
+
+This package is licensed under a MIT-style license.  See the file 
+COPYING for details.
+
+Mailing list:
+
+To get involved in PRS development, subscribe to the prsradio-devel list 
+by sending a message to prs-devel-request@lists.sourceforge.net with 
+subscribe in the subject line.  This list will also service user 
+questions for now, though a users list will probably be created in the 
+fullness of time.
+
+
+
+for further information about PRS, visit the source forge project at 
+http://sourceforge.net/projects/prsradio
+
+Geoff Shang - 28 December 2007
