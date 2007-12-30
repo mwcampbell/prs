@@ -40,7 +40,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 	cur = cur->xmlChildrenNode;
 
 	while (cur != NULL) {
-		if (!xmlStrcmp (cur->name, "stream")) {
+		if (!xmlStrcasecmp (cur->name, "stream")) {
 			double retry_delay;
 
 			/* create the shout connection */
@@ -104,18 +104,18 @@ stream_config (mixer *m, xmlNodePtr cur)
 			tmp = xmlGetProp (cur, "protocol");
 			shout_set_protocol (s, SHOUT_PROTOCOL_XAUDIOCAST);
 			if (tmp) {
-				if (!xmlStrcmp (tmp, "xaudiocast"))
+				if (!xmlStrcasecmp (tmp, "xaudiocast"))
 					shout_set_protocol (s, SHOUT_PROTOCOL_XAUDIOCAST);
-				else if (!xmlStrcmp (tmp, "http"))
+				else if (!xmlStrcasecmp (tmp, "http"))
 					shout_set_protocol (s, SHOUT_PROTOCOL_HTTP);
-				if (!xmlStrcmp (tmp, "icy"))
+				if (!xmlStrcasecmp (tmp, "icy"))
 					shout_set_protocol (s, SHOUT_PROTOCOL_ICY);
 				xmlFree (tmp);
 			}
 			tmp = xmlGetProp (cur, "format");
-			if (!xmlStrcmp (tmp, "mp3"))
+			if (!xmlStrcasecmp (tmp, "mp3"))
 				shout_set_format (s, SHOUT_FORMAT_MP3);
-			if (!xmlStrcmp (tmp, "vorbis"))
+			if (!xmlStrcasecmp (tmp, "vorbis"))
 				shout_set_format (s, SHOUT_FORMAT_VORBIS);
 			else if (tmp)
 				xmlFree (tmp);
@@ -154,7 +154,7 @@ stream_config (mixer *m, xmlNodePtr cur)
 
 			child = cur->xmlChildrenNode;
 			while (child) {
-				if (!xmlStrcmp (child->name, "encoder_arg")) {
+				if (!xmlStrcasecmp (child->name, "encoder_arg")) {
 					child = child->xmlChildrenNode;
 					fprintf (stderr, "Adding encoder arg %s.\n", child->content);
 					args = string_list_prepend (args, child->content);
@@ -222,7 +222,7 @@ multiband_audio_compressor_config (mixer *m, MixerBus *b, xmlNodePtr cur)
 
 	cur = cur->xmlChildrenNode;
 	while (cur) {
-		if (!xmlStrcmp (cur->name, "band")) {
+		if (!xmlStrcasecmp (cur->name, "band")) {
 			freq = atof (xmlGetProp(cur, "freq"));
 			threshhold = atof (xmlGetProp(cur, "threshhold"));
 			ratio = atof (xmlGetProp(cur, "ratio"));
@@ -265,13 +265,13 @@ mixer_output_config (mixer *m, xmlNodePtr cur)
 	type = xmlGetProp (cur, "type");
 	rate = xmlGetProp (cur, "rate");
 	channels = xmlGetProp (cur, "channels");
-	if (!xmlStrcmp (type, "oss"))
+	if (!xmlStrcasecmp (type, "oss"))
 		o = oss_mixer_output_new (sc_name,
 					  name,
 					  atoi(rate),
 					  atoi(channels),
 					  m->latency);
-	else if (!xmlStrcmp (type, "wave"))
+	else if (!xmlStrcasecmp (type, "wave"))
 		o = file_mixer_output_new (name,
 					   atoi(rate),
 					   atoi(channels),
@@ -309,7 +309,7 @@ mixer_channel_config (mixer *m, xmlNodePtr cur)
 	sc_name = xmlGetProp (cur, "sc_name");
 	rate = xmlGetProp (cur, "rate");
 	channels = xmlGetProp (cur, "channels");
-	if (!xmlStrcmp (type, "oss"))
+	if (!xmlStrcasecmp (type, "oss"))
 		ch = oss_mixer_channel_new (sc_name,
 					    name,
 					    atoi (rate),
@@ -377,9 +377,9 @@ mixer_bus_config (mixer *m, xmlNodePtr cur)
 
 	cur = cur->xmlChildrenNode;
 	while (cur) {
-		if (!xmlStrcmp (cur->name, "audiocompressor"))
+		if (!xmlStrcasecmp (cur->name, "audiocompressor"))
 			audio_compressor_config (m, b, cur);
-		if (!xmlStrcmp (cur->name, "multibandaudiocompressor"))
+		if (!xmlStrcasecmp (cur->name, "multibandaudiocompressor"))
 			multiband_audio_compressor_config (m, b, cur);
 		cur = cur->next;
 	}
@@ -393,13 +393,13 @@ mixer_config (mixer *m, xmlNodePtr cur)
 {
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL) {
-		if (!xmlStrcmp (cur->name, "bus"))
+		if (!xmlStrcasecmp (cur->name, "bus"))
 			mixer_bus_config (m, cur);
-		if (!xmlStrcmp (cur->name, "output"))
+		if (!xmlStrcasecmp (cur->name, "output"))
 			mixer_output_config (m, cur);
-		if (!xmlStrcmp (cur->name, "channel"))
+		if (!xmlStrcasecmp (cur->name, "channel"))
 			mixer_channel_config (m, cur);
-		if (!xmlStrcmp (cur->name, "patch"))
+		if (!xmlStrcasecmp (cur->name, "patch"))
 			mixer_patch_config (m, cur);
 		cur = cur->next;
 	}
@@ -439,17 +439,17 @@ logger_config (xmlNodePtr cur)
 	xmlChar *type_string = xmlGetProp (cur, "type");
 	xmlChar *log_file_name = xmlGetProp (cur, "log_file_name");
 	
-	if (!xmlStrcmp (type_string, "live365")) {
+	if (!xmlStrcasecmp (type_string, "live365")) {
 		l = logger_new (LOGGER_TYPE_LIVE365,
 				log_file_name, NULL,
 				   username, password, NULL);
 	}
-	if (!xmlStrcmp (type_string, "shoutcast")) {
+	if (!xmlStrcasecmp (type_string, "shoutcast")) {
 		l = logger_new (LOGGER_TYPE_SHOUTCAST,
 				log_file_name, url,
 				   username, password, NULL);
 	}
-	if (!xmlStrcmp (type_string, "icecast")) {
+	if (!xmlStrcasecmp (type_string, "icecast")) {
 		l = logger_new (LOGGER_TYPE_ICECAST,
 				log_file_name, url,
 				   username, password, mount);
@@ -488,15 +488,15 @@ prs_config (PRS *prs, const char *filename)
 	}
 	cur = cur->xmlChildrenNode;
 	while (cur) {
-		if (!xmlStrcmp (cur->name, "stream_config"))
+		if (!xmlStrcasecmp (cur->name, "stream_config"))
 			stream_config (prs->mixer, cur);
-		else if (!xmlStrcmp (cur->name, "mixer_config")) 
+		else if (!xmlStrcasecmp (cur->name, "mixer_config")) 
 			mixer_config (prs->mixer, cur);
-		else if (!xmlStrcmp (cur->name, "telnet"))
+		else if (!xmlStrcasecmp (cur->name, "telnet"))
 			telnet_config (prs, cur);
-		else if (!xmlStrcmp (cur->name, "db"))
+		else if (!xmlStrcasecmp (cur->name, "db"))
 			db_config (prs->db, cur);
-		else if (!xmlStrcmp (cur->name, "logger")) {
+		else if (!xmlStrcasecmp (cur->name, "logger")) {
 			prs->logger = logger_config (cur);
 			mixer_automation_add_logger (prs->automation,
 						     prs->logger);

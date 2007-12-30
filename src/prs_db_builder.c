@@ -40,7 +40,7 @@ config (Database *db, const char *filename)
   cur = cur->xmlChildrenNode;
   while (cur)
     {
-      if (!xmlStrcmp (cur->name, "db"))
+      if (!xmlStrcasecmp (cur->name, "db"))
 	db_config (db, cur);
       cur = cur->next;
     }  
