@@ -1,0 +1,201 @@
+This file explains all the options available in the PRS config file.  A 
+sample config file is included in the src subdirectory as prs.conf.dist.
+
+1.  File structure:
+
+The PRS config file is an XML file.  This means that file syntax is 
+important, particularly since, at time of writing, much required 
+error-checking code is missing from the config file parser 
+in prs_config.c.
+
+Many entries appear in the form
+
+<ITEM param1="value1" param2="value2" param3="value3"/>
+
+This is a complete XML element and requires no closing tag.  It appears 
+to be equivalent to:
+
+<ITEM param1="value1" param2="value2" param3="value3"></ITEM>
+
+Items can be spread across multiple lines like so:
+
+<ITEM param1="value1"
+	param2="value2"
+	param3="value3"/>
+
+Other entries have the more conventional
+
+<ITEM>
+	<param>value</param>
+</ITEM>
+
+format, and some have a combination of the two.
+
+It's very important to know which variant you're dealing with.  This is 
+of particular importance with the <stream> element, as it can be written 
+with or without child nodes, depending on desired functionality.
+
+Steps have been taken to try and make the config file parser case 
+insensitive.  However it is still possible that some elements may still 
+be case sensitive.  Certainly, all parameter *values* should be case 
+insensitive.  If in doubt however, use lower case.
+
+The PRS config file has two main sections.  these are stream_config 
+where one or more output streams can be configured, and mixer_config 
+where buses (including dynamic compressors), patches, and soundcard 
+input and output channels can be defined.  There are also a number of 
+smaller sections used for defining the telnet port, metadata handling, 
+and telling PRS where the database is.
+
+2.  PRS structure:
+
+Before we start, a few words about the structure of the PRS sound 
+system.
+
+The PRS mixer is a mixer with an unlimited number of input channels.  
+Aside from sound card input channels, which are defined in the config 
+file and are not required, there is no need for you to do anything to 
+create any of these channels.  PRS will create and destroy mixer 
+channels as they are needed.  The mixer itself has only one output, the 
+master out, but this output can be patched to several places via buses.
+
+A bus is a connector.  It has a sample rate and number of channels and 
+is used to connect an audio source to a destination.  It can also 
+optionally have a simple dynamic compressor and/or a multiband audio 
+compressor inserted in.  If used, these compressors will process the 
+sound after it leaves its source but before it reaches its destination.
+
+In truth, a bus as it appears in the config file is actually a 
+definition of a connector, rather than a connector itself .  The same 
+bus definition can be referenced by name to connect different elements 
+to each other  without affecting any other use of the same bus 
+definition.  This can be confusing as it may appear that elements are 
+connected directly to each other when they really aren't.
+
+The mixer can be patched to one or more outputs.  Despite the difference 
+in configuration, a stream is an output, just as a soundcard is.  PRS 
+can also output to a wave file.
+
+3.  configuration options:
+
+3.1.  "prs_config":
+
+All PRS configuration elements must appear with a 
+<prs_config></prs_config> tag pair.  That is to say, <prs_config> must 
+be the first thing to appear in the file and </prs_config> must be the 
+last thing in the file.  Failing to do this will result iin an invalid 
+configuration file.
+
+3.2.  Stream configuration:
+
+All output streams (Shoutcast or Icecast) are configured in the 
+<stream_config> section.  The only meaningful child node in a 
+<stream_config> section is <stream>.
+
+You may have as many <stream> sections as you wish.
+
+The following parameters are available in a stream section.
+
+name - This is the name of the stream section and is used within the 
+config file to refer to it.  It is not the name or title of your stream 
+as displayed to your listeners (see title).  This parameter is required 
+otherwise you won't be able to patch this stream to the mixer.
+
+rate - This is the sampling rate of the audio to be streamed, *not* the 
+sampling rate of the stream itself.  It must match the sampling rate of 
+the bus which it is connected to.  You may control the sampling rate of 
+the output stream either by using encoder args (see below) or by setting 
+the sampling rate of the bus to the desired rate and channels.  If this 
+parameter is not present, PRS defaults to 44100.
+
+channels - This is the number of incoming channels from the connected 
+bus.  Again, it is not the number of channels to be encoded in your 
+output stream.  If not present, the default is 2 (i.e. stereo).
+
+format - This is the format of the output stream.  currently only "mp3" 
+and "vorbis" are meaningful values, and "vorbis" can only be used with 
+Icecast2 servers.
+
+bitrate - This is the bit rate of your outgoing stream in kbps (e.g. 
+"128").  For Ogg Vorbis streams, this will be approximated to a quality 
+setting by the encoder.  Note that although this is a number, it still 
+needs to be quoted.  This value is also used in YP information.  No 
+default behaviour is defined, but given that currently PRS spawns a 
+command line encoder, I would guess that the default would be whatever 
+the default bitrate is for the sample rate and the value of the "stereo" 
+setting.
+
+stereo - Whether or not your outgoing stream is to be stereo.  
+Meaningful values are "1" and "0".  Default is "1".
+
+host - The host of your streaming server.
+
+port - The port of your streaming server on the host specified above.  
+For Shoutcast servers, specify the listen port rather than the actual 
+source port (e.g. 8000, not 8001).  PRS will make the appropriate 
+adjustments.
+
+protocol - The protocol which should be used.  In practice, this means 
+which type of server you are connecting to.  Use "icy" for Shoutcast, 
+"xaudiocast" for Icecast 1.x (now deprecated) and "http" for Icecast 
+2.x.  The default is "xaudiocast", though I am seriously considering 
+changing it to "http".
+
+mount - The mount point to connect to.  This is only meaningful for 
+Icecast 1.x and 2.x connections.
+
+user - The username to use to connect to the server.  I'm almost certain 
+that this is only valid for Icecast 2.x servers, and to use it you need 
+a specific <mount> section in your Icecast config file which specifies a 
+username.  The default behaviour is not immediately obvious, but the 
+default for Icecast 2.x is to use a username of "source" and libshout 
+(which PRS uses) may well just do the right thing if no username is 
+supplied.
+
+password - The password to connect to the server.
+
+retry_delay - How long to wait between connection attempts.  Defaults to 
+10.0 seconds.  Note that indications are that this value is not 
+currently being acted upon.
+
+archive_file_name - If present, PRS will archive a copy of your stream 
+in a file.
+
+title - The title of your stream.  This will be displayed to your 
+listeners and will be shown in YP information.
+
+description - An additional description of your stream.  Only meaningful 
+for Icecast servers.  Used in YP information.
+
+genre - The genre of your stream.  Used in YP listings.
+
+url - A URL related to your stream.  This is for directing listeners to 
+a website etc.  People don't expect to see the actual URL of your stream 
+here.  Used in YP listings.
+
+Note that it appears not to be possible to turn off YP listings from 
+PRS, though adding this functionality should be fairly trivial.
+
+agent - This sets the User Agent string which will be sent to the 
+server.  All HTTP clients send a header to identify the software which 
+is connecting.  If not defined, libshout uses its own default (e.g. 
+"libshout/2.1").
+
+This ends the list of parameters available as part of the stream tag.  
+However, there is one more tag which is available, but must be used 
+inside the <stream> section.
+
+<encoder_arg> - This tag is used to add an extra command line parameter 
+to the encoder command line.  You may wish to use this to alter the 
+sampling rate for example if the default one for your selected bitrate 
+is not the desired rate. You may have multiple <encoder_arg> tags.
+
+The following example changes the sampling rate for the LAME MP3 
+encoder:
+
+        <encoder_arg>--resample</encoder_arg>
+        <encoder_arg>22050</encoder_arg>
+
+Use of this tag will be demonstrated in the reworked sample PRS config 
+file.
+
