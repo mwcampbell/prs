@@ -111,10 +111,8 @@ The next step is to create prs.conf.  This file is used by all three
 parts of the PRS system so we need to make it before going any further.
 
 A sample file prs.conf.dist can be found in the src directory of the PRS 
-sources.  the terminology used in the example is a bit confusing, and I 
-plan to add a glossary file here explaining what all the config and 
-scheduler terms really mean.  But it should be clear enough what the 
-file does, even if it's not so clear exactly how it does it.
+sources.  A complete guide to the PRS config file is located in 
+doc/configuration.txt.
 
 Most if not all of the config file is optional, however a config file 
 without at least one output method *and* at least one bus won't be of 
@@ -237,6 +235,11 @@ Go to your directory where ;you have your PRS config file (e.g.
 /home/prs) and type:
 
 prs_server
+
+This will use file prs.conf as your config file.  To use an alternate 
+config file, specifiy it on the command line like so:
+
+prs_server mystation.conf
 
 PRS should spit out some output, with the last line being "Parent server 
 process returning.".  Anything other than this probably indicates an 
