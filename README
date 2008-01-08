@@ -40,6 +40,9 @@ Installation:
 
 Read the file INSTALL for installation and setup instructions.
 
+A comprehensive configuration guide and a list of the commands available 
+in the PRS command line interface can be found in the doc directory.
+
 License:
 
 This package is licensed under a MIT-style license.  See the file 
@@ -55,7 +58,10 @@ fullness of time.
 
 
 
+To hear PRS in action, check out the Mainstream and Cafe streams at ACB 
+Radio (http://www.acbradio.org).
+
 for further information about PRS, visit the source forge project at 
 http://sourceforge.net/projects/prsradio
 
-Geoff Shang - 28 December 2007
+Geoff Shang - 8 January 2008
