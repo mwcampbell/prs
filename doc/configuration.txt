@@ -35,6 +35,9 @@ It's very important to know which variant you're dealing with.  This is
 of particular importance with the <stream> element, as it can be written 
 with or without child nodes, depending on desired functionality.
 
+All values are assumed to be strings, even numerical values.  So you 
+should give all values in quotes.
+
 Steps have been taken to try and make the config file parser case 
 insensitive.  However it is still possible that some elements may still 
 be case sensitive.  Certainly, all parameter *values* should be case 
@@ -80,10 +83,10 @@ can also output to a wave file.
 
 3.1.  "prs_config":
 
-All PRS configuration elements must appear with a 
+All PRS configuration elements must appear within a 
 <prs_config></prs_config> tag pair.  That is to say, <prs_config> must 
-be the first thing to appear in the file and </prs_config> must be the 
-last thing in the file.  Failing to do this will result iin an invalid 
+be the first tag to appear in the file and </prs_config> must be the 
+last tag in the file.  Failing to do this will result iin an invalid 
 configuration file.
 
 3.2.  Stream configuration:
@@ -114,7 +117,7 @@ output stream.  If not present, the default is 2 (i.e. stereo).
 
 format - This is the format of the output stream.  currently only "mp3" 
 and "vorbis" are meaningful values, and "vorbis" can only be used with 
-Icecast2 servers.
+Icecast 2.x servers.
 
 bitrate - This is the bit rate of your outgoing stream in kbps (e.g. 
 "128").  For Ogg Vorbis streams, this will be approximated to a quality 
@@ -122,8 +125,8 @@ setting by the encoder.  Note that although this is a number, it still
 needs to be quoted.  This value is also used in YP information.  No 
 default behaviour is defined, but given that currently PRS spawns a 
 command line encoder, I would guess that the default would be whatever 
-the default bitrate is for the sample rate and the value of the "stereo" 
-setting.
+the encoder's default bitrate is for the sample rate and the value of 
+the "stereo" setting.
 
 stereo - Whether or not your outgoing stream is to be stereo.  
 Meaningful values are "1" and "0".  Default is "1".
@@ -199,3 +202,293 @@ encoder:
 Use of this tag will be demonstrated in the reworked sample PRS config 
 file.
 
+3.3: Mixer configuration:
+
+The mixer configuration section is contained within a 
+<mixer_config></mixer_config> tag.  This section can contain 0 or more 
+bus, channel, output and patch tags.  While all elements are optional, a 
+file with no bus definition will result in a PRS with no way to connect 
+its output to anything, a file with neither an output section nor a 
+stream definition will have nowhere to send its output to, and a file 
+with no patch definitions will not be able to connect the mixer to any 
+defined outputs.
+
+
+3.3.1. Bus definitions:
+
+As mentioned previously, a bus is a connector between the output of the 
+mixer and either a stream output or another defined output.  It can 
+resample the output of the mixer, as well as apply either simple and/or 
+multi-band audio compression.
+
+A bus section in the config file is a specification for a bus, meaning 
+that this specification can be used to create more than one connection, 
+however each conection wil be independent of any others using that same 
+definition.
+
+Note also that since the bus definition also includes any desired 
+dynamic compression, you may wish to define a different bus if you wish 
+to use a soundcard channel, as using the one bus for everything could 
+result in the soundcard audio being compressed twice - once on the way 
+into the mixer and again on the way out.
+
+3.3.1.1. Bus parameters:
+
+The bus tag has three parameters, all of which are required (i.e. no 
+default values are available).
+
+name - This is the name for the bus definition which is used in the 
+patch definition to refer to it.
+
+rate - The output sample rate of the bus.  Outputs connected to this bus 
+will receive the mixer audio at the sample rate given here.
+
+channels - The number of output channels of the bus.  Outputs connected 
+to this bus will receive this number of channels as their input.
+
+3.3.1.2. Simple audio compression:
+
+You can perform simple audio compression using an audiocompressor tag 
+within a bus definition.  See the sample config file for a demonstration 
+of the correct syntax.
+
+there are 5 parameters for the audiocompressor tag, all are required.
+
+threshhold - This is the point at which the compressor begins working.  
+all sounds at or above this level (presumably in DBs) will be made 
+quieter by using the settings specified here.  All sounds below this 
+level wil be left as is.  This number is expected to be negative and can 
+contain decimals.
+
+ratio - This is how much the signal should be compressed.  The higher 
+the number, the quieter the resulting sound, and the higher the output 
+gain will have to be as a result.
+
+attack_time - This is how quickly you want the compressor to act, given 
+in seconds .  different types of content may require diffent attack 
+times.  Music may sound better with a slower attack time, for example.  
+This number may also contain decimals.
+
+release_time - How quickly the compressor should "release" after 
+compressing down the signal.  In other words, how long it should take to 
+unsquash the sound.  This is given in seconds and may contain decimals.
+
+output_gain - The amount of gain to be added to the resulting sound.  
+Since the act of compression will reduce the amplitude (i.e. volume) of 
+the sound, you will probably want to set this to a positive number in 
+order to increase the volume of the resulting sound in order to 
+compensate for this.
+
+The above parameters may look complicated and somewhat intimidating.  
+But don't get put off.  Compression provides you with the ability to 
+have PRS compensate automatically for changes in volume in your source 
+material, meaning that your listeners won't have to be constantly 
+twiddling the volume control.
+
+Much has been written about the black art of compression and much more 
+is probably still yet to be written.  At the end of the day, however, 
+it's how it sounds to you that matters, so experiment with the settings 
+and figure out what sounds good to you.
+
+3.3.1.3. Multi-band audio compression:
+
+For many people, simple audio compression will sound just fine and do a 
+perfectly acceptable job.  But if you find that, say for example, bass 
+drums are causing higher sounds to fluctuate or "pump", or you would 
+like to perform some kinds of equalisation, then the multi-band 
+compressor may well help you.
+
+Note that multi-band compression uses up more CPU than standard 
+compression, particularly if you use several bands.
+
+Multi-band compressor settings are contained within a 
+<multibandaudiocompressor> tag.  Contained within this tag are one or 
+more "band" tags, each giving the settings to be applied to that 
+frequency band.
+
+The "band" tag has the following parameters:
+
+freq - The frequency to which this compression should apply.  Note that 
+the highest value you can use for freq is 45% of the sample rate for the 
+bus.  so for example, if your bus uses a rate of 44100, the highest 
+frequency you can specify is 19845 Hz.  Attempting to enter a higher 
+number will see it reduced to the highest possible value.
+
+threshhold - Level above which PRS should compress the sound.
+
+ratio - HOw much to compress the sound.
+
+attack_time - How quickly to compress the sound.
+
+release_time - How quickly to raise the volume following compression.
+
+pre_process_gain - Adjusts the gain prior to the effect being processed.  
+Presumably this is to prevent clipping.
+
+output_gain - Gain to be added or subtracted after the effect has been 
+carried out.
+
+link - I have no idea what this parameter does.  Reading 
+multibandaudiocompressor.c indicates that it does indeed do something 
+but I don't know what.
+
+3.3.2. Channels:
+
+In addition to sound files and Internet streams, PRS can take input from 
+a soundcard.
+
+Channels are defined using the "channel" tag.  The following parameters 
+are supported:
+
+name - This is the name of the channel, not the name of the card.  Like 
+the name parameter in other configs, this is used to refer to it for the 
+purposes of patching, etc.  Note that the CLI commands "on", "off" and 
+"N" have the name "soundcard" hard-coded in their functions, so using 
+these commands requires you to use the name "soundcard", at least for 
+now.  For this reason, it does not appear possible to be able to make 
+use of a soundcard channel called anything else, as it would not be 
+possible to turn it on (soundcard channels are currently set to off by 
+default).
+
+type - The channel type.  The only valid value here is "oss" for OSS 
+soundcards, and any other value will cause this channel definition to be 
+skipped.
+
+sc_name - This is the soundcard name.  Looking at ossmixerchannel.c this 
+would appear to be the device name of the soundcard (e.g. /dev/dsp0).
+
+rate - Sample rate to use for reading from the card.
+
+channels - Number of channels to read from the card (1 for mono, 2 for 
+stereo).
+
+Note that a variable called location is also defined in 
+mixer_channel_config() in src/prs_config.c and it is freed at the end of 
+the function, but is never assigned to.
+
+3.3.3. Outputs:
+
+In addition to streams, PRS can output to OSS soundcards and wave files.
+
+Outputs are defined using the "output" tag.  The following parameters 
+are supported:
+
+name - This is the name of the output.  Like the name parameter in other 
+configs, this is used to refer to it for the purposes of patching, etc.  
+Note that for soundcard outputs, the CLI commands "soundon" and 
+"soundoff" have the name "soundcard" hard-coded in their functions, so 
+using these commands requires you to use the name "soundcard", at least 
+for now.  Since soundcard outputs default to on, you can use soundcard 
+outputs with other names, but only an output called "soundcard" will be 
+able to be controled with "soundon" and "soundoff".  For wave outputs, 
+the name parameter is also used for the output filename.
+
+type - The channel type, either "oss" or "wave".
+
+sc_name - This is the soundcard name.  Looking at ossmixeroutput.c this 
+would appear to be the device name of the soundcard (e.g. /dev/dsp0).  
+This parameter is ignored for wave outputs.
+
+rate - Sample rate to use for writing to the card or wave file.
+
+channels - Number of channels to write to the card or file (1 for mono, 
+2 for stereo).
+
+3.3.4. Patching:
+
+Patch definitions are where all the defined pieces come together and are 
+connected to each other.
+
+Patch definitions are confusing at first because the end at which the 
+main mixer is located is not specified.  This is because it is obvious - 
+a channel is patched into the mixer and an output is patched from it.  
+Consult the sample config file for usage examples.
+
+Patches are specified with the "patch" tag and the following parameters 
+can be used:
+
+channel - The name of the channel to patch to the mixer.
+
+bus - The name of the bus definition to use for the patch.
+
+output - The name of the stream, soundcard or wave output to patch mixer 
+output to.
+
+You may have as many patches as you wish.
+
+Note: The following example *is* legal, but confusing:
+
+<patch channel="soundcard" bus="air" output="test" />
+
+This will actually create two patches, not one, and is equivalent to 
+writing two patch definitions.  This works because the code currently 
+simply checks for either both "channel" and "bus, or "bus" and "output".
+
+This way of writing patches simply serves to make a potentially 
+confusing part of the config file even more confusing and is not 
+recommended.
+
+3.4. Telnet definition:
+
+You can set up PRS to listen for a telnet connection.  If you telnet to 
+this port and supply the password, you can access the CLI.  See 
+doc/CLI.txt for a list of commands available at the CLI.
+
+Note that if you do not supply a telnet config, the CLI will be made 
+available at the console where you launch PRS.
+
+Also a reminder that at present the password is echoed when entered.
+
+Use of telnet over the Internet is discouraged.  If you want to access a 
+remote PRS, it is recommended that you SSH to the host where it is 
+running and telnet from there.
+
+Also note that it is currently not possible to bind the telnet port to a 
+specific interface, so if you wish to prevent logins from the INternet, 
+you will have to do this with a firewall.
+
+Telnet definitions are set up with the "telnet" tag.  The following 
+parameters are available:
+
+password - The password to use to log in.
+
+port - The port which PRS should use to listen for telnet connections.  
+If this parameter is not given, port 4777 is used.
+
+3.5.  Logging:
+
+PRS uses the term "logging" to refer to how track metadata is handled.  
+Metadata handlers are set up using the "logger" tag.  The following 
+parameters are available:
+
+type - The type of logging to use.  supported values are "live365", 
+"shoutcast" and "icecast".  Note that "icecast" refers to Icecast 2.x 
+servers.
+
+url - The host and port of the server to log to, in the form 
+"host:port".  NOt meaningful for Live365 logging.
+
+username - The username to log in with.
+
+password - The password to log in with.
+
+mount - The mountpoint to use.  Only relevant for Icecast logging.
+
+log_file_name - If this parameter is present, PRS will also log track 
+metadata to an XML-formatted file with the name given here.
+
+3.6.  Database details:
+
+PRS needs to use a mysql database for storage of automation and 
+scheduling information.  The "db" tag gives the database details using 
+the following parameters:
+
+host - The host of the mysql server.  If this is not present it defaults 
+to "localhost".
+
+name - This is the name of the database to use.   If not given it 
+defaults to "prs".
+
+user - The username for the mysql connection.
+
+password - The password for the mysql connection.
