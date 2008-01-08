@@ -79,6 +79,13 @@ The mixer can be patched to one or more outputs.  Despite the difference
 in configuration, a stream is an output, just as a soundcard is.  PRS 
 can also output to a wave file.
 
+It is very important to make sure that sample rates and channels match 
+internally within PRS.  You can tell PRS via extra parameters (not 
+currently demonstrated in the sample config) to produce a stream of a 
+differing sampling rate, but if a bus outputs a different sampling rate 
+from what an output expects to receive, the results can range from odd 
+sounds to program termination without explanation.
+ 
 3.  configuration options:
 
 3.1.  "prs_config":
@@ -105,11 +112,11 @@ as displayed to your listeners (see title).  This parameter is required
 otherwise you won't be able to patch this stream to the mixer.
 
 rate - This is the sampling rate of the audio to be streamed, *not* the 
-sampling rate of the stream itself.  It must match the sampling rate of 
-the bus which it is connected to.  You may control the sampling rate of 
-the output stream either by using encoder args (see below) or by setting 
-the sampling rate of the bus to the desired rate and channels.  If this 
-parameter is not present, PRS defaults to 44100.
+sampling rate of the stream itself.  It *must* match the sampling rate 
+of the bus which it is connected to.  You may control the sampling rate 
+of the output stream either by using encoder args (see below) or by 
+setting the sampling rate of the bus to the desired rate and channels.  
+If this parameter is not present, PRS defaults to 44100.
 
 channels - This is the number of incoming channels from the connected 
 bus.  Again, it is not the number of channels to be encoded in your 
