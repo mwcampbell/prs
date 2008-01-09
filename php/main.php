@@ -5,10 +5,14 @@ html_start ("Main Menu");
 ?>
 <H3>Manage Playlist Templates</H3>
 
-<ul>
-<li><a href="newtemplate.php">Create New Playlist Template</a></li>
-<li><a href = "edittemplate.php">Edit an Existing Playlist Template</a></li>
-</ul>
+<a href="newtemplate.php">Create New Playlist Template</a>
+
+<form name = "select_template" action="edittemplate.php" method="post">
+<select name="template_id">
+<? display_template_list (-1); ?>
+</select>
+<input type = "submit" value="Edit Template">
+</form>
 
 <H3>Manage schedule</H3>
 
