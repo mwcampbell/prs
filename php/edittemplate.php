@@ -10,12 +10,13 @@ if ($_SERVER["REQUEST_METHOD"] == "GET")
         	$template_id = $_GET["template_id"];
 } // end if get request
 else
-// $template_id is only posted from this script so will always be set to something.
+// $template_id will always be set to something if posted.
 	$template_id = $_POST["template_id"];
 
 /* If we don't have a template id, let user pick a template */
+// $template_id will be set to "-1" if the user has not selected one.
 
-if (!$template_id) {
+if ((!$template_id) or ($template_id == "-1")) {
 	html_start ("Select Playlist Template");
 ?>
 <form name = "select_template" action="edittemplate.php" method="post">
