@@ -6,7 +6,7 @@ html_start ("Main Menu");
 ?>
 <H3>Manage Playlist Templates</H3>
 
-<a href="newtemplate.php">Create New Playlist Template</a>
+<P><a href="newtemplate.php">Create New Playlist Template</a></P>
 
 <form name = "select_template" action="edittemplate.php" method="post">
 <select name="template_id">
@@ -17,7 +17,7 @@ html_start ("Main Menu");
 
 <H3>Manage schedule</H3>
 
-<a href = "addtimeslot.php">Add Time Slot</a>
+<P><a href = "addtimeslot.php">Add Time Slot</a></P>
 
 <form name = "view_schedule" action="viewschedule.php" method="post">
 <div>
@@ -31,9 +31,11 @@ html_start ("Main Menu");
 <input type="submit" value="View Schedule">
 </form>
 
-<a href = "copyschedule.php">Copy Time Slots</a>
+<P><a href = "copyschedule.php">Copy Time Slots</a></P>
 
-<a href = "updatedb.php">Update Database</a>
+<H3>Other Operations</H3>
+
+<P><a href = "updatedb.php">Update Database</a></P>
 <?
 html_end ();
 ?>
