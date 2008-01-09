@@ -16,11 +16,21 @@ html_start ("Main Menu");
 
 <H3>Manage schedule</H3>
 
-<ul>
-<li><a href = "addtimeslot.php">Add Time Slot</a></li>
-<li><a href = "viewschedule.php">View/edit Schedule</a></li>
-<li><a href = "copyschedule.php">Copy Time Slots</a></li>
-</ul>
+<a href = "addtimeslot.php">Add Time Slot</a>
+
+<form name = "view_schedule" action="viewschedule.php" method="post">
+<div>
+<label for="start_date">Enter start date :</label>
+<input type = text name="start_date" id="start_date">
+</div>
+<div>
+<label for="end_date">Enter end date:</label>
+<input type = text name="end_date" id="end_date">
+</div>
+<input type="submit" value="View Schedule">
+</form>
+
+<a href = "copyschedule.php">Copy Time Slots</a>
 
 <a href = "updatedb.php">Update Database</a>
 <?
