@@ -1,6 +1,7 @@
 <?
 require_once ("common.php");
 check_user ();
+db_connect ();
 html_start ("Main Menu");
 ?>
 <H3>Manage Playlist Templates</H3>
