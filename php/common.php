@@ -3,8 +3,8 @@ require_once ("config.php");
 session_start ();
 $html_started = 0;
 $html_title_prefix = "PRS Manager: ";
-if ($_SESSION["station"])
-  $html_title_prefix .= $_SESSION["station"] . ": ";
+if ($_SESSION["station_name"])
+  $html_title_prefix .= $_SESSION["station_name"] . ": ";
 
 function
 html_start ($title)

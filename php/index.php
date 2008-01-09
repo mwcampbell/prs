@@ -37,7 +37,7 @@ html_start ("Log In");
 if ($STATIONS)
 {
 	echo ("<label for=\"station\">Station:</label>\n");
-	echo ("<select id=\"station\" name=\"station\">\n");
+	echo ("<select id=\"station\" name=\"station_config\">\n");
 	foreach ($STATIONS as $name => $config)
 	{
 		echo ("<option value=\"$config\">$name</option>\n");

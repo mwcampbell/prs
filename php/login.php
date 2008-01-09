@@ -35,7 +35,7 @@ parse_config_file ($filename) {
 	} // end while
 } // end parse_config_file()
 
-parse_config_file ($_POST["station"]);
+parse_config_file ($_POST["station_config"]);
 
 db_connect ();
 
@@ -65,7 +65,16 @@ else if (!$_SESSION["user_username"])
 		$_SESSION["user_username"] = $_POST["username"];
 		$_SESSION["user_password"] = $real_password;
 		$_SESSION["user_type"] = $real_type;
-		$_SESSION["station"] = $_POST["station"];
+
+        	foreach ($STATIONS as $name => $config)
+        {
+                	if ($config == $_POST["station_config"])
+				$station_name = $name;
+        }
+
+		$_SESSION["station_name"] = $station_name;
+		$_SESSION["station_config"] = $_POST["station_config"];
+
 // DB session vars were set in startElement();
 	}
 }
