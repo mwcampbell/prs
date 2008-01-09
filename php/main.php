@@ -8,12 +8,14 @@ html_start ("Main Menu");
 
 <P><a href="newtemplate.php">Create New Playlist Template</a></P>
 
+<P>
 <form name = "select_template" action="edittemplate.php" method="post">
 <select name="template_id">
 <? display_template_list (-1); ?>
 </select>
 <input type = "submit" value="Edit Template">
 </form>
+</P>
 
 <H3>Manage schedule</H3>
 
