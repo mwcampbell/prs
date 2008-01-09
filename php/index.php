@@ -24,6 +24,7 @@ for each station you have.  Then save it as config.php and reload this page.</P>
 	exit;
 }
 
+require_once ("config.php");
 require_once ("common.php");
 html_start ("Log In");
 ?>

@@ -1,5 +1,4 @@
 <?
-require_once ("config.php");
 session_start ();
 $html_started = 0;
 $html_title_prefix = "PRS Manager: ";
