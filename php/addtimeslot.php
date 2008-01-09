@@ -25,12 +25,13 @@ if ($_POST["start_date"] && $_POST["end_date"]) {
         $daylight . ", " . $_POST["template_id"] . ", " .
 	$_POST["fallback_id"] . ", " . $_POST["end_prefade"] . ")";
 	db_query ($query);
-	html_start ("Schedule updated");
+	html_start ("Add Time slot");
+echo "<P>Time slot added successfully.</P>\n";
 	echo "<a href = \"main.php\">Back to Main Menu</a>\n";
 	$schedule_updated = 1;
 }
 else {
-        html_start ("Update Schedule");
+        html_start ("Add Time Slot");
         $schedule_updated = 0;
 }
 
