@@ -31,7 +31,7 @@ if (!$_POST["audio_root"]) {
 }
 else {
 	$commandline = "/usr/local/bin/prs_db_builder ";
-	$commandline .= "-C \"" . $_SESION["station"] . "\" ";
+	$commandline .= "-C \"" . $_SESSION["station"] . "\" ";
 	if ($_POST["existing_category"])
 		$commandline .= "-c \"" . $_POST["existing_category"] . "\" ";
 	else
