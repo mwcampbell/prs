@@ -63,6 +63,7 @@ display_template_list (-1);
 <label for="load_events">Include events</label>
 <input type=submit value="Load">
 </form>
+<HR>
 </p>
 
 <?php
