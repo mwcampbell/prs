@@ -111,7 +111,7 @@ echo '<label for="template_artist_exclude">Minimum time between recordings from 
 echo '<input type="text" name="template_artist_exclude" id="template_artist_exclude"';
 if ($artist_exclude)
 	echo ' value="' . timestring ($artist_exclude) . '"';
-echo "><br>\n"
+echo "><br>\n";
 
 echo '<label for="template_recording_exclude">Minimum time between repetitions of a recording (HH:MM):</label>' . "\n";
 echo '<input type="text" name="template_recording_exclude" id="template_recording_exclude"';
