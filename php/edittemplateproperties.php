@@ -123,6 +123,6 @@ echo '<input type="submit" value="
 if ($action == "edit")
 	echo "Update Template";
 else echo "Create Template";
-echo '">\n</div>\n</form>\n";
+echo '">' . "\n</div>\n</form>\n";
 html_end ();
 ?>
