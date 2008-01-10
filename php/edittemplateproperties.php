@@ -119,7 +119,7 @@ if ($recording_exclude)
 	echo ' value="' . timestring ($recording_exclude) . '"';
 echo "><br>\n";
 
-echo '<input type="submit" value="
+echo '<input type="submit" value="';
 if ($action == "edit")
 	echo "Update Template";
 else echo "Create Template";
