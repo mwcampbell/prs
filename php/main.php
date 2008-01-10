@@ -6,7 +6,7 @@ html_start ("Main Menu");
 ?>
 <H3>Manage Playlist Templates</H3>
 
-<P><a href="newtemplate.php">Create New Playlist Template</a></P>
+<P><a href="edittemplateproperties.php">Create New Playlist Template</a></P>
 
 <P>
 <form name = "select_template" action="edittemplate.php" method="post">
