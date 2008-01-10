@@ -43,7 +43,6 @@ if ($action == "edit" or $action == "load") {
 if ($action == "edit")
 	html_start ("Edit Template Properties");
 else html_start ("Create Playlist Template");
-?>
 
 if ($action == "new" or ($action == "load" and $template_id == "-1")) {
 ?>
