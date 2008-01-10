@@ -87,7 +87,7 @@ echo ">\n";
 echo '<label for="template_events_repeat">Repeat events in this template ';
 echo "until the template's end time has been reached.</label><br>\n";
 
-echo '<label for="template_handle_overlap">What to do when a recording won''t fit:</label>' . "\n";
+echo '<label for="template_handle_overlap">What to do when a recording won\'t fit:</label>' . "\n";
 echo '<select id="template_handle_overlap" name="template_handle_overlap">' . "\n";
 echo '<option value="1"';
 if ($handle_overlap == 1)
