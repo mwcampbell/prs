@@ -3,7 +3,7 @@ require_once ("common.php");
 check_user ();
 html_start ("Create Playlist Template");
 ?>
-<form name="newtemplate" action="addevents.php" method="post">
+<form name="newtemplate" action="updatetemplate.php" method="post">
 <div>
 <input type="hidden" name="new_template" value="yes">
 <label for="template_name">Name:</label>
