@@ -7,8 +7,11 @@ db_connect ();
 function timestring ($seconds) {
 	$hours = 0;
 	$minutes = 0;
-	if ($seconds >= 3600)
+	if ($seconds >= 3600) {
 		$hours = ($seconds - ($seconds % 3600)) / 3600;
+		$seconds = $seconds % 3600;
+} // end if at least 1 hour
+
 // Times should be in hole minutes since this is how they are entered.
 	$minutes = $seconds / 60;
 	return (sprintf ("%02d:%02d", $hours, $minutes));
