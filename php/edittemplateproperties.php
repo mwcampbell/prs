@@ -124,6 +124,13 @@ echo '<input type="submit" value="';
 if ($action == "edit")
 	echo "Update Template";
 else echo "Create Template";
-echo '">' . "\n</div>\n</form>\n";
+echo '">' . "\n</div>\n</form>\n</p>\n";
+
+if ($action == "edit") {
+	echo '<a href="edittemplate.php?template_id=' . $template_id;
+	echo '">Return to the template editor</a>' . "\n";
+} // end if editing
+else echo '<a href="main.php">return to the main menu</a>' . "\n";
+
 html_end ();
 ?>
