@@ -75,8 +75,10 @@ display_template_list (-1);
 if ($action == "new" or $action == "load")
 	echo '<input type="hidden" name="new_template" value="yes">' . "\n";
 
-if ($_POST["load_events"])
+if ($_POST["load_events"]) {
         echo '<input type="hidden" name="load_events" value="yes">' . "\n";
+	echo '<input type="hidden" name="original_template_id" value="' . $template_id . '">' . "\n";
+} // end if loading in events
  
 echo '<label for="template_name">Name:</label>' . "\n";
 echo '<input type="text" name="template_name" id="template_name"';
