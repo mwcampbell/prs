@@ -29,9 +29,6 @@ else {
 	$template_id = $_POST["template_id"];
 } // end if post (either "edit" or "load")
 
-if ($action == "edit" and $template_id == "-1")
-	html_error ("No template selected.");
-
 if ($action == "edit" or $action == "load") {
 	$res = db_query ("select * from playlist_template where template_id=" . $template_id);
 	$row = mysql_fetch_assoc ($res);
