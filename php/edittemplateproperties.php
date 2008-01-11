@@ -127,10 +127,10 @@ else echo "Create Template";
 echo '">' . "\n</div>\n</form>\n</p>\n";
 
 if ($action == "edit") {
-	echo '<a href="edittemplate.php?template_id=' . $template_id;
-	echo '">Return to the template editor</a>' . "\n";
+	echo '<P><a href="edittemplate.php?template_id=' . $template_id;
+	echo '">Return to the template editor</a></p>' . "\n";
 } // end if editing
-else echo '<a href="main.php">return to the main menu</a>' . "\n";
+else echo '<p><a href="main.php">return to the main menu</a></p>' . "\n";
 
 html_end ();
 ?>
