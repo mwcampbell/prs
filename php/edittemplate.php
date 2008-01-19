@@ -31,13 +31,21 @@ if ((!$template_id) or ($template_id == "-1")) {
 }
 
 html_start ("Edit Playlist Template");
-/* Get list of events in specified template */
 
-$query = "select * from playlist_event where template_id = $template_id order by event_number";
+$query = "select template_name from playlist_template where template_id=$template_id";
 $res = db_query ($query);
+
+// This should never happen, but...
+if (mysql_num_rows ($res) == 0)
+	html_error ("Template number $template_id not found.");
+
+$row = mysql_fetch_assoc ($res);
+$template_name = $row["template_name"];
+mysql_free_result ($res);
+
+echo "<H3>$template_name</H3>\n";
 ?>
 <div>
-<a href = "main.php">Back to Main Menu</a>
 </div>
 <div>
 <form name="add_event" action="addevents.php" method="post">
@@ -45,6 +53,27 @@ $res = db_query ($query);
 <input type="submit" value="Add Events">
 </form>
 </div>
+
+<?php
+/* Get list of events in specified template */
+
+$query = "select * from playlist_event where template_id = $template_id order by event_number";
+$res = db_query ($query);
+if (mysql_num_rows ($res) == 0) {
+?>
+
+<P>There are no events in this template.</P>
+
+<HR>
+
+<P><a href = "main.php">Back to Main Menu</a></P>
+<?php
+	mysql_free_result ($res);
+	html_end();
+	exit;
+} // end if no events
+?>
+
 <table>
 <tr>
 <th>Event Name</th>
@@ -117,6 +146,7 @@ while ($row = mysql_fetch_assoc ($res)) {
 <?
 }
 mysql_free_result ($res);
-echo "</table>";
+echo "</table>\n<hr>\n";
+echo "<p><a href = \"main.php\">Back to Main Menu</a></p>\n";
 html_end ();
 ?>
