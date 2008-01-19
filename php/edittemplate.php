@@ -116,6 +116,7 @@ while ($row = mysql_fetch_assoc ($res)) {
 </tr>
 <?
 }
+mysql_free_result ($res);
 echo "</table>";
 html_end ();
 ?>
