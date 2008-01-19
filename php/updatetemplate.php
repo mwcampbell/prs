@@ -5,18 +5,18 @@ db_connect ();
 
 // The following is used to convert a string "hh:mm" to seconds.
 // Return -1 on failure.
-function timenum ($string)
+function timenum ($string) {
 	if ($string == "")
 		return 0;
 	if ((strlen ($string) <> 5) or (strpos ($string, ":") <> 2))
 		return -1;
 
 	list ($hours, $minutes) = explode (":", $string, 2);
-	if (!isnumeric ($hours) or !isnumeric ($minutes)
+	if (!is_numeric ($hours) or !is_numeric ($minutes))
 		return -1;
 	if ($hours < 0)
 		return -1;
-	if (($minutes > 59) or ($minutes < 0)
+	if (($minutes > 59) or ($minutes < 0))
 		return -1;
 
 	$seconds = intval ($hours*3600) + intval ($minutes*60);
@@ -33,12 +33,11 @@ if ($_POST["new_template"]) {
 	$duplicate = false;
 	$res = db_query ("select template_name from playlist_template");
 	while ($row = mysql_fetch_assoc ($res) and !$duplicate)
-		if (strcasecmp ($template_name, $row["template_name"] == 0)
+		if (strcasecmp ($template_name, $row["template_name"]) == 0)
 			$duplicate = true;
-	} // end traversal of templates
 	mysql_free_result ($res);
 	if ($duplicate)
-		html_error ("Sorry, but a template with that name already exists");
+		html_error ("Sorry, but a template with that name already exists.");
 } // end if new template
 
 if (!$_POST["template_events_repeat"])
@@ -95,7 +94,7 @@ if ($_POST["new_template"])
 		'"' . $row["event_name"] . '", "' . $row["event_type"] . '", ' .
 		'"' . $row["event_channel_name"] . '", ' . $row["event_level"] . ', ' .
 		$row["event_anchor_event_number"] . ', ' .
-		$event_anchor_position . ', ' . $row["event_offset"] . ', ' .
+		$row["event_anchor_position"] . ', ' . $row["event_offset"] . ', ' .
 		'"' . $row["detail1"] . '", "' . $row["detail2"] . '", ' .
 		'"' . $row["detail3"] . '", "' . $row["detail4"] . '", ' .
 		'"' . $row["detail5"] . '")';
