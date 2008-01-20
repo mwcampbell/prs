@@ -46,6 +46,11 @@ mysql_free_result ($res);
 echo "<H3>$template_name</H3>\n";
 ?>
 <div>
+<form action="edittemplateproperties.php" method="post">
+<input type="hidden" name="action" value="edit">
+<input type="hidden" name="template_id" value="<?php echo $template_id ?>">
+<input type="submit" value="Edit Template Properties">
+</form>
 </div>
 <div>
 <form name="add_event" action="addevents.php" method="post">
