@@ -24,21 +24,24 @@ function timenum ($string) {
 } // end timenum()
 
 
+if ($_POST["new_template"])
+	$template_id = -1; // This wil be set properly later
+else $template_id = $_POST["template_id"];
+
 $template_name = $_POST["template_name"];
 if ($template_name == "")
 	html_error ("You must enter a template name.");
 
 // Check for duplicate template names
-if ($_POST["new_template"]) {
-	$duplicate = false;
-	$res = db_query ("select template_name from playlist_template");
-	while ($row = mysql_fetch_assoc ($res) and !$duplicate)
-		if (strcasecmp ($template_name, $row["template_name"]) == 0)
-			$duplicate = true;
+$duplicate = false;
+$res = db_query ("select template_name from playlist_template");
+while ($row = mysql_fetch_assoc ($res) and !$duplicate)
+	if ((strcasecmp ($template_name, $row["template_name"]) == 0) and
+	($template_id <> $row["template_id"]))
+		$duplicate = true;
 	mysql_free_result ($res);
-	if ($duplicate)
-		html_error ("Sorry, but a template with that name already exists.");
-} // end if new template
+if ($duplicate)
+	html_error ("Sorry, but a template with the name $template_name already exists.");
 
 if (!$_POST["template_events_repeat"])
 	$template_events_repeat = "0";
@@ -105,7 +108,6 @@ if ($_POST["new_template"])
 
 else {
 // Update existing template
-	$template_id = $_POST["template_id"];
 	$query = "update playlist_template set " .
 	"template_name='" . addslashes ($template_name) . "', " .
 	"repeat_events=$template_events_repeat, " .
