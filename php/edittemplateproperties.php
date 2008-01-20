@@ -74,6 +74,7 @@ display_template_list (-1);
 <?php
 if ($action == "new" or $action == "load")
 	echo '<input type="hidden" name="new_template" value="yes">' . "\n";
+else echo '<input type="hidden" name="template_id" value="' . $template_id . '">' . "\n";
 
 if ($_POST["load_events"]) {
         echo '<input type="hidden" name="load_events" value="yes">' . "\n";
