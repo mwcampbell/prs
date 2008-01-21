@@ -34,8 +34,8 @@ if ($template_name == "")
 
 // Check for duplicate template names
 $duplicate = false;
-$res = db_query ("select template_name from playlist_template");
-while ($row = mysql_fetch_assoc ($res) and !$duplicate)
+$res = db_query ("select template_name,template_id from playlist_template");
+while (($row = mysql_fetch_assoc ($res)) and !$duplicate)
 	if ((strcasecmp ($template_name, $row["template_name"]) == 0) and
 	($template_id <> $row["template_id"]))
 		$duplicate = true;
