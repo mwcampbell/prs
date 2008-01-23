@@ -15,9 +15,10 @@ compile it.  In particular, you need a relatively recent automake.
 1.9.6 works fine, 1.4-p6 does not.  I did not try any versions 
 inbetween.
 
-The following is a probably incomplete list of libraries required to 
+The following is a probably incomplete list of packages required to 
 build PRS:
 
+* PKG-Config
 * libogg
 * libvorbis
 * libvorbisfile
@@ -26,7 +27,7 @@ build PRS:
 * libshout
 * libmysqlclient
 * libxml2
-* GnuTLS
+* OpenSSL
 * libtheora?
 * libid3
 
@@ -266,7 +267,7 @@ where you have copied the PHP files.  It's best if you've configured
 your browser to automatically use index.php as a directory index, so 
 that you could surf to www.myserver.com/prs for example.
 
-Use the username and password as entered in secion 2.5 to log into the 
+Use the username and password as entered in section 2.5 to log into the 
 system.  If you have more than one PRS station, you may select it from 
 the drop-down list on the front page.  Note though that credentials are 
 only relevant for the station in whose database they reside.  This means 
