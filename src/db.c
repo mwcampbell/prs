@@ -119,14 +119,14 @@ void
 db_config (Database *db, xmlNodePtr cur)
 {
 	xmlChar *host = NULL, *user = NULL, *password = NULL, *name = NULL;
-	host = xmlGetProp (cur, "host");
+	host = xmlGetProp (cur, (xmlChar*)"host");
 	if (host == NULL)
-		host = strdup ("localhost");
-	user = xmlGetProp (cur, "user");
-	password = xmlGetProp (cur, "password");
-	name = xmlGetProp (cur, "name");
-	db_connect (db, host, user, password,
-		    (name) ? name : (xmlChar*)"prs");
+		host = xmlCharStrdup ("localhost");
+	user = xmlGetProp (cur, (xmlChar*)"user");
+	password = xmlGetProp (cur, (xmlChar*)"password");
+	name = xmlGetProp (cur, (xmlChar*)"name");
+	db_connect (db, (char*)host, (char*)user, (char*)password,
+		    (name) ? (char*)name : "prs");
 	if (name)
 		xmlFree (name);
 	if (host)
