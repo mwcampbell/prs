@@ -41,7 +41,7 @@ debug_printf (int flags,
 	gettimeofday (&v, NULL);
 	timestring = strdup (ctime (&v.tv_sec));
 	timestring[strlen(timestring)-6] = 0;
-	fprintf (stdout, "%s.%03d\n\t", timestring, v.tv_usec/1000);
+	fprintf (stdout, "%s.%03ld\n\t", timestring, v.tv_usec/1000);
 	free (timestring);
 	va_start (args, format);
 	vfprintf (stdout, format, args);
