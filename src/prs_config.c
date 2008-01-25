@@ -485,6 +485,7 @@ prs_config (PRS *prs, const char *filename)
 	if (cur == NULL) {
 		fprintf (stderr, "Invalid configuration file.\n");
 		xmlFreeDoc (doc);
+		return -1;
 	}
 	cur = cur->xmlChildrenNode;
 	while (cur) {
@@ -504,5 +505,6 @@ prs_config (PRS *prs, const char *filename)
 		cur = cur->next;
 	}  
 	xmlFreeDoc (doc);
+	return 0;
 }
   
