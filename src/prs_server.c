@@ -207,7 +207,10 @@ main (int argc, char *argv[])
   if (argc > 1)
     config_filename = argv[1];
   debug_printf (DEBUG_FLAGS_GENERAL, "Loading config file %s\n", config_filename);
-  prs_config (prs, config_filename);
+  if (prs_config (prs, config_filename) == -1)
+    {
+      return 1;
+    }
 
   if (prs->telnet_interface)
     {
