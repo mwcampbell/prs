@@ -156,7 +156,7 @@ url_mixer_channel_get_data (MixerChannel *ch)
 	int rv;
   
 	if (!ch)
-		return;
+		return -1;
 	i = (channel_info *) ch->data;
 	tmp = ch->input;
 	remainder = ch->chunk_size*ch->channels;
@@ -284,7 +284,7 @@ mp3_process_first_block (channel_info *i,
 
 	buf = (unsigned char *) ptr;	
 
-	end_buf = (char *) ptr+(size-4);
+	end_buf = (unsigned char *) ptr+(size-4);
 	while (buf <= end_buf) {
 		if (*buf == 0XFF && (*(buf+1) >> 4) == 0X0F) {
 			ulong_header = (((*buf) << 24) |
@@ -310,7 +310,7 @@ mp3_process_first_block (channel_info *i,
 		
 	i->rate = mh.samplerate;
 	i->channels = (mh.stereo > 1) ? 2 : 1;
-	return rv;
+	return (char*)rv;
 }
 
 
