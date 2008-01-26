@@ -5,11 +5,13 @@
  *
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <sys/soundcard.h>
 #include "soundcard.h"
 
