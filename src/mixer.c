@@ -283,6 +283,7 @@ mixer_stop (mixer *m)
 	thread = m->thread;
 	mixer_unlock (m);
 	pthread_join (thread, NULL);
+	return 0;
 }
 
 
@@ -403,7 +404,7 @@ mixer_get_channel (mixer *m,
 		debug_printf (DEBUG_FLAGS_MIXER,
 			      "mixer_get_channel: no channels\n");
 		mixer_unlock (m);
-		return;
+		return NULL;
 	}
 	for (tmp = m->channels; tmp; tmp = tmp->next)
 	{
@@ -778,7 +779,7 @@ mixer_fade_channel (mixer *m,
 	assert (m != NULL);
 	assert (channel_name != NULL);
 	debug_printf (DEBUG_FLAGS_MIXER,
-		      "fading channel %s: destionation=%f, time=%f\n",
+		      "fading channel %s: destination=%f, time=%f\n",
 		      channel_name, fade_destination, fade_time);
 
 	if (fade_destination == 0)
