@@ -6,6 +6,7 @@
  */
 
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 #include "debug.h"
 #include "mixerbus.h"
@@ -89,6 +90,7 @@ mixer_bus_add_data (MixerBus *b,
 		else
 			*tmp++ = (short) samp;    
 	}
+	return 0;
 }
 
 
