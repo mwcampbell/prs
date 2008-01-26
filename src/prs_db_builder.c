@@ -36,15 +36,17 @@ config (Database *db, const char *filename)
     {
       fprintf (stderr, "Invalid configuration file.\n");
       xmlFreeDoc (doc);
+      return -1;
     }
   cur = cur->xmlChildrenNode;
   while (cur)
     {
-      if (!xmlStrcasecmp (cur->name, "db"))
+      if (!xmlStrcasecmp (cur->name, (xmlChar*)"db"))
 	db_config (db, cur);
       cur = cur->next;
     }  
   xmlFreeDoc (doc);
+  return 0;
 }
 
 static void
@@ -110,7 +112,10 @@ main (int argc, char *argv[])
   if (argc - optind != 1)
     usage (argv[0]);
 
-  config (db, config_file);
+  if (config (db, config_file) == -1)
+    {
+      return 1;
+    }
 
   /* Create tables */
 
