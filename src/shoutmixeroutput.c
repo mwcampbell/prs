@@ -219,7 +219,7 @@ shout_thread (void *data)
 			connected = 0;
 		}
 		else {
-			rv = shout_send (i->shout, buffer, bytes_read);
+			rv = shout_send (i->shout, (unsigned char*)buffer, bytes_read);
 			if (rv) {
 				debug_printf (DEBUG_FLAGS_GENERAL, "Error sending data to server: %s\n", shout_get_error (i->shout));
 				stop_encoder (o);
