@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <math.h>
 #include <sys/types.h>
@@ -33,7 +34,7 @@ oss_mixer_channel_get_data (MixerChannel *ch)
 	int rv;
   
 	if (!ch)
-		return;
+		return -1;
 	tmp = ch->input;
 	remainder = ch->chunk_size*ch->channels;
 	i = (oss_info *) ch->data;
