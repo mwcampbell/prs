@@ -39,6 +39,8 @@ mixer_patch_point_new (MixerChannel *ch,
 		       MixerBus *b,
 		       int latency);
 void
+mixer_patch_point_post_data (MixerPatchPoint *p);
+void
 mixer_patch_point_destroy (MixerPatchPoint *p);
 
 
