@@ -66,6 +66,7 @@ mixer_output_add_data (MixerOutput *o,
 	length *= o->channels;
 	while (length--)
 		*tmp++ += *tmp2++;
+	return 0;
 }
 
 
