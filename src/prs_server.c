@@ -275,7 +275,7 @@ main (int argc, char *argv[])
     {
 	    debug_printf (DEBUG_FLAGS_TELNET, "Waiting for telnet connection.\n");
 	    while ((new_sock = accept (sock, (struct sockaddr *) &sa,
-				 &sa_length)) >= 0)
+				 (socklen_t *) &sa_length)) >= 0)
 	{
 	  FILE *sock_fp = fdopen (new_sock, "r+");
 	  debug_printf (DEBUG_FLAGS_TELNET, "Starting prs session.\n");
