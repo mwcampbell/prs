@@ -123,6 +123,7 @@ mixer_automation_add_event (MixerAutomation *a,
 		debug_printf (DEBUG_FLAGS_AUTOMATION, "fade all event added\n");
 		break;
 	}
+	return 0;
 }
 
 
