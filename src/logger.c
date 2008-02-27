@@ -325,6 +325,10 @@ icecast_log_file (logger_data *d)
 	}
 	if (encoded_password)
 		curl_free (encoded_password);
+	if (encoded_username)
+		curl_free (encoded_username);
+	if (encoded_mount)
+		curl_free (encoded_mount);
 }
 
 
