@@ -89,10 +89,15 @@ as has full access to it.  This can be done like so:
 
 grant all  on prs.* to prs identified by 'MyPassword';
 
-This command also creates the prs user if it doesn't already exist.   
-You can omit the "identified by 'MyPassword'" clause if the user account 
-already exists or if you wish to not have a password associated with 
-that account (not recommended).
+If your mysql server is on the same host as PRS, you will probably want 
+to specify localhost instead like so:
+
+grant all  on prs.* to 'prs'@'localhost' identified by 'MyPassword';
+
+The grant statement also creates the prs user if it doesn't already 
+exist.  You can omit the "identified by 'MyPassword'" clause if the user 
+account already exists or if you wish to not have a password associated 
+with that account (not recommended).
 
 The above commands create an empty database.  prs_db_builder will create 
 most of the tables for you, and the rest will be done by prs_server when 
