@@ -930,8 +930,8 @@ recording_picker_new (Database *db, double artist_exclude,
 	p = (RecordingPicker *) malloc (sizeof (RecordingPicker));
 	assert (p != NULL);
 	debug_printf (DEBUG_FLAGS_DATABASE,
-		      "recording_picker_new: artist_exclude=%d, "
-		      "recording_exclude=%d\n", artist_exclude,
+		      "recording_picker_new: artist_exclude=%g, "
+		      "recording_exclude=%g\n", artist_exclude,
 		      recording_exclude);
 	db_lock (db);
   
