@@ -167,6 +167,7 @@ logger_data_log_entry (logger_data *d)
 
 		fprintf (d->l->log_file, "\t<entry>\n");
 		fprintf (d->l->log_file, "\t\t<time>%ld</time>\n", cur_time);
+		fprintf (d->l->log_file, "\t\t<filename>%s</filename>\n", d->path);
 		fprintf (d->l->log_file, "\t\t<title>%s</title>\n", d->name);
 		fprintf (d->l->log_file, "\t\t<artist>%s</artist>\n", d->artist);
 		fprintf (d->l->log_file, "\t\t<album>%s</album>\n", d->album);
