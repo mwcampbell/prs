@@ -108,7 +108,10 @@ display_repetition_list ($selected_repetition)
 		0 => "One Time Only",
 		3600 => "Hourly",
 		86400 => "Daily",
-		604800 => "Weekly"
+		604800 => "Weekly",
+		1209600 => "2 Weeks",
+		1814400 => "3 Weeks",
+		2419200 => "4 Weeks"
 	);
 
 	echo "<select name=\"repetition\" id=\"repetition\">\n";
