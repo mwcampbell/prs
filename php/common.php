@@ -119,6 +119,6 @@ display_repetition_list ($selected_repetition)
 			echo " selected";
 		echo ">$value</option>\n";
 	} // end while list of repetition types
-	echo "</select>\n\n";
+	echo "</select>\n";
 }
 ?>
