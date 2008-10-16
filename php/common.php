@@ -100,4 +100,25 @@ display_template_list ($selected_template)
         }
         mysql_free_result ($res);
 }
+
+function
+display_repetition_list ($selected_repetition)
+{
+	$repetition_table = array (
+		0 => "One Time Only",
+		3600 => "Hourly",
+		86400 => "Daily",
+		604800 => "Weekly"
+	);
+
+	echo "<select name=\"repetition\" id=\"repetition\">\n";
+	reset ($repetition_table);
+	while (list ($key, $value) = each ($repetition_table)) {
+		echo "<option value=\"$key\"";
+		if ($selected_repetition == $key)
+			echo " selected";
+		echo ">$value</option>\n";
+	} // end while list of repetition types
+	echo "</select>\n\n";
+}
 ?>

@@ -47,12 +47,9 @@ else {
 </div>
 <div>
 <label for="repetition">Repetition:</label>
-<select name="repetition" id="repetition" value="0">
-<option value="0">One Time Only</option>
-<option value="3600">Hourly</option>
-<option value="86400">Daily</option>
-<option value="604800">Weekly</option>
-</select>
+<?
+display_repetition_list (0);
+?>
 </div>
 <div>
 <label for="template_id">Select playlist template</label>

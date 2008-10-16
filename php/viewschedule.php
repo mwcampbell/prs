@@ -98,26 +98,9 @@ html_start ($title);
 <input type="text" name="end_time" id="end_time" length="30" value="<? echo $end_time; ?>">
 </td> 
 <td>
-<select name="repetition" id="repetition">
 <?
-echo "<option value=\"0\"";
-if ($repetition == 0)
-	echo " selected";
-echo ">One Time Only</option>";
-echo "<option value=\"3600\"";
-if ($repetition == 3600)
-	echo " selected";
-echo ">Hourly</option>";
-echo "<option value=\"86400\"";
-if ($repetition == 86400)
-	echo " selected";
-echo ">Daily</option>";
-echo "<option value=\"604800\"";
-if ($repetition == 604800)
-	echo " selected";
-echo ">Weekly</option>";
+display_repetition_list ($repetition);
 ?>
-</select>
 </td>
 <td>
 <select name="template_id" id="template_id">
