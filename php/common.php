@@ -86,17 +86,19 @@ redirect ($relative_url)
 
 
 function
-display_template_list ($selected_template)
+display_template_list ($selected_template, $exclude_selected=false)
 {
         $res = db_query ("select template_id, template_name from playlist_template order by template_name");
         echo "<option value=\"-1\">None Selected</option>\n";
 	while ($row = mysql_fetch_assoc ($res)) {
         	$id = $row["template_id"];
         	$name = $row["template_name"];
-        	echo "<option value=\"$id\"";
-		if ($id == $selected_template)
-			echo " selected";
-		echo ">$name</option>\n";
+		if (!$exclude_selected or ($id != $selected_template)) {
+	        	echo "<option value=\"$id\"";
+			if ($id == $selected_template)
+				echo " selected";
+			echo ">$name</option>\n";
+		}
         }
         mysql_free_result ($res);
 }
