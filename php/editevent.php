@@ -46,9 +46,8 @@ if (!$event_number) {
 	$event_number = $row["max"] + 1;
 	mysql_free_result ($res);
 }
-else {
+else if (!$insert_event)
 	$update_event = "yes";
-}
 
 if (!$event_name)
         $event_name = "event $event_number";
