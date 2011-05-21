@@ -79,8 +79,6 @@ start_encoder (MixerOutput *o)
 							    "-r");
 			i->args_list = string_list_prepend (i->args_list,
 							    sample_rate_arg);
-			i->args_list = string_list_prepend (i->args_list,
-							    "-x");
 			if (!i->stereo) {
 				i->args_list = string_list_prepend (i->args_list,
 								    "-mm");
