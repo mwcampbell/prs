@@ -72,7 +72,7 @@ mp3_mixer_channel_new (const char *name, const char *location,
 	}
 	mp3_header_read (fp, &mh);
 	fclose (fp);
-	d = mp3_decoder_new (location, 0);
+	d = mp3_decoder_new (location, 0, (mh.mode == 3) ? 1 : 2);
 	if (d == NULL) {
 		debug_printf (DEBUG_FLAGS_MIXER,
 			      "mp3mixerchannel: failed to create decoder\n");

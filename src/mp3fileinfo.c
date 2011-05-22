@@ -60,7 +60,7 @@ get_mp3_audio_in (FileInfo *info, int threshhold)
 	int done = 0;
 
 	assert (info != NULL);
-	d = mp3_decoder_new (info->path, 0);
+	d = mp3_decoder_new (info->path, 0, info->channels);
 	assert (d != NULL);
 	buffer_size = info->rate * info->channels;
 	buffer = (short *) malloc (buffer_size * sizeof (short));
@@ -111,7 +111,7 @@ get_mp3_audio_out (FileInfo *info, int threshhold)
 	seek_time = info->length - 10;
 	if (seek_time < 0)
 		seek_time = 0;
-	d = mp3_decoder_new (info->path, seek_time);
+	d = mp3_decoder_new (info->path, seek_time, info->channels);
 	assert (d != NULL);
 
 	samples_read = mp3_decoder_get_data (d, buffer, buffer_size);

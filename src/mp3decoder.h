@@ -22,7 +22,7 @@ struct _MP3Decoder {
 
 
 MP3Decoder *
-mp3_decoder_new (const char *filename, double start_time);
+mp3_decoder_new (const char *filename, double start_time, int channels);
 int
 mp3_decoder_get_data (MP3Decoder *d, short *buffer, int size);
 void
