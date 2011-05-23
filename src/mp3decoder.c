@@ -28,7 +28,7 @@ mp3_decoder_new (const char *filename, double start_time, int channels)
 	int decoder_output[2] = {-1, -1};
 	int rv = -1;
 	char start_time_str[100] = "0";
-	char channel_selection_param[10];
+	char *channel_selection_param;
 
 	assert (filename != NULL);
 	debug_printf (DEBUG_FLAGS_CODEC,
@@ -39,9 +39,9 @@ mp3_decoder_new (const char *filename, double start_time, int channels)
 
 	assert (channels >= 1 && channels <= 2);
 	if (channels == 2) {
-		channel_selection_param = strdup ("--stereo");
+		channel_selection_param = "--stereo";
 	} else {
-		channel_selection_param = strdup ("--mono");
+		channel_selection_param = "--mono";
 	}
 
 	/* Create pipe */
@@ -86,7 +86,6 @@ mp3_decoder_new (const char *filename, double start_time, int channels)
 			      "mp3_decoder_new: fork failed: %s\n",
 			      strerror (errno));
 
-	free (channel_selection_param);
 	return d;
 }
 
