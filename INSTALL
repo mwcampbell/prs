@@ -7,17 +7,20 @@ This file covers the following topics:
 * Building
 * Configuration
 * Running the software
+* Troubleshooting
+* Known bugs
 
 1.  Building the code:
 
 Since this is development code, you need the various auto* tools to 
 compile it.  In particular, you need a relatively recent automake.  
-1.9.6 works fine, 1.4-p6 does not.  I did not try any versions 
-inbetween.
+1.9.6 works fine, 1.4-p6 does not.  I have not tried any versions 
+inbetween.  You obviously also need a C compiler (GCC works fine) and make.
 
 The following is a probably incomplete list of packages required to 
 build PRS:
 
+* Libtool
 * PKG-Config
 * libogg
 * libvorbis
@@ -39,17 +42,22 @@ Note that while PRS seems to link against all these libraries, it
 doesn't necessarily seem to use all of them.  Speex is one example.  
 Also, it may be able to compile without some of them.
 
-The following executables are required when running PRS:
+The following executables are required when running prs_server:
 
 * madplay
 * mpg123
 * lame
 * oggenc
 
-You also need mysql to hold all the data, plus PHP and a webserver in 
-order to run the web interface to the schedule.  The PHP interface is in 
-the php subdirectory of the source tree and currently is not modified by 
-the build process, though this may change.
+The following is needed when running prs_db_builder:
+
+* find
+
+You also need a mysql server to hold all the data, plus PHP with mysql 
+support and a webserver in order to run the web interface to the 
+schedule.  The PHP interface is in the php subdirectory of the source 
+tree and currently is not modified by the build process, though this may 
+change.
 
 To build, type the following:
 
@@ -89,8 +97,8 @@ as has full access to it.  This can be done like so:
 
 grant all  on prs.* to prs identified by 'MyPassword';
 
-If your mysql server is on the same host as PRS, you will probably want 
-to specify localhost instead like so:
+If your mysql server is on the same host as PRS (recommended), you will 
+probably want to specify localhost instead like so:
 
 grant all  on prs.* to 'prs'@'localhost' identified by 'MyPassword';
 
@@ -106,15 +114,15 @@ prs_db_builder.
 
 2.2.  Configuring PRS:
 
+The next step is to create prs.conf.  This file is used by all three 
+parts of the PRS system so we need to make it before going any further.
+
 I strongly recommend giving PRS its own directory to run in.  By 
 default it will look for the config file prs.conf in the directory 
 where you launch it, and it will generate prs.log and prs.err.
 
 For the sake of example, I will use the directory /home/prs as the base 
 directory.
-
-The next step is to create prs.conf.  This file is used by all three 
-parts of the PRS system so we need to make it before going any further.
 
 A sample file prs.conf.dist can be found in the src directory of the PRS 
 sources.  A complete guide to the PRS config file is located in 
@@ -198,6 +206,17 @@ The syntax for prs_db_builder is as follows:
 
 prs_db_builder [-C <configfile>] -c <category> <path>
 
+prs_db_builder uses prs.conf in the current folder if the -C option is 
+not specified.
+
+If no category is specified, the genre (if any) of the file to be added 
+is used, or a blank category is used if no genre is available.  For this 
+reason, specifying a category is a very good idea.
+
+Also note that prs_db_builder will add the path exactly as specified, so 
+it's a very good idea to use absolute paths (e.g. /home/prs/content) 
+rather than relative paths.
+
 So if your station IDs are in /home/prs/content/ids then you might do 
 the following:
 
@@ -243,7 +262,7 @@ Go to your directory where ;you have your PRS config file (e.g.
 prs_server
 
 This will use file prs.conf as your config file.  To use an alternate 
-config file, specifiy it on the command line like so:
+config file, specify it on the command line like so:
 
 prs_server mystation.conf
 
@@ -263,7 +282,7 @@ At time of writing, the password is echoed back to you.
 
 A list of the commands available in the CLI can be found in doc/CLI.txt.  
 Of particular note are "quit" which exits the CLI, and "shutdown" which 
-terminates prs_server.
+terminates prs_server.  An unknown command will simply be ignored.
 
 3.2.  Using the web interface:
 
@@ -282,3 +301,67 @@ for each station.
 
 A discussion of the web system and how it works will soon be available 
 in doc/scheduling.txt.
+
+4.  Troubleshooting:
+
+PRS has a number of known quirks and some known bugs.
+
+* I only hear loud static on my MP3 stream.
+
+Add the -x parameter to lame to tell it to byte-swap the audio coming 
+in, like so:
+
+<encoder_arg>-x</encoder_arg>
+
+See doc/configuration.txt for information on how to add encoder args to 
+stream definitions.
+
+* My new timeslots aren't being acted on without a restart.
+
+PRS won't check for new timeslots in the middle of the current one.  So 
+if say you want to run automation most of the time but want to be able 
+to schedule one-off programs from time to time, create an automation 
+template and specify it to run each day for 24 hours.  This will mean an 
+interrupted song once a day, but also means that on days when you want 
+to schedule something, you can schedule an automation block before and 
+after and the program in question at the time you want it, and PRS wil 
+just deal with it without needing to restart.
+
+* PRS updates don't work when run from the website.
+
+Not sure what this is exactly.  The commandline that's run looks fine.  
+Certainly the web interface doesn't validate the search path, so be sure 
+that's correct.
+
+* Copy Timeslots doesn't work properly.
+
+Copy timeslots is broken!   *Do not* use it!
+
+5.  Known bugs:
+
+* PRS doesn't pick up MP3 tags properly in all cases.  Hopefully this is 
+just a matter of using different functions in the API.
+
+* PRS doesn't shutdown cleanly.  You may need to kill it if it hangs on 
+shutdown.
+
+* prs_db_builder aborts if it strikes a file it doesn't like and doesn't 
+even say what it is.  This is annoying.  The directory is searched in 
+unsorted order (i.e. "ls --sort=none") so you may be able to figure out 
+the problematic file by examining the database and seeing which file was 
+processed immediately before the crash.
+
+* The reconnect time isn't always used.  If the encoder dies for some 
+reason, it repeatedly tries to reconnect without waiting the required 
+length of time.
+
+* It's not currently possible to delete a template.  There's code to do 
+this but it's not been tested or hooked up to the interface.
+
+* It's not possible to logout of the interface.  This makes it 
+impossible to switch to another station.  Fortunately, sessions time out 
+relatively quickly anyway, so wait about ten minutes and try again.
+
+* It's not possible to make the interface secure.  I'm looking for ways 
+to detect whether we're using HTTP or HTTPS but have had no luck so far.
+

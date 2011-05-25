@@ -3,6 +3,13 @@ This is PRS the personal radio station.
 Please note that code is currently considered alpha software, though 
 hopefully with your help it can be made more stable and bug-free.
 
+This code is not exactly user-friendly to administer, and definitely not 
+user-friendly to install.  There are some parts which require the manual 
+manipulation of mysql databases, and the C programs need to be compiled 
+from source.  If you're not comfortable with getting your hands dirty in 
+the command line and in mysql databases, this software isn't for you, at 
+least not now.
+
 What is PRS?
 
 PRS is a package for automating radio broadcasts.  It is primarily 
@@ -51,17 +58,14 @@ COPYING for details.
 Mailing list:
 
 To get involved in PRS development, subscribe to the prsradio-devel list 
-by sending a message to prs-devel-request@lists.sourceforge.net with 
+by sending a message to prsradio-devel-request@lists.sourceforge.net with 
 subscribe in the subject line.  This list will also service user 
 questions for now, though a users list will probably be created in the 
 fullness of time.
 
-
-
-To hear PRS in action, check out the Mainstream and Cafe streams at ACB 
-Radio (http://www.acbradio.org).
+To hear PRS in action, check out the automation at MintFM (http://MintFM.net)..
 
 for further information about PRS, visit the source forge project at 
 http://sourceforge.net/projects/prsradio
 
-Geoff Shang - 8 January 2008
+Geoff Shang - 25 May 2011
