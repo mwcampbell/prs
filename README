@@ -52,8 +52,11 @@ in the PRS command line interface can be found in the doc directory.
 
 License:
 
-This package is licensed under a MIT-style license.  See the file 
-COPYING for details.
+This package is licensed under a MIT-style license, except for the 
+resampling code.  See the file COPYING for license details.  The 
+resampler (src/resample.c and src/resample.h) is licensed under the GNU 
+Library General Public License (LGPL) version 2.0 (see 
+http://www.gnu.org/licenses/old-licenses/lgpl-2.0.html)
 
 Mailing list:
 
