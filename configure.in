@@ -29,12 +29,7 @@ PKG_CHECK_MODULES(vorbisfile, vorbisfile)
 PKG_CHECK_MODULES(libxml2, libxml-2.0)
 PKG_CHECK_MODULES(shout, shout)
 PKG_CHECK_MODULES(libcurl, libcurl)
-
-AC_CHECK_LIB(id3, ID3Tag_New,
-    id3lib_LIBS="-lid3"
-  ,
-    AC_MSG_ERROR(could not find the id3 library)
-  )
+PKG_CHECK_MODULES(taglib_c, taglib_c)
 
 dnl MySQL configuration
 
@@ -66,7 +61,7 @@ AC_SUBST(shout_CFLAGS)
 AC_SUBST(shout_LIBS)
 AC_SUBST(libcurl_CFLAGS)
 AC_SUBST(libcurl_LIBS)
-AC_SUBST(id3lib_LIBS)
+AC_SUBST(taglib_c_LIBS)
 AC_SUBST(mysql_LIBS)
 AC_SUBST(mysql_CFLAGS)
 

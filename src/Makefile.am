@@ -10,7 +10,7 @@ prs_db_builder_LDADD = \
 	$(vorbis_LIBS) \
 	$(vorbisfile_LIBS) \
 	$(libxml2_LIBS) \
-	$(id3lib_LIBS) \
+	$(taglib_c_LIBS) \
 	$(mysql_LIBS)
 prs_db_builder_SOURCES = \
 	db.c \
@@ -38,7 +38,7 @@ prs_server_LDADD = \
 	$(libxml2_LIBS) \
 	$(shout_LIBS) \
 	$(libcurl_LIBS) \
-	$(id3lib_LIBS) \
+	$(taglib_c_LIBS) \
 	$(mysql_LIBS)
 prs_server_SOURCES = \
 	fileinfo.c \

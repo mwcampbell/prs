@@ -125,7 +125,18 @@ int mp3_header_read(FILE *fp, mp3_header_t *mh)
 		       (buf[3]);
 		memset(mh, 0, sizeof(mp3_header_t));
 
-		if (mp3_header_parse(head, mh)) {
+		if (strncmp(buf, "ID3", 3) == 0) {
+			char id3buf[10];
+			int len;
+			memcpy(id3buf, buf, 4);
+			fread(id3buf + 4, 6, 1, fp);
+			len =
+				((id3buf[6] & 0x7f) << 21) |
+				((id3buf[7] & 0x7f) << 14) |
+				((id3buf[8] & 0x7f) << 7) |
+				(id3buf[9] & 0x7f);
+			fseek(fp, len, SEEK_CUR);
+		} else if (mp3_header_parse(head, mh)) {
 			fseek(fp, -4, SEEK_CUR);
 			return 1;
 		} else

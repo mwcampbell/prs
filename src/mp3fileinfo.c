@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <id3.h>
+#include <taglib/tag_c.h>
 #include "debug.h"
 #include "fileinfo.h"
 #include "mp3decoder.h"
@@ -135,9 +135,8 @@ mp3_file_info_new (const char *path, const unsigned short in_threshhold,
 		   const unsigned short out_threshhold)
 {
 	FileInfo *info;
-	ID3Tag *tag = NULL;
-	ID3Frame *frame = NULL;
-	ID3Field *field = NULL;
+	TagLib_File *file = NULL;
+	TagLib_Tag *tag = NULL;
 	int frames;
 	assert (path != NULL);
 	debug_printf (DEBUG_FLAGS_FILE_INFO,
@@ -167,50 +166,27 @@ mp3_file_info_new (const char *path, const unsigned short in_threshhold,
 	info->audio_out = -1.0;
 
 	/* Get ID3 info. */
-	tag = ID3Tag_New ();
-	ID3Tag_Link (tag, path);
+	file = taglib_file_new(path);
 
-	if ((frame = ID3Tag_FindFrameWithID (tag, ID3FID_TITLE)) != NULL &&
-	    (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
+	if (file != NULL &&
+	    (tag = taglib_file_tag(file)) != NULL)
 	{
-		char title[256];
-		ID3Field_GetASCII (field, title, 256);
-		info->name = strdup (title);
+		info->name = taglib_tag_title(tag);
+		if (info->name != NULL)
+			info->name = strdup(info->name);
+		info->artist = taglib_tag_artist(tag);
+		if (info->artist != NULL)
+			info->artist = strdup(info->artist);
+		info->album = taglib_tag_album(tag);
+		if (info->album != NULL)
+			info->album = strdup(info->album);
+		info->genre = taglib_tag_genre(tag);
+		if (info->genre != NULL)
+			info->genre = strdup(info->genre);
+		taglib_tag_free_strings();
 	}
-  
-	if ((frame = ID3Tag_FindFrameWithID (tag, ID3FID_LEADARTIST)) != NULL &&
-	    (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
-	{
-		char artist[256];
-		ID3Field_GetASCII (field, artist, 256);
-		info->artist = strdup (artist);
-	}
-  
-	if ((frame = ID3Tag_FindFrameWithID (tag, ID3FID_ALBUM)) != NULL &&
-	    (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
-	{
-		char album[256];
-		ID3Field_GetASCII (field, album, 256);
-		info->album = strdup (album);
-	}
-  
-	if ((frame = ID3Tag_FindFrameWithID (tag, ID3FID_YEAR)) != NULL &&
-	    (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
-	{
-		char date[256];
-		ID3Field_GetASCII (field, date, 256);
-		info->date = strdup (date);
-	}
-  
-	if ((frame = ID3Tag_FindFrameWithID (tag, ID3FID_CONTENTTYPE)) != NULL &&
-	    (field = ID3Frame_GetField (frame, ID3FN_TEXT)) != NULL)
-	{
-		char genre[256];
-		ID3Field_GetASCII (field, genre, 256);
-		info->genre = strdup (genre);
-	}
-  
-	ID3Tag_Delete (tag);
+	if (file != NULL)
+		taglib_file_free(file);
   
 	if (in_threshhold > 0)
 		info->audio_in = get_mp3_audio_in (info, in_threshhold);
@@ -219,3 +195,5 @@ mp3_file_info_new (const char *path, const unsigned short in_threshhold,
   
 	return info;
 }
+
+

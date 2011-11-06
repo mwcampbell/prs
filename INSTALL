@@ -32,7 +32,7 @@ build PRS:
 * libxml2
 * OpenSSL
 * libtheora?
-* libid3
+* TagLib C binding (libtagc0-dev on Debian/Ubuntu)
 
 Don't forget to make sure you install development packages for required 
 libraries if running on a package-based distribution such as Debian or 
