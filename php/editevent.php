@@ -52,7 +52,7 @@ else if (!$insert_event)
 if (!$event_name)
         $event_name = "event $event_number";
 
-if (($event_type == "random") or ($event-type == "simple_random"))
+if (($event_type == "random") or ($event_type == "simple_random"))
 {
 	$categories = array ();
 	$res = db_query ("select category_name from category");
