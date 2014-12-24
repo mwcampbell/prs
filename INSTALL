@@ -61,7 +61,8 @@ change.
 
 To build, type the following:
 
-./autogen.sh
+autoreconf -i
+./configure
 make
 make install
 

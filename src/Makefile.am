@@ -1,3 +1,5 @@
+AUTOMAKE_OPTIONS = foreign
+
 bin_PROGRAMS = prs_db_builder prs_server
 
 prs_db_builder_CFLAGS = \
