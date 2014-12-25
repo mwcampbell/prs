@@ -285,7 +285,7 @@ shout_mixer_output_new (const char *name,
 	/* Open the archive file if one is specified */
 
 	if (archive_file_name) {
-		i->archive_file_fd = open (archive_file_name, O_WRONLY | O_CREAT | O_TRUNC);
+		i->archive_file_fd = open (archive_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	}
 	else
 		i->archive_file_fd = -1;
