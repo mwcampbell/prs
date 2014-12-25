@@ -3,7 +3,7 @@
  *
  * Copyright 2003 Marc Mulcahy
  *
- * db.c: Implementation of the PRS interface to the MySQL database.
+ * db.c: Implementation of the PRS interface to the SQLite database.
  *
  */
 
@@ -13,7 +13,7 @@
 #include <math.h>
 #include <time.h>
 #include <string.h>
-#include <mysql/mysql.h>
+#include <sqlite3.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include "debug.h"
@@ -29,8 +29,7 @@ db_new (void)
 		      "creating database object\n");
 	db = (Database *) malloc (sizeof (Database));
 	assert (db != NULL);
-	db->conn = mysql_init (NULL);
-	assert (db->conn != NULL);
+	db->db = NULL;
 	pthread_mutex_init (&(db->mutex), NULL);
 	return db;
 }
@@ -50,29 +49,23 @@ db_unlock (Database *db)
 }
 
 int
-db_connect (Database *db, const char *host, const char *user,
-	    const char *password, const char *name)
+db_open (Database *db, const char *filename)
 {
-	MYSQL *result;
+	int rc;
 	assert (db != NULL);
-	assert (host != NULL);
-	assert (user != NULL);
-	assert (password != NULL);
-	assert (name != NULL);
+	assert (filename != NULL);
 	debug_printf (DEBUG_FLAGS_DATABASE,
-		      "db_connect: host=%s, user=%s, password=%s, name=%s\n",
-		      host, user, password, name);
+		      "db_open: filename=%s\n", filename);
 	db_lock (db);
-	result = mysql_real_connect (db->conn, host, user, password, name, 0,
-				     NULL, 0);
+	rc = sqlite3_open (filename, &(db->db));
 	db_unlock (db);
 
-	if (result)
+	if (rc == SQLITE_OK)
 		return 0;
 	else
 	{
-		fprintf (stderr, "Unable to connect to database: %s\n",
-			 mysql_error (db->conn));
+		fprintf (stderr, "Unable to open database: %s\n",
+			 sqlite3_errmsg (db->db));
 		db_close (db);
 		exit (EXIT_FAILURE);
 	}
@@ -81,26 +74,41 @@ db_connect (Database *db, const char *host, const char *user,
 static void
 db_execute (Database *db, const char *stmt)
 {
+	char *errmsg;
+	int rc;
 	assert (db != NULL);
 	assert (stmt != NULL);
 	debug_printf (DEBUG_FLAGS_DATABASE,
 		      "db: executing: %s\n", stmt);
-	if (mysql_real_query (db->conn, stmt, strlen (stmt)) != 0) {
-		fprintf (stderr, "MySQL error: %s\n", mysql_error (db->conn));
+	rc = sqlite3_exec (db->db, stmt, NULL, NULL, &errmsg);
+	if (rc != SQLITE_OK) {
+		fprintf (stderr, "SQLite error: %s\n", errmsg);
+		sqlite3_free (errmsg);
 		exit (EXIT_FAILURE);
 	}
 }
 
-static MYSQL_RES *
-db_query (Database *db, const char *query)
+static void
+db_query (Database *db, const char *query, char ***presult, int *pnrows,
+	  int *pncolumns)
 {
-	MYSQL_RES *res = NULL;
+	char *errmsg;
+	int rc;
 	assert (db != NULL);
 	assert (query != NULL);
-	db_execute (db, query);
-	res = mysql_store_result (db->conn);
-	assert (res != NULL);
-	return res;
+	assert (presult != NULL);
+	assert (pnrows != NULL);
+	assert (pncolumns != NULL);
+	debug_printf (DEBUG_FLAGS_DATABASE,
+		      "db: executing: %s\n", query);
+	rc = sqlite3_get_table (db->db, query, presult, pnrows,
+				pncolumns, &errmsg);
+	if (rc != SQLITE_OK) {
+		fprintf (stderr, "SQLite error: %s\n", errmsg);
+		sqlite3_free (errmsg);
+		exit (EXIT_FAILURE);
+	}
+	assert (presult != NULL);
 }
 
 void
@@ -109,8 +117,8 @@ db_close (Database *db)
 	assert (db != NULL);
 	debug_printf (DEBUG_FLAGS_DATABASE, "closing database\n");
 	db_lock (db);
-	if (db->conn)
-		mysql_close (db->conn);
+	if (db->db)
+		sqlite3_close (db->db);
 	db_unlock (db);
 	free (db);
 }
@@ -118,23 +126,11 @@ db_close (Database *db)
 void
 db_config (Database *db, xmlNodePtr cur)
 {
-	xmlChar *host = NULL, *user = NULL, *password = NULL, *name = NULL;
-	host = xmlGetProp (cur, (xmlChar*)"host");
-	if (host == NULL)
-		host = xmlCharStrdup ("localhost");
-	user = xmlGetProp (cur, (xmlChar*)"user");
-	password = xmlGetProp (cur, (xmlChar*)"password");
-	name = xmlGetProp (cur, (xmlChar*)"name");
-	db_connect (db, (char*)host, (char*)user, (char*)password,
-		    (name) ? (char*)name : "prs");
-	if (name)
-		xmlFree (name);
-	if (host)
-		xmlFree (host);
-	if (password)
-		xmlFree (password);
-	if (user)
-		xmlFree (user);
+	xmlChar *filename = NULL;
+	filename = xmlGetProp (cur, (xmlChar*)"filename");
+	db_open (db, (char*)filename);
+	if (filename)
+		xmlFree (filename);
 }
 
 
@@ -162,7 +158,7 @@ process_for_sql (const char *s)
 	while (s && *s)
 	{
 		if (*s == '\'')
-			*ptr++ = '\\';
+			*ptr++ = '\'';
 		*ptr++ = *s++;
 	}
 	*ptr = 0;
@@ -177,7 +173,7 @@ create_table (Database *db,
 	      const char *create_query,
 	      int erase_existing)
 {
-	MYSQL_RES *res;
+	int rc;
 	char query[2048];
   
 	assert (db != NULL);
@@ -189,12 +185,10 @@ create_table (Database *db,
 
 	/* Does table already exist */
 
-	sprintf (query, "describe %s", table_name);
-	if (mysql_real_query (db->conn, query, strlen (query)) == 0)
-	{
+	sprintf (query, "select count(*) from %s", table_name);
+	rc = sqlite3_exec (db->db, query, NULL, NULL, NULL);
+	if (rc == SQLITE_OK) {
 		debug_printf (DEBUG_FLAGS_DATABASE, "table exists\n");
-		res = mysql_store_result (db->conn);
-		mysql_free_result (res);
 		if (!erase_existing)
 			return -1;
 		sprintf (query, "drop table %s", table_name);
@@ -211,7 +205,7 @@ static int
 does_table_exist (Database *db,
 		  const char *table_name)
 {
-	MYSQL_RES *res;
+	int rc;
 	char query[1024];
 	int rv;
 
@@ -221,12 +215,10 @@ does_table_exist (Database *db,
 		      "checking whether table %s exists\n", table_name);
 	sprintf (query, "describe %s", table_name);
 
-	if (mysql_real_query (db->conn, query, strlen (query)) == 0)
-	{
+	rc = sqlite3_exec (db->db, query, NULL, NULL, NULL);
+	if (rc == SQLITE_OK) {
 		debug_printf (DEBUG_FLAGS_DATABASE,
 			      "table %s exists\n", table_name);
-		res = mysql_store_result (db->conn);
-		mysql_free_result (res);
 		rv = 1;
 	}
 	else {
@@ -240,46 +232,46 @@ does_table_exist (Database *db,
 
 
 static Recording *
-get_recording_from_result (Database *db,
-			   MYSQL_ROW row)
+get_recording_from_result (Database *db, char **result, int rowindex,
+			   int ncolumns)
 {
 	Recording *r = NULL;
 	assert (db != NULL);
-	assert (row != NULL);
+	assert (result != NULL);
 	r = (Recording *) malloc (sizeof(Recording));
 	assert (r != NULL);
 	r->db = db;
 
 	/* Get recording information from database result */
 
-	r->id = atoi (row[0]);
-	r->name = strdup (row[1]);
-	r->path = strdup (row[2]);
-	r->artist = strdup (row[3]);
-	r->category = strdup (row[4]);
-	r->date = strdup (row[5]);
-	r->rate = atoi (row[6]);
-	r->channels = atoi (row[7]);
-	r->length = atof (row[8]);
-	r->audio_in = atof (row[9]);
-	r->audio_out = atof (row[10]);
+	r->id = atoi (result[rowindex * ncolumns + 0]);
+	r->name = strdup (result[rowindex * ncolumns + 1]);
+	r->path = strdup (result[rowindex * ncolumns + 2]);
+	r->artist = strdup (result[rowindex * ncolumns + 3]);
+	r->category = strdup (result[rowindex * ncolumns + 4]);
+	r->date = strdup (result[rowindex * ncolumns + 5]);
+	r->rate = atoi (result[rowindex * ncolumns + 6]);
+	r->channels = atoi (result[rowindex * ncolumns + 7]);
+	r->length = atof (result[rowindex * ncolumns + 8]);
+	r->audio_in = atof (result[rowindex * ncolumns + 9]);
+	r->audio_out = atof (result[rowindex * ncolumns + 10]);
 	return r;
 }
 
 
 
 static PlaylistEvent *
-get_playlist_event_from_result (MYSQL_ROW row)
+get_playlist_event_from_result (char **result, int rowindex, int ncolumns)
 {
 	PlaylistEvent *e = NULL;
 	char *type;
 
-	assert (row != NULL);
+	assert (result != NULL);
 	e = (PlaylistEvent *) malloc (sizeof(PlaylistEvent));
 	assert (e != NULL);
-	e->template_id = atoi (row[0]);
-	e->number = atoi (row[1]);
-	type = row[3];
+	e->template_id = atoi (result[rowindex * ncolumns + 0]);
+	e->number = atoi (result[rowindex * ncolumns + 1]);
+	type = result[rowindex * ncolumns + 3];
 	if (!strcmp (type, "simple_random"))
 		e->type = EVENT_TYPE_SIMPLE_RANDOM;
 	else if (!strcmp (type, "random"))
@@ -294,16 +286,16 @@ get_playlist_event_from_result (MYSQL_ROW row)
 		debug_printf (DEBUG_FLAGS_DATABASE,
 			      "unknown event type %s\n", type);
 
-	e->channel_name = strdup (row[4]);
-	e->level = atof (row[5]);
-	e->anchor_event_number = atoi (row[6]);
-	e->anchor_position = atoi (row[7]);
-	e->offset = atof (row[8]);
-	e->detail1 = strdup (row[9]);
-	e->detail2 = strdup (row[10]);
-	e->detail3 = strdup (row[11]);
-	e->detail4 = strdup (row[12]);
-	e->detail5 = strdup (row[13]);
+	e->channel_name = strdup (result[rowindex * ncolumns + 4]);
+	e->level = atof (result[rowindex * ncolumns + 5]);
+	e->anchor_event_number = atoi (result[rowindex * ncolumns + 6]);
+	e->anchor_position = atoi (result[rowindex * ncolumns + 7]);
+	e->offset = atof (result[rowindex * ncolumns + 8]);
+	e->detail1 = strdup (result[rowindex * ncolumns + 9]);
+	e->detail2 = strdup (result[rowindex * ncolumns + 10]);
+	e->detail3 = strdup (result[rowindex * ncolumns + 11]);
+	e->detail4 = strdup (result[rowindex * ncolumns + 12]);
+	e->detail5 = strdup (result[rowindex * ncolumns + 13]);
 	e->start_time = e->end_time = -1.0;
 	return e;
 }
@@ -333,22 +325,23 @@ static list *
 get_playlist_events_from_template (Database *db,
 				   int template_id)
 {
-	MYSQL_RES *res = NULL;
-	MYSQL_ROW row;
+	char **result = NULL;
+	int nrows;
+	int ncolumns;
+	int rowindex;
 	char buffer[1024];
 	list *events = NULL;
   
 	assert (db != NULL);
 	assert (template_id >= 0);
 	sprintf (buffer, "select * from playlist_event where template_id = %d order by event_number desc", template_id);
-	res = db_query (db, buffer);
-	while (row = mysql_fetch_row (res))
-	{
-		PlaylistEvent *e = get_playlist_event_from_result (row);
+	db_query (db, buffer, &result, &nrows, &ncolumns);
+	for (rowindex = 1; rowindex <= nrows; rowindex++) {
+		PlaylistEvent *e = get_playlist_event_from_result (result, rowindex, ncolumns);
 		events = prs_list_prepend (events, (void *) e);
 	}
 
-	mysql_free_result (res);
+	sqlite3_free_table (result);
 	return events;
 }
 
@@ -375,22 +368,22 @@ create_recording_tables (Database *db)
 {
 	char *artist_create_query = 
       "create table artist ("
-      "artist_id int primary key auto_increment,"
+      "artist_id integer primary key,
       "artist_name varchar (200))";
 	char *category_create_query = 
       "create table category ("
-      "category_id int primary key auto_increment,"
+      "category_id integer primary key,"
       "category_name varchar (128))";
 	char *recording_create_query =
       "create table recording ("
-      "recording_id int primary key auto_increment,"
+      "recording_id integer primary key,"
       "recording_name varchar (255),"
       "recording_path varchar (255),"
-      "artist_id int,"
-      "category_id int,"
+      "artist_id integer,"
+      "category_id integer,"
       "date varchar (20),"
-      "rate int,"
-      "channels int,"
+      "rate integer,"
+      "channels integer,"
       "length double,"
       "audio_in double,"
       "audio_out double)";
@@ -472,33 +465,33 @@ create_playlist_tables (Database *db)
 {
 	char *playlist_template_create_query =
       "create table playlist_template ("
-      "template_id int primary key auto_increment,"
+      "template_id integer primary key,"
       "template_name varchar (100),"
-      "repeat_events int,"
-      "handle_overlap int,"
+      "repeat_events integer,"
+      "handle_overlap integer,"
       "artist_exclude double,"
       "recording_exclude double)";
 	char *create_schedule_query =
     "create table schedule ("
-    "time_slot_id int primary key auto_increment,"
+    "time_slot_id integer primary key,"
     "start_time double,"
     "length double,"
     "repetition double,"
-    "daylight int,"
-    "template_id int,"
-    "fallback_id int,"
+    "daylight integer,"
+    "template_id integer,"
+    "fallback_id integer,"
     "end_prefade double)";
 
 	char *create_playlist_event_query =
       "create table playlist_event ("
-      "template_id int,"
-      "event_number int,"
+      "template_id integer,"
+      "event_number integer,"
       "event_name varchar (100),"
       "event_type varchar (20),"
       "event_channel_name varchar (100),"
       "event_level double,"
-      "event_anchor_event_number int,"
-      "event_anchor_position int,"
+      "event_anchor_event_number integer,"
+      "event_anchor_position integer,"
       "event_offset double,"
       "detail1 varchar (64),"
       "detail2 varchar (64),"
@@ -540,20 +533,20 @@ playlist_template_destroy (PlaylistTemplate *t)
 
 static PlaylistTemplate *
 get_playlist_template_from_result (Database *db,
-				   MYSQL_ROW row)
+				   char **result, int rowindex, int ncolumns)
 {
 	PlaylistTemplate *t = NULL;
 
 	assert (db != NULL);
-	assert (row != NULL);
+	assert (result != NULL);
 	t = (PlaylistTemplate *) malloc (sizeof(PlaylistTemplate));
 	assert (t != NULL);
-	t->id = atoi (row[0]);
-	t->name = strdup (row[1]);
-	t->repeat_events = atoi (row[2]);
-	t->handle_overlap = atoi (row[3]);
-	t->artist_exclude = atof (row[4]);
-	t->recording_exclude = atof (row[5]);
+	t->id = atoi (result[rowindex * ncolumns + 0]);
+	t->name = strdup (result[rowindex * ncolumns + 1]);
+	t->repeat_events = atoi (result[rowindex * ncolumns + 2]);
+	t->handle_overlap = atoi (result[rowindex * ncolumns + 3]);
+	t->artist_exclude = atof (result[rowindex * ncolumns + 4]);
+	t->recording_exclude = atof (result[rowindex * ncolumns + 5]);
 	t->type = TEMPLATE_TYPE_STANDARD;
 	t->events = get_playlist_events_from_template (db, t->id);
 	t->db = db;
@@ -578,8 +571,10 @@ PlaylistTemplate *
 get_playlist_template (Database *db, double cur_time)
 {
 	PlaylistTemplate *t = NULL;
-	MYSQL_RES *res = NULL;
-	MYSQL_ROW row;
+	char **result = NULL;
+	int nrows;
+	int ncolumns;
+	int rowindex;
 	char buffer[1024];
 	int daylight;
 	double repetition;
@@ -599,20 +594,19 @@ get_playlist_template (Database *db, double cur_time)
 		      "get_playlist_template: cur_time=%f\n", cur_time);
 	db_lock (db);
 	sprintf (buffer, schedule_query, cur_time, cur_time, cur_time, cur_time, daylight*3600);
-	res = db_query (db, buffer);
-	if (mysql_num_rows (res) < 1 ||
-	    (row = mysql_fetch_row (res)) == NULL)
-	{
-		mysql_free_result (res);
+	db_query (db, buffer, &result, &nrows, &ncolumns);
+	if (nrows < 1) {
+		sqlite3_free_table (result);
 		db_unlock (db);
 		debug_printf (DEBUG_FLAGS_DATABASE,
 			      "no template found\n");
 		return NULL;
 	}
-	t = get_playlist_template_from_result (db, row);
-	t->start_time = atof (row[6]);
-	t->end_time = atof (row[7]);
-	repetition = atof (row[8]);
+	rowindex = 1;
+	t = get_playlist_template_from_result (db, result, rowindex, ncolumns);
+	t->start_time = atof (result[rowindex * ncolumns + 6]);
+	t->end_time = atof (result[rowindex * ncolumns + 7]);
+	repetition = atof (result[rowindex * ncolumns + 8]);
 
 	if (repetition != 0) {
 		
@@ -626,9 +620,9 @@ get_playlist_template (Database *db, double cur_time)
 	}
 	t->end_time += t->start_time;
 	
-	t->fallback_id = atoi (row[9]);
-	t->end_prefade = atof(row[10]);;
-	mysql_free_result (res);
+	t->fallback_id = atoi (result[rowindex * ncolumns + 9]);
+	t->end_prefade = atof(result[rowindex * ncolumns + 10]);;
+	sqlite3_free_table (result);
 	db_unlock (db);
   
 	return t;
@@ -640,8 +634,10 @@ PlaylistTemplate *
 get_playlist_template_by_id (Database *db, int id)
 {
 	PlaylistTemplate *t;
-	MYSQL_RES *res = NULL;
-	MYSQL_ROW row;
+	char **result = NULL;
+	int nrows;
+	int ncolumns;
+	int rowindex;
 	char buffer[1024];
 
 	assert (db != NULL);
@@ -650,22 +646,21 @@ get_playlist_template_by_id (Database *db, int id)
 
 	db_lock (db);
 	sprintf (buffer, "select template_id, template_name, repeat_events, handle_overlap, artist_exclude, recording_exclude from playlist_template where template_id = %d", id);
-	res = db_query (db, buffer);
-	if (mysql_num_rows (res) != 1 ||
-	    (row = mysql_fetch_row (res)) == NULL)
-	{
+	db_query (db, buffer, &result, &nrows, &ncolumns);
+	if (nrows != 1) {
 		debug_printf (DEBUG_FLAGS_DATABASE,
 			      "no template found\n");
-		mysql_free_result (res);
+		sqlite3_free_table (result);
 		db_unlock (db);
 		return NULL;
 	}
-	t = get_playlist_template_from_result (db, row);
+	rowindex = 1;
+	t = get_playlist_template_from_result (db, result, rowindex, ncolumns);
 	t->start_time = -1;
 	t->end_time = -1;
 	t->fallback_id = -1;
 	t->end_prefade = 0.0;
-	mysql_free_result (res);
+	sqlite3_free_table (result);
 	db_unlock (db);
   
 	return t;
@@ -728,7 +723,7 @@ create_user_table (Database *db)
 {
 	char *prs_users_create_query =
       "create table prs_user ("
-      "user_id int primary key auto_increment,"
+      "user_id integer primary key,"
       "user_name varchar (20),"
       "password varchar (20),"
       "email varchar (255),"
@@ -748,8 +743,10 @@ create_user_table (Database *db)
 void
 add_recording (Recording *r, Database *db)
 {
-	MYSQL_RES *res = NULL;
-	MYSQL_ROW row;
+	char **result = NULL;
+	int nrows;
+	int ncolumns;
+	int rowindex;
 	int artist_id;
 	int category_id;
 	char buffer[2048];
@@ -779,38 +776,34 @@ add_recording (Recording *r, Database *db)
 	recording_date = process_for_sql (r->date);
 	sprintf (buffer, "select artist_id from artist where artist_name = '%s'",
 		 artist_name);
-	res = db_query (db, buffer);
-	if (mysql_num_rows (res) == 1 &&
-	    (row = mysql_fetch_row (res)) != NULL)
-	{
-		artist_id = atoi (row[0]);
-		mysql_free_result (res);
+	db_query (db, buffer, &result, &nrows, &ncolumns);
+	if (nrows == 1) {
+		rowindex = 1;
+		artist_id = atoi (result[rowindex * ncolumns + 0]);
+		sqlite3_free_table (result);
 	}
-	else
-	{
-		mysql_free_result (res);
+	else {
+		sqlite3_free_table (result);
 		sprintf (buffer, "insert into artist (artist_name) values ('%s')", 
 			 artist_name);
 		db_execute (db, buffer);
-		artist_id = mysql_insert_id (db->conn);
+		artist_id = sqlite3_last_insert_rowid (db->db);
 	}
 	sprintf (buffer,
 		 "select category_id from category where category_name = '%s'",
 		 category_name);
-	res = db_query (db, buffer);
-	if (mysql_num_rows (res) == 1 &&
-	    (row = mysql_fetch_row (res)) != NULL)
-	{
-		category_id = atoi (row[0]);
-		mysql_free_result (res);
+	db_query (db, buffer, &result, &nrows, &ncolumns);
+	if (nrows == 1) {
+		rowindex = 1;
+		category_id = atoi (result[rowindex * ncolumns + 0]);
+		sqlite3_free_table (result);
 	}
-	else
-	{
-		mysql_free_result (res);
+	else {
+		sqlite3_free_table (result);
 		sprintf (buffer, "insert into category (category_name) values ('%s')",
 			 category_name);
 		db_execute (db, buffer);
-		category_id = mysql_insert_id (db->conn);
+		category_id = sqlite3_last_insert_rowid (db->db);
 	}
 
 	sprintf (buffer, recording_insert_query, recording_name, recording_path,
@@ -818,7 +811,7 @@ add_recording (Recording *r, Database *db)
 		 r->length, r->audio_in, r->audio_out);
 	db_execute (db, buffer);
 	r->db = db;
-	r->id = mysql_insert_id (db->conn);
+	r->id = sqlite3_last_insert_rowid (db->db);
 	free (recording_name);
 	free (recording_path);
 	free (artist_name);
@@ -848,8 +841,10 @@ delete_recording (Recording *r)
 Recording *
 find_recording_by_path (Database *db, const char *path)
 {
-	MYSQL_RES *res = NULL;
-	MYSQL_ROW row;
+	char **result = NULL;
+	int nrows;
+	int ncolumns;
+	int rowindex;
 	Recording *r;
 	char buffer[1024];
 	char *recording_path;
@@ -869,15 +864,16 @@ find_recording_by_path (Database *db, const char *path)
 	sprintf (buffer, "%s and recording.recording_path = '%s'", select_query,
 		 recording_path);
 	free (recording_path);
-	res = db_query (db, buffer);
-	if (mysql_num_rows (res) != 1 ||
-	    (row = mysql_fetch_row (res)) == NULL) {
+	db_query (db, buffer, &result, &nrows, &ncolumns);
+	if (nrows != 1) {
 		debug_printf (DEBUG_FLAGS_DATABASE,
 			      "recording with path %s not found\n", path);
 		r = NULL;
-	} else
-		r = get_recording_from_result (db, row);
-	mysql_free_result (res);
+	} else {
+		rowindex = 1;
+		r = get_recording_from_result (db, result, rowindex, ncolumns);
+	}
+	sqlite3_free_table (result);
 	db_unlock (db);
 	return r;
 }
@@ -887,11 +883,11 @@ find_recording_by_path (Database *db, const char *path)
 list *
 get_recordings (Database *db)
 {
-	MYSQL_RES *res = NULL;
-	MYSQL_ROW row;
+	char **result = NULL;
+	int nrows;
+	int ncolumns;
 	Recording *r;
 	char buffer[1024];
-	int i = 0;
 	list *rv = NULL;
 	
 
@@ -899,19 +895,15 @@ get_recordings (Database *db)
 		return NULL;
 	db_lock (db);
 	sprintf (buffer, "select * from recording");
-	if (mysql_real_query (db->conn, buffer, strlen(buffer)) < 0 ||
-	    (res = mysql_store_result (db->conn)) == NULL) {
+	if (sqlite3_get_table (db->db, buffer, &result, &nrows, &ncolumns, NULL) != SQLITE_OK) {
 		db_unlock (db);
 		return NULL;
 	}
-	i = mysql_num_rows (res);
-	while (i) {
-		row = mysql_fetch_row (res);
-		r = get_recording_from_result (db, row);
+	for (rowindex = 1; rowindex <= nrows; rowindex++) {
+		r = get_recording_from_result (db, result, rowindex, ncolumns);
 		rv = prs_list_prepend (rv, r);
-		i--;
 	}
-	mysql_free_result (res);
+	sqlite3_free_table (result);
 	db_unlock (db);
 	return rv;
 }
@@ -945,7 +937,7 @@ recording_picker_new (Database *db, double artist_exclude,
 
 	/* Create the tables */
 
-	sprintf (buffer, "create table %s (recording_id int, time double)",
+	sprintf (buffer, "create table %s (recording_id integer, time double)",
 		 p->recording_exclude_table_name);
 	create_table (db,
 		      p->recording_exclude_table_name,
@@ -976,8 +968,6 @@ recording_picker_destroy (RecordingPicker *p)
 	debug_printf (DEBUG_FLAGS_DATABASE,
 		      "recording_picker_destroy called\n");
 
-	db_lock (p->db);
-	db_unlock (p->db);
 	free (p);
 }
 
@@ -989,8 +979,10 @@ recording_picker_select (RecordingPicker *p,
 			 double cur_time)
 {
 	list *tmp;
-	MYSQL_RES *res = NULL;
-	MYSQL_ROW row;
+	char **result = NULL;
+	int nrows;
+	int ncolumns;
+	int rowindex;
 	char *buffer;
 	char category_part[1024];
 	int n;
@@ -1043,38 +1035,36 @@ recording_picker_select (RecordingPicker *p,
 		db_execute (p->db, temp);
 		sprintf (temp, "select artist_name from %s",
 			 p->artist_exclude_table_name);
-		res = db_query (p->db, temp);
+		db_query (p->db, temp, &result, &nrows, &ncolumns);
 		first = 1;
 
-		while (row = mysql_fetch_row (res))
-		{
+		for (rowindex = 1; rowindex <= nrows; rowindex++) {
 			if (first)
 				first = 0;
 			else
 				artists_strlen += 2;
 
-			artists = string_list_append (artists, row[0]);
-			artists_strlen += strlen (row[0]);
+			artists = string_list_append (artists, result[rowindex * ncolumns + 0]);
+			artists_strlen += strlen (result[rowindex * ncolumns + 0]);
 		}
 
-		mysql_free_result (res);
+		sqlite3_free_table (result);
 		sprintf (temp, "select recording_id from %s",
 			 p->recording_exclude_table_name);
-		res = db_query (p->db, temp);
+		db_query (p->db, temp, &result, &nrows, &ncolumns);
 		first = 1;
 
-		while (row = mysql_fetch_row (res))
-		{
+		for (rowindex = 1; rowindex <= nrows; rowindex++) {
 			if (first)
 				first = 0;
 			else
 				recordings_strlen += 2;
 
-			recordings = string_list_append (recordings, row[0]);
-			recordings_strlen += strlen (row[0]);
+			recordings = string_list_append (recordings, result[rowindex * ncolumns + 0]);
+			recordings_strlen += strlen (result[rowindex * ncolumns + 0]);
 		}
 
-		mysql_free_result (res);
+		sqlite3_free_table (result);
 		buffer = malloc (artists_strlen + recordings_strlen + 2048);
 		assert (buffer != NULL);
 		strcpy (buffer, select_query);
@@ -1130,32 +1120,21 @@ recording_picker_select (RecordingPicker *p,
 		if (category_list)
 			strcat (buffer, category_part);
 	}
-	res = db_query (p->db, buffer);
-	if (mysql_num_rows (res) <= 0)
+	db_query (p->db, buffer, &result, &nrows, &ncolumns);
+	if (nrows <= 0)
 	{
-		mysql_free_result (res);
+		sqlite3_free_table (result);
 		free (buffer);
 		db_unlock (p->db);
 		debug_printf (DEBUG_FLAGS_DATABASE, "no recording found\n");
 		return NULL;
 	}
 
-	n = rand () % mysql_num_rows (res);
-	mysql_data_seek (res, n);
-	row = mysql_fetch_row (res);
+	n = rand () % nrows;
+	rowindex = n + 1;
 
-	if (row == NULL)
-	{
-		mysql_free_result (res);
-		free (buffer);
-		db_unlock (p->db);
-		debug_printf (DEBUG_FLAGS_DATABASE,
-			      "row fetched after mysql_data_seek is NULL\n");
-		return NULL;
-	}
-
-	r = get_recording_from_result (p->db, row);
-	mysql_free_result (res);
+	r = get_recording_from_result (p->db, result, rowindex, ncolumns);
+	sqlite3_free_table (result);
 
 	/* Add info to the exclude tables */
 
@@ -1197,9 +1176,9 @@ create_log_table (Database *db)
 {
 	char *log_create_query =
       "create table log ("
-      "recording_id int,"
-      "start_time int,"
-      "length int)";
+      "recording_id integer,"
+      "start_time integer,"
+      "length integer)";
 
 	assert (db != NULL);
 	db_lock (db);

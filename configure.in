@@ -30,20 +30,7 @@ PKG_CHECK_MODULES(libxml2, libxml-2.0)
 PKG_CHECK_MODULES(shout, shout)
 PKG_CHECK_MODULES(libcurl, libcurl)
 PKG_CHECK_MODULES(taglib_c, taglib_c)
-
-dnl MySQL configuration
-
-MYSQL_CONFIG=`which mysql_config`
-if test "x$MYSQL_CONFIG" = x ; then
-  AC_CHECK_LIB(mysqlclient, mysql_init,
-      mysql_libs="-lmysqlclient"
-    ,
-      AC_MSG_ERROR(could not find the mysqlclient library)
-    )
-else
-  mysql_LIBS=`$MYSQL_CONFIG --libs`
-  mysql_CFLAGS=`$MYSQL_CONFIG --cflags`
-fi
+PKG_CHECK_MODULES(sqlite3, sqlite3)
 
 dnl --------------------------------------------------
 dnl Do substitutions

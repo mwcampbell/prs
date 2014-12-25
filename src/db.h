@@ -7,7 +7,7 @@
 
 #ifndef _DB_H
 #define _DB_H
-#include <mysql/mysql.h>
+#include <sqlite3.h>
 #include <pthread.h>
 #include <libxml/parser.h>
 #include "list.h"
@@ -16,15 +16,14 @@ typedef struct _Database Database;
 
 struct _Database
 {
-	MYSQL *conn;
+	sqlite3 *db;
 	pthread_mutex_t mutex;
 };
 
 Database *
 db_new (void);
 int
-db_connect (Database *db, const char *host, const char *user,
-	    const char *password, const char *name);
+db_open (Database *db, const char *filename);
 void
 db_close (Database *db);
 void
