@@ -35,7 +35,7 @@ soundcard_setup (const char *name,
 		mode = O_WRONLY;
 	else
 		mode = O_RDONLY;
-	fd = open (name, mode);
+	fd = open (name, mode, 0666);
 	if (fd < 0) {
 		perror ("sound card open failed");
 		exit (EXIT_FAILURE);
