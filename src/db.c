@@ -469,8 +469,8 @@ create_playlist_tables (Database *db)
       "template_name varchar (100),"
       "repeat_events integer,"
       "handle_overlap integer,"
-      "artist_exclude double,"
-      "recording_exclude double)";
+      "artist_exclude integer,"
+      "recording_exclude integer)";
 	char *create_schedule_query =
     "create table schedule ("
     "time_slot_id integer primary key,"
@@ -545,8 +545,8 @@ get_playlist_template_from_result (Database *db,
 	t->name = strdup (result[rowindex * ncolumns + 1]);
 	t->repeat_events = atoi (result[rowindex * ncolumns + 2]);
 	t->handle_overlap = atoi (result[rowindex * ncolumns + 3]);
-	t->artist_exclude = atof (result[rowindex * ncolumns + 4]);
-	t->recording_exclude = atof (result[rowindex * ncolumns + 5]);
+	t->artist_exclude = atoi (result[rowindex * ncolumns + 4]);
+	t->recording_exclude = atoi (result[rowindex * ncolumns + 5]);
 	t->type = TEMPLATE_TYPE_STANDARD;
 	t->events = get_playlist_events_from_template (db, t->id);
 	t->db = db;
@@ -911,8 +911,8 @@ get_recordings (Database *db)
 
 
 RecordingPicker *
-recording_picker_new (Database *db, double artist_exclude,
-		      double recording_exclude)
+recording_picker_new (Database *db, int artist_exclude,
+		      int recording_exclude)
 {
 	static int randomized = 0;
 	char buffer[1024];
@@ -938,13 +938,13 @@ recording_picker_new (Database *db, double artist_exclude,
 
 	/* Create the tables */
 
-	sprintf (buffer, "create table %s (recording_id integer, time double)",
+	sprintf (buffer, "create table %s (recording_exclude_id integer primary key, recording_id integer)",
 		 p->recording_exclude_table_name);
 	create_table (db,
 		      p->recording_exclude_table_name,
 		      buffer,
 		      0);
-	sprintf (buffer, "create table %s (artist_name varchar(200), time double)",
+	sprintf (buffer, "create table %s (artist_exclude_id integer primary key, artist_name varchar(200))",
 		 p->artist_exclude_table_name);
 	create_table (db,
 		      p->artist_exclude_table_name,
@@ -977,7 +977,7 @@ recording_picker_destroy (RecordingPicker *p)
 Recording *
 recording_picker_select (RecordingPicker *p,
 			 list *category_list,
-			 double cur_time)
+			 int avoid_repeating)
 {
 	list *tmp;
 	char **result = NULL;
@@ -996,15 +996,13 @@ recording_picker_select (RecordingPicker *p,
       "from recording, artist, category "
       "where recording.artist_id = artist.artist_id and "
       "recording.category_id = category.category_id";
-	time_t ct;
-    
+
 	assert (p != NULL);
 	assert (p->db != NULL);
 	debug_printf (DEBUG_FLAGS_DATABASE,
-		      "recording_picker_select: cur_time=%f\n", cur_time);
+		      "recording_picker_select: avoid_repeating=%d\n", avoid_repeating);
 
 	db_lock (p->db);
-	ct = cur_time;
 	*category_part = 0;
 	for (tmp = category_list; tmp; tmp = tmp->next) {
 		char temp[256];
@@ -1017,25 +1015,14 @@ recording_picker_select (RecordingPicker *p,
 	}
 	if (category_list)
 		strcat (category_part, ")");
-	if (cur_time >= 0) {
+	if (avoid_repeating) {
 		list *artists = NULL, *recordings = NULL;
 		int artists_strlen = 0, recordings_strlen = 0, first;
 		char temp[1024];
 
-		/* Delete old items from exclude tables */
-
-		sprintf (temp, "delete from %s where %s.time < %ld",
-			 p->recording_exclude_table_name,
-			 p->recording_exclude_table_name,
-			 (long) (cur_time-p->recording_exclude));
-		db_execute (p->db, temp);
-		sprintf (temp, "delete from %s where %s.time < %ld",
+		sprintf (temp, "select artist_name from %s order by artist_exclude_id desc limit %d",
 			 p->artist_exclude_table_name,
-			 p->artist_exclude_table_name,
-			 (long) (cur_time-p->artist_exclude));
-		db_execute (p->db, temp);
-		sprintf (temp, "select artist_name from %s",
-			 p->artist_exclude_table_name);
+			 p->artist_exclude);
 		db_query (p->db, temp, &result, &nrows, &ncolumns);
 		first = 1;
 
@@ -1050,8 +1037,9 @@ recording_picker_select (RecordingPicker *p,
 		}
 
 		sqlite3_free_table (result);
-		sprintf (temp, "select recording_id from %s",
-			 p->recording_exclude_table_name);
+		sprintf (temp, "select recording_id from %s order by recording_exclude_id desc limit %d",
+			 p->recording_exclude_table_name,
+			 p->recording_exclude);
 		db_query (p->db, temp, &result, &nrows, &ncolumns);
 		first = 1;
 
@@ -1139,14 +1127,14 @@ recording_picker_select (RecordingPicker *p,
 
 	/* Add info to the exclude tables */
 
-	if (cur_time >= 0)
+	if (avoid_repeating)
 	{
 		char *artist_name = process_for_sql (r->artist);
-		sprintf (buffer, "insert into %s values (%d, %lf)",
-			 p->recording_exclude_table_name, r->id, cur_time);
+		sprintf (buffer, "insert into %s (recording_id) values (%d)",
+			 p->recording_exclude_table_name, r->id);
 		db_execute (p->db, buffer);
-		sprintf (buffer, "insert into %s values ('%s', %lf)",
-			 p->artist_exclude_table_name, artist_name, cur_time);
+		sprintf (buffer, "insert into %s (artist_name) values ('%s')",
+			 p->artist_exclude_table_name, artist_name);
 		db_execute (p->db, buffer);
 		free (artist_name);
 	}  

@@ -403,11 +403,11 @@ scheduler_schedule_next_event (scheduler *s)
 
 		if (e->type == EVENT_TYPE_SIMPLE_RANDOM) {
 			debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduling simple random event\n");
-			r = recording_picker_select (stack_entry->p, categories, -1);
+			r = recording_picker_select (stack_entry->p, categories, 0);
 		}
 		else {
 			debug_printf (DEBUG_FLAGS_SCHEDULER, "Scheduling random event\n");
-			r = recording_picker_select (stack_entry->p, categories, e->start_time);
+			r = recording_picker_select (stack_entry->p, categories, 1);
 		}
 
 		/* Free the list of categories */

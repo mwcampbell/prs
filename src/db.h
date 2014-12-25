@@ -118,8 +118,8 @@ struct _PlaylistTemplate {
 	double end_time;
 	int repeat_events;
 	handle_overlap_type handle_overlap;
-	double artist_exclude;
-	double recording_exclude;
+	int artist_exclude;
+	int recording_exclude;
 	list *events;
 	int fallback_id;
 	double end_prefade;
@@ -225,22 +225,22 @@ typedef struct _RecordingPicker RecordingPicker;
 struct _RecordingPicker {
 	char *artist_exclude_table_name;
 	char *recording_exclude_table_name;
-	double artist_exclude;
-	double recording_exclude;
+	int artist_exclude;
+	int recording_exclude;
 	Database *db;
 };
 
 
 
 RecordingPicker *
-recording_picker_new (Database *db, double artist_exclude,
-		      double recording_exclude);
+recording_picker_new (Database *db, int artist_exclude,
+		      int recording_exclude);
 void
 recording_picker_destroy (RecordingPicker *p);
 Recording *
 recording_picker_select (RecordingPicker *p,
 			 list *category_list,
-			 double cur_time);
+			 int avoid_repeating);
 
 
 
