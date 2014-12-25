@@ -368,7 +368,7 @@ create_recording_tables (Database *db)
 {
 	char *artist_create_query = 
       "create table artist ("
-      "artist_id integer primary key,
+      "artist_id integer primary key, "
       "artist_name varchar (200))";
 	char *category_create_query = 
       "create table category ("
@@ -886,6 +886,7 @@ get_recordings (Database *db)
 	char **result = NULL;
 	int nrows;
 	int ncolumns;
+	int rowindex;
 	Recording *r;
 	char buffer[1024];
 	list *rv = NULL;
