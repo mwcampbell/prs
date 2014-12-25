@@ -7,3 +7,12 @@ configure
 depcomp
 install-sh
 missing
+*.o
+Makefile
+config.log
+config.status
+.deps
+prs_db_builder
+prs_server
+prs.conf
+*.db
