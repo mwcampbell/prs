@@ -160,31 +160,15 @@ main (int argc, char *argv[])
       path[strlen (path) - 1] = 0;
       if (!recording_table_created)
 	{
-	  i = file_info_new (path, 0, 0);
 	  r = find_recording_by_path (db, path);
-	  if (r && abs (i->length-r->length) <= .001 &&
-	      r->category && (category && !strcmp (r->category, category) || i->genre && !strcmp (r->category, i->genre)) &&
-	      (r->name && i->name) && !strcmp (r->name, i->name))
+	  if (r)
 	    {
-	      file_info_free (i);
 	      recording_free (r);
 	      continue;
 	    }
-	  if (i)
-		  file_info_free (i);
-	  if (r)
-	    {
-	      delete_recording (r);
-	      recording_free (r);
-	    }
-	  i = file_info_new (path, 1000, 2000);
-	  r = (Recording *) malloc (sizeof(Recording));
 	}
-      else
-	{
-	  i = file_info_new (path, 1000, 2000);
-	  r = (Recording *) malloc (sizeof(Recording));
-	}
+      i = file_info_new (path, 1000, 2000);
+      r = (Recording *) malloc (sizeof(Recording));
       if (!i)
 	      continue;
       if (i->name)
