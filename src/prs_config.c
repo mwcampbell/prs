@@ -16,6 +16,7 @@
 #include "audiocompressor.h"
 #include "multibandaudiocompressor.h"
 #include "alsamixeroutput.h"
+#include "aplaymixeroutput.h"
 #include "ossmixeroutput.h"
 #include "ossmixerchannel.h"
 #include "shoutmixeroutput.h"
@@ -278,6 +279,11 @@ mixer_output_config (mixer *m, xmlNodePtr cur)
 					   atoi((char*)rate),
 					   atoi((char*)channels),
 					   m->latency);
+	else if (!xmlStrcasecmp (type, (xmlChar*)"aplay"))
+		o = aplay_mixer_output_new ((char*)name,
+					    atoi((char*)rate),
+					    atoi((char*)channels),
+					    m->latency);
 	else if (!xmlStrcasecmp (type, (xmlChar*)"wave"))
 		o = file_mixer_output_new ((char*)name,
 					   atoi((char*)rate),

@@ -70,6 +70,8 @@ prs_server_SOURCES = \
 	mixeroutput.h \
 	alsamixeroutput.c \
 	alsamixeroutput.h \
+	aplaymixeroutput.c \
+	aplaymixeroutput.h \
 	ossmixeroutput.c \
 	ossmixeroutput.h \
 	soundcard.c \
