@@ -213,7 +213,7 @@ does_table_exist (Database *db,
 	assert (table_name != NULL);
 	debug_printf (DEBUG_FLAGS_DATABASE,
 		      "checking whether table %s exists\n", table_name);
-	sprintf (query, "describe %s", table_name);
+	sprintf (query, "select count(*) from %s", table_name);
 
 	rc = sqlite3_exec (db->db, query, NULL, NULL, NULL);
 	if (rc == SQLITE_OK) {
