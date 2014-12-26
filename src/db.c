@@ -585,7 +585,7 @@ get_playlist_template (Database *db, double cur_time)
     "end_prefade from playlist_template, schedule "
     "where playlist_template.template_id = schedule.template_id and "
     "((repetition = 0 and start_time <= %lf and start_time+length > %lf) or "
-    "(repetition != 0 and start_time <= %lf and ((%lf-start_time-(daylight*3600)+%d) %%` repetition) < length)) "
+    "(repetition != 0 and start_time <= %lf and ((%lf-start_time-(daylight*3600)+%d) %% repetition) < length)) "
     "order by time_slot_id desc";
 
 	daylight = is_daylight (cur_time);
