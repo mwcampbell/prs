@@ -24,7 +24,6 @@ prs_db_builder_SOURCES = \
 	mp3header.c \
 	list.c	\
 	debug.c \
-	getopt_long.c \
 	prs_db_builder.c
 
 prs_server_CFLAGS = \
