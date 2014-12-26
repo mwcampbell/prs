@@ -85,12 +85,12 @@ verify_database (Database *db)
 int
 main (int argc, char *argv[])
 {
-  char path[1024], find_cmd[1024], opt;
+  char path[1024], find_cmd[1024];
   char *category = NULL, *config_file = "prs.conf";
   FILE *fp;
   FileInfo *i;
   Database *db = db_new ();
-  int recording_table_created, user_table_created;
+  int opt, recording_table_created, user_table_created;
 
   while ((opt = getopt (argc, argv, "c:C:")) != -1)
     {
