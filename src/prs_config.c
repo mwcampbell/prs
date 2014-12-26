@@ -15,6 +15,7 @@
 #include "db.h"
 #include "audiocompressor.h"
 #include "multibandaudiocompressor.h"
+#include "alsamixeroutput.h"
 #include "ossmixeroutput.h"
 #include "ossmixerchannel.h"
 #include "shoutmixeroutput.h"
@@ -271,6 +272,12 @@ mixer_output_config (mixer *m, xmlNodePtr cur)
 					  atoi((char*)rate),
 					  atoi((char*)channels),
 					  m->latency);
+	else if (!xmlStrcasecmp (type, (xmlChar*)"alsa"))
+		o = alsa_mixer_output_new ((char*)sc_name,
+					   (char*)name,
+					   atoi((char*)rate),
+					   atoi((char*)channels),
+					   m->latency);
 	else if (!xmlStrcasecmp (type, (xmlChar*)"wave"))
 		o = file_mixer_output_new ((char*)name,
 					   atoi((char*)rate),

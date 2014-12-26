@@ -32,7 +32,8 @@ prs_server_CFLAGS = \
 	$(libxml2_CFLAGS) \
 	$(shout_CFLAGS) \
 	$(libcurl_CFLAGS) \
-	$(sqlite3_CFLAGS)
+	$(sqlite3_CFLAGS) \
+	$(alsa_CFLAGS)
 prs_server_LDADD = \
 	$(pthread_LIBS) \
 	$(vorbis_LIBS) \
@@ -41,7 +42,8 @@ prs_server_LDADD = \
 	$(shout_LIBS) \
 	$(libcurl_LIBS) \
 	$(taglib_c_LIBS) \
-	$(sqlite3_LIBS)
+	$(sqlite3_LIBS) \
+	$(alsa_LIBS)
 prs_server_SOURCES = \
 	fileinfo.c \
 	fileinfo.h \
@@ -66,6 +68,8 @@ prs_server_SOURCES = \
 	mixerbus.h \
 	mixeroutput.c \
 	mixeroutput.h \
+	alsamixeroutput.c \
+	alsamixeroutput.h \
 	ossmixeroutput.c \
 	ossmixeroutput.h \
 	soundcard.c \

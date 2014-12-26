@@ -30,6 +30,7 @@ PKG_CHECK_MODULES(shout, shout)
 PKG_CHECK_MODULES(libcurl, libcurl)
 PKG_CHECK_MODULES(taglib_c, taglib_c)
 PKG_CHECK_MODULES(sqlite3, sqlite3)
+PKG_CHECK_MODULES(alsa, alsa)
 
 dnl --------------------------------------------------
 dnl Do substitutions
