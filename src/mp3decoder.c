@@ -69,7 +69,7 @@ mp3_decoder_new (const char *filename, double start_time, int channels)
 		open ("/dev/null", O_WRONLY);
 		close (decoder_output[0]);
 		close (decoder_output[1]);
-		execlp ("madplay", "madplay", "-q", "-o", "raw:-",
+		execlp ("madplay", "madplay", "-q", "-o", "raw:-", "-G", "radio",
 			channel_selection_param, "-s", start_time_str, filename, NULL);
 		debug_printf (DEBUG_FLAGS_CODEC,
 			      "mp3_decoder_new: exec failed: %s\n",
