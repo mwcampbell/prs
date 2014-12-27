@@ -28,7 +28,6 @@ mp3_decoder_new (const char *filename, double start_time, int channels)
 	int decoder_output[2] = {-1, -1};
 	int rv = -1;
 	char start_time_str[100] = "0";
-	char *channel_selection_param;
 
 	assert (filename != NULL);
 	debug_printf (DEBUG_FLAGS_CODEC,
@@ -38,11 +37,6 @@ mp3_decoder_new (const char *filename, double start_time, int channels)
 	sprintf (start_time_str, "%lf", start_time);
 
 	assert (channels >= 1 && channels <= 2);
-	if (channels == 2) {
-		channel_selection_param = "--stereo";
-	} else {
-		channel_selection_param = "--mono";
-	}
 
 	/* Create pipe */
 
@@ -69,8 +63,7 @@ mp3_decoder_new (const char *filename, double start_time, int channels)
 		open ("/dev/null", O_WRONLY);
 		close (decoder_output[0]);
 		close (decoder_output[1]);
-		execlp ("madplay", "madplay", "-q", "-o", "raw:-", "-G", "radio",
-			channel_selection_param, "-s", start_time_str, filename, NULL);
+		execlp ("sox", "sox", "--replay-gain=track", filename, "-t", "sw", "-", "trim", start_time_str, NULL);
 		debug_printf (DEBUG_FLAGS_CODEC,
 			      "mp3_decoder_new: exec failed: %s\n",
 			      strerror (errno));
