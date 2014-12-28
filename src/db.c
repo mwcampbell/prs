@@ -13,6 +13,10 @@
 #include <math.h>
 #include <time.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sqlite3.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
@@ -930,8 +934,15 @@ recording_picker_new (Database *db, int artist_exclude,
   
 	if (!randomized)
 	{
-		srand (time (NULL));
-		randomized = 1;
+		int fd;
+		fd = open ("/dev/urandom", O_RDONLY);
+		if (fd >= 0) {
+			unsigned seed;
+			read (fd, &seed, sizeof(seed));
+			srand (seed);
+			close (fd);
+			randomized = 1;
+		}
 	}
 	p->artist_exclude_table_name = strdup ("artist_exclude");
 	p->recording_exclude_table_name = strdup ("recording_exclude");
