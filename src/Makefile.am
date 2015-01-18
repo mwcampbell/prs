@@ -102,7 +102,14 @@ prs_server_SOURCES = \
 	wavemixerchannel.h \
 	audiofilter.c \
 	audiofilter.h \
-	audiocompressor.c \
+	SimpleComp.cpp \
+	SimpleComp.h \
+	SimpleCompProcess.inl \
+	SimpleEnvelope.cpp \
+	SimpleEnvelope.h \
+	SimpleGain.h \
+	SimpleHeader.h \
+	audiocompressor.cpp \
 	audiocompressor.h \
 	multibandaudiocompressor.c \
 	multibandaudiocompressor.h \
