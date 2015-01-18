@@ -96,7 +96,7 @@ audio_compressor_new (int rate,
 	d->comp.setAttack (attack_time * 1000.0);
 	d->comp.setRelease (release_time * 1000.0);
 	d->comp.setThresh (threshhold);
-	d->comp.setRatio (ratio);
+	d->comp.setRatio (1.0 / ratio);
 	d->comp.initRuntime ();
 	d->output_gain = output_gain;
   
