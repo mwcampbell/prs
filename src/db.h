@@ -28,6 +28,10 @@ void
 db_close (Database *db);
 void
 db_config (Database *db, xmlNodePtr cur);
+void
+db_begin_transaction (Database *db);
+void
+db_commit (Database *db);
 
 /*
  *

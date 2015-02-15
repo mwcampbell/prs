@@ -137,6 +137,18 @@ db_config (Database *db, xmlNodePtr cur)
 		xmlFree (filename);
 }
 
+void
+db_begin_transaction (Database *db)
+{
+	db_execute (db, "BEGIN TRANSACTION");
+}
+
+void
+db_commit (Database *db)
+{
+	db_execute (db, "COMMIT");
+}
+
 
 
 /*

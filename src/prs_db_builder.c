@@ -117,6 +117,8 @@ main (int argc, char *argv[])
       return 1;
     }
 
+  db_begin_transaction (db);
+
   /* Create tables */
 
   if (!check_recording_tables (db))
@@ -202,6 +204,7 @@ main (int argc, char *argv[])
     }
 
   pclose (fp);
+  db_commit (db);
   db_close (db);
   return 0;
 }
