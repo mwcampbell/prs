@@ -63,7 +63,7 @@ verify_database (Database *db)
 	list *recordings, *tmp;
 	Recording *r;
 	
-	fprintf (stderr, "Verifying database...\n");
+	printf ("Verifying database...\n");
 	recordings = get_recordings (db);
 	tmp = recordings;
 	while (tmp) {
@@ -78,7 +78,7 @@ verify_database (Database *db)
 	tmp = tmp->next;
 	}
 	recording_list_free (recordings);
-	fprintf (stderr, "Done verifying database.\n");
+	printf ("Done verifying database.\n");
 }
 
 
